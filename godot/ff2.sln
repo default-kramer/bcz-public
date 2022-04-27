@@ -5,9 +5,9 @@ VisualStudioVersion = 17.1.32407.343
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ff2", "ff2.csproj", "{D00AD443-B029-43FF-A371-CDBBA727BCCC}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FF2.Core", "..\core\FF2.Core.csproj", "{B5895AF2-95E5-45D0-AFA3-C4C87CB687DF}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FF2.Core", "..\core\FF2.Core\FF2.Core.csproj", "{B5895AF2-95E5-45D0-AFA3-C4C87CB687DF}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FF2.CoreTests", "..\FF2.CoreTests\FF2.CoreTests.csproj", "{948D6672-68E1-4D4D-8677-A427F847503A}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FF2.CoreTests", "..\core\FF2.CoreTests\FF2.CoreTests.csproj", "{948D6672-68E1-4D4D-8677-A427F847503A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

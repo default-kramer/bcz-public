@@ -8,6 +8,6 @@
     <PackageReference Include="System.Memory" Version="4.5.4" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\core\FF2.Core.csproj" />
+    <ProjectReference Include="..\core\FF2.Core\FF2.Core.csproj" />
   </ItemGroup>
 </Project>
