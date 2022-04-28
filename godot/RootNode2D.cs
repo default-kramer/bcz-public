@@ -1,6 +1,7 @@
 using FF2.Core;
 using Godot;
 using System;
+using System.Linq;
 
 using Color = FF2.Core.Color;
 
@@ -96,5 +97,11 @@ public class RootNode2D : Node2D
 		}
 
 		this.Update();
+	}
+
+	protected override void Dispose(bool disposing)
+	{
+		base.Dispose(disposing);
+		grid = null;
 	}
 }
