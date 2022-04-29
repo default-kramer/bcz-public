@@ -23,12 +23,12 @@ public class RootNode2D : Node2D
 	// Called when the node enters the scene tree for the first time.
 	public override void _Ready()
 	{
-		grid = RAND.RandomGrid();
+		grid = Grid.Create(PRNG.Create());
 	}
 
 	public override void _Draw()
 	{
-		Rotate((float)(frames * sign) / 5000);
+		//Rotate((float)(frames * sign) / 5000);
 
 		var rect = this.GetViewportRect();
 		var cellX = rect.Size.x / grid.Width;
@@ -46,35 +46,75 @@ public class RootNode2D : Node2D
 				var screenY = canvasY * screenCellSize;
 				var screenX = x * screenCellSize;
 
-				DrawOccupant(loc, occ, screenX, screenY, screenCellSize);
+				switch (occ.Kind)
+				{
+					case OccupantKind.Catalyst:
+						DrawCatalyst(occ, screenX, screenY, screenCellSize);
+						break;
+					case OccupantKind.Enemy:
+						DrawEnemy(occ, screenX, screenY, screenCellSize);
+						break;
+				}
 			}
 		}
 	}
 
-	private void DrawOccupant(Loc loc, Occupant occ, float screenX, float screenY, float screenCellSize)
+	private static Godot.Color ConvertColor(Color color)
 	{
-		Godot.Color? gColor = occ.Color switch
+		return color switch
 		{
 			Color.Red => Red,
 			Color.Blue => Blue,
 			Color.Yellow => Yellow,
-			_ => null,
+			_ => throw new Exception("unexpected color: " + color),
 		};
+	}
 
-		if (gColor.HasValue)
+	private readonly Vector2[] enemyPointBuffer = new Vector2[4];
+
+	private void DrawEnemy(Occupant occ, float screenX, float screenY, float screenCellSize)
+	{
+		var gColor = ConvertColor(occ.Color);
+		var half = screenCellSize / 2;
+		enemyPointBuffer[0] = new Vector2(screenX + half, screenY);
+		enemyPointBuffer[1] = new Vector2(screenX + screenCellSize, screenY + half);
+		enemyPointBuffer[2] = new Vector2(screenX + half, screenY + screenCellSize);
+		enemyPointBuffer[3] = new Vector2(screenX, screenY + half);
+		DrawColoredPolygon(enemyPointBuffer, gColor);
+	}
+
+	private void DrawCatalyst(Occupant occ, float screenX, float screenY, float screenCellSize)
+	{
+		var gColor = ConvertColor(occ.Color);
+
+		// always draw the circle
+		var radius = screenCellSize / 2;
+		var centerX = screenX + radius;
+		var centerY = screenY + radius;
+		DrawCircle(new Vector2(centerX, centerY), radius, gColor);
+
+		// if we have a partner, draw the half-rectangle
+		var half = screenCellSize / 2;
+		Rect2 rect;
+
+		switch (occ.Direction)
 		{
-			if (occ.Direction == Direction.None)
-			{
-				var radius = screenCellSize / 2;
-				var centerX = screenX + radius;
-				var centerY = screenY + radius;
-				DrawCircle(new Vector2(centerX, centerY), radius, gColor.Value);
-			}
-			else
-			{
-				var rect = new Rect2(screenX, screenY, screenCellSize, screenCellSize);
-				DrawRect(rect, gColor.Value);
-			}
+			case Direction.Left:
+				rect = new Rect2(screenX, screenY, half, screenCellSize);
+				DrawRect(rect, gColor);
+				break;
+			case Direction.Right:
+				rect = new Rect2(screenX + half, screenY, half, screenCellSize);
+				DrawRect(rect, gColor);
+				break;
+			case Direction.Up:
+				rect = new Rect2(screenX, screenY, screenCellSize, half);
+				DrawRect(rect, gColor);
+				break;
+			case Direction.Down:
+				rect = new Rect2(screenX, screenY + half, screenCellSize, half);
+				DrawRect(rect, gColor);
+				break;
 		}
 	}
 

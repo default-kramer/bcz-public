@@ -79,7 +79,7 @@ namespace FF2.Core
         }
     }
 
-    public struct Occupant
+    public struct Occupant : IEquatable<Occupant>
     {
         private readonly Bits data;
 
@@ -105,6 +105,21 @@ namespace FF2.Core
         public OccupantKind Kind { get { return data.GetKind(); } }
 
         public Direction Direction { get { return data.GetDirection(); } }
+
+        public static Occupant MakeCatalyst(Color color, Direction direction)
+        {
+            return new Occupant(OccupantKind.Catalyst, color, direction);
+        }
+
+        public static Occupant MakeEnemy(Color color)
+        {
+            return new Occupant(OccupantKind.Enemy, color, Direction.None);
+        }
+
+        public bool Equals(Occupant other)
+        {
+            return this.data == other.data;
+        }
     }
 
     public struct Loc
@@ -133,207 +148,6 @@ namespace FF2.Core
                 default:
                     throw new ArgumentException("unexpected Direction: " + direction);
             }
-        }
-    }
-
-    public sealed class Grid : IDisposable
-    {
-        public readonly int Width;
-        public readonly int Height;
-        private readonly Memory<Occupant> cells;
-        private readonly IMemoryOwner<Occupant> owner;
-
-        private Grid(int width, int height)
-        {
-            this.Width = width;
-            this.Height = height;
-            int size = width * height;
-            this.owner = MemoryPool<Occupant>.Shared.Rent(size);
-            this.cells = owner.Memory.Slice(0, size);
-            this.cells.Span.Fill(Occupant.None);
-        }
-
-        public static Grid Create(int width, int height)
-        {
-            return new Grid(width, height);
-        }
-
-        public Grid Clone()
-        {
-            var clone = new Grid(this.Width, this.Height);
-            this.cells.CopyTo(clone.cells);
-            return clone;
-        }
-
-        public int Index(Loc loc)
-        {
-            return loc.Y * Width + loc.X;
-        }
-
-        public bool InBounds(Loc loc)
-        {
-            return loc.X >= 0 && loc.Y >= 0 && loc.X < Width && loc.Y < Height;
-        }
-
-        public Occupant Get(Loc loc)
-        {
-            return cells.Span[Index(loc)];
-        }
-
-        public void Set(Loc loc, Occupant occ)
-        {
-            cells.Span[Index(loc)] = occ;
-        }
-
-        public void Dispose()
-        {
-            owner.Dispose();
-        }
-
-        public bool Fall()
-        {
-            return GridFallAlgorithm.Fall(this);
-        }
-    }
-
-    static class GridFallAlgorithm
-    {
-        enum BlockedFlag : int
-        {
-            Unsure = 0,
-            Blocked = 1,
-            Unblocked = 2,
-        }
-
-        public static bool Fall(Grid grid)
-        {
-            int size = grid.Width * grid.Height;
-
-            using var blockedFlagOwner = MemoryPool<BlockedFlag>.Shared.Rent(size);
-            var results = blockedFlagOwner.Memory.Slice(0, size).Span;
-            results.Fill(BlockedFlag.Unsure);
-
-            using var assumeUnblockedOwner = MemoryPool<bool>.Shared.Rent(size);
-            var assumeUnblocked = assumeUnblockedOwner.Memory.Slice(0, size).Span;
-            assumeUnblocked.Fill(false);
-
-            CalcBlocked(grid, results, assumeUnblocked);
-
-            return ApplyResults(grid, results);
-        }
-
-        private static void CalcBlocked(Grid grid, Span<BlockedFlag> results, Span<bool> assumeUnblocked)
-        {
-            for (int y = 0; y < grid.Height; y++)
-            {
-                for (int x = 0; x < grid.Width; x++)
-                {
-                    var loc = new Loc(x, y);
-                    bool blocked = IsBlocked(grid, results, assumeUnblocked, loc);
-                    results[grid.Index(loc)] = blocked ? BlockedFlag.Blocked : BlockedFlag.Unblocked;
-                }
-            }
-        }
-
-        /// <summary>
-        /// Determine whether the given <param name="loc"> is blocked.
-        /// Some trivial cases are
-        /// * a vacant loc is unblocked
-        /// * a normal enemy is blocked (it never moves)
-        /// The non-trivial case is to assume that the loc is unblocked and recursively check
-        /// that all of the <see cref="FallDependencies(Occupant)"/> are also unblocked.
-        /// </summary>
-        /// <param name="results">
-        /// Contains the information we learned from checking previous Locs.
-        /// This is read-only because it should only be updated when <paramref name="assumeUnblocked"/> is empty,
-        /// which is done at the site of the outermost (non-recursive) call.
-        /// </param>
-        private static bool IsBlocked(Grid grid, ReadOnlySpan<BlockedFlag> results, Span<bool> assumeUnblocked, Loc loc)
-        {
-            if (!grid.InBounds(loc))
-            {
-                return true; // can't fall off the grid
-            }
-
-            var idx = grid.Index(loc);
-            if (assumeUnblocked[idx])
-            {
-                return false;
-            }
-            switch (results[idx])
-            {
-                case BlockedFlag.Blocked: return true;
-                case BlockedFlag.Unblocked: return false;
-            }
-
-            var occ = grid.Get(loc);
-            var kind = occ.Kind;
-            switch (kind)
-            {
-                case OccupantKind.None:
-                    return false;
-                // This code should support falling Enemies. Set their Direction==Down and try it out.
-                case OccupantKind.Enemy:
-                case OccupantKind.Catalyst:
-                    var temp = assumeUnblocked[idx];
-                    assumeUnblocked[idx] = true;
-
-                    bool isBlocked = false;
-                    var deps = FallDependencies(occ);
-                    foreach (var dir in Lists.Directions.DRLU)
-                    {
-                        if (deps.HasFlag(dir))
-                        {
-                            isBlocked = isBlocked || IsBlocked(grid, results, assumeUnblocked, loc.Neighbor(dir));
-                        }
-                    }
-
-                    assumeUnblocked[idx] = temp;
-                    return deps != Direction.None && isBlocked;
-                default:
-                    throw new InvalidOperationException("unexpected OccupantKind: " + kind);
-            }
-        }
-
-        /// <summary>
-        /// Returns all the Directions (as a single enum value) that must be unblocked
-        /// in order for the given Occupant to fall.
-        /// </summary>
-        static Direction FallDependencies(Occupant occ)
-        {
-            var dir = occ.Direction;
-            switch (occ.Kind)
-            {
-                case OccupantKind.Catalyst:
-                    dir = dir | Direction.Down;
-                    break;
-            }
-
-            return dir;
-        }
-
-        static bool ApplyResults(Grid grid, ReadOnlySpan<BlockedFlag> results)
-        {
-            bool any = false;
-
-            for (int y = 1; y < grid.Height; y++)
-            {
-                for (int x = 0; x < grid.Width; x++)
-                {
-                    var loc = new Loc(x, y);
-                    var occ = grid.Get(loc);
-
-                    if (occ.Kind != OccupantKind.None
-                        && results[grid.Index(loc)] == BlockedFlag.Unblocked)
-                    {
-                        grid.Set(loc.Neighbor(Direction.Down), occ);
-                        grid.Set(loc, Occupant.None);
-                        any = true;
-                    }
-                }
-            }
-
-            return any;
         }
     }
 }

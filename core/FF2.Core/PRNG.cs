@@ -84,6 +84,26 @@ namespace FF2.Core
             SetState(state);
         }
 
+        private static readonly Random seeder = new Random();
+        private static long GetSeed(long limit)
+        {
+            return (long)(seeder.NextDouble() * (limit - 1));
+        }
+        public static PRNG Create()
+        {
+            var state = new State(GetSeed(m1), GetSeed(m1), GetSeed(m1), GetSeed(m2), GetSeed(m2), GetSeed(m2));
+            try
+            {
+                return new PRNG(state);
+            }
+            catch (ArgumentException)
+            {
+                // This exception should be ****Extremely**** unlikely (getting s10,s11,s12 all zero),
+                // but it is still technically possible
+                return Create();
+            }
+        }
+
         /// <returns>A pseudorandom double N such that 0 &lt; N &lt; 1</returns>
         public double NextDouble()
         {
@@ -119,15 +139,6 @@ namespace FF2.Core
             }
 
             return (int)(NextDouble() * maxValue);
-        }
-
-        private static ulong StaffordMix(ulong z)
-        {
-            z = (z ^ (z >> 30)) * 0xbf58476d1ce4e5b9;
-            z = (z ^ (z >> 27)) * 0x94d049bb133111eb;
-            // This is necessary in Java to guarantee that we return a positive number
-            z = (z >> 1) ^ (z >> 32);
-            return z;
         }
 
         public struct State
