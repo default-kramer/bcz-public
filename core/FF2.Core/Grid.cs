@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Buffers;
 using System.Collections.Generic;
 using System.Linq;
@@ -70,7 +70,7 @@ namespace FF2.Core
 
         public bool IsVacant(Loc loc)
         {
-            return Get(loc).Equals(Occupant.None);
+            return Get(loc) == Occupant.None;
         }
 
         public void Dispose()

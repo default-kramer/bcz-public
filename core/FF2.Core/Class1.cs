@@ -79,7 +79,7 @@ namespace FF2.Core
         }
     }
 
-    public struct Occupant : IEquatable<Occupant>
+    public struct Occupant
     {
         private readonly Bits data;
 
@@ -116,9 +116,24 @@ namespace FF2.Core
             return new Occupant(OccupantKind.Enemy, color, Direction.None);
         }
 
-        public bool Equals(Occupant other)
+        public static bool operator ==(Occupant a, Occupant b)
         {
-            return this.data == other.data;
+            return a.data == b.data;
+        }
+
+        public static bool operator !=(Occupant a, Occupant b)
+        {
+            return a.data != b.data;
+        }
+
+        public override bool Equals(object? obj)
+        {
+            return obj is Occupant other && this == other;
+        }
+
+        public override int GetHashCode()
+        {
+            return data.GetHashCode();
         }
     }
 
