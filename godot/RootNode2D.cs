@@ -133,11 +133,6 @@ public class RootNode2D : Node2D
     int sign = -1;
     public override void _Process(float delta)
     {
-        if (Input.IsKeyPressed((int)KeyList.J))
-        {
-            State.Plummet();
-        }
-
         if (frames % 10 == 0)
         {
             // TODO obviously we should be doing something else here
@@ -153,5 +148,33 @@ public class RootNode2D : Node2D
         }
 
         this.Update();
+    }
+
+    public override void _UnhandledKeyInput(InputEventKey @event)
+    {
+        Console.WriteLine("KEY");
+        var e = @event;
+
+        bool refresh = false;
+        if (e.Pressed)
+        {
+            if (e.Scancode == (int)KeyList.A)
+            {
+                refresh = State.Move(Direction.Left);
+            }
+            if (e.Scancode == (int)KeyList.D)
+            {
+                refresh = State.Move(Direction.Right);
+            }
+            if (e.Scancode == (int)KeyList.H)
+            {
+                refresh = State.Plummet();
+            }
+        }
+
+        if (refresh)
+        {
+            this.Update();
+        }
     }
 }

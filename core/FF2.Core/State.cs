@@ -72,6 +72,17 @@ namespace FF2.Core
             if (loc == LocB) { return OccB; }
             return null;
         }
+
+        public M2? Translate(Direction dir, Grid grid)
+        {
+            var a = LocA.Neighbor(dir);
+            var b = LocB.Neighbor(dir);
+            if (grid.InBounds(a) && grid.InBounds(b))
+            {
+                return new M2(a, OccA, b, OccB);
+            }
+            return null;
+        }
     }
 
     public sealed class State : IDisposable
@@ -101,9 +112,9 @@ namespace FF2.Core
         static State()
         {
             var temp = new List<DeckItem>();
-            foreach(var color in Lists.Colors.RYB)
+            foreach (var color in Lists.Colors.RYB)
             {
-                foreach(var color2 in Lists.Colors.RYB)
+                foreach (var color2 in Lists.Colors.RYB)
                 {
                     temp.Add(ValueTuple.Create(color, color2));
                 }
@@ -194,6 +205,30 @@ namespace FF2.Core
         {
             grid.Dispose();
             spawnDeck.Dispose();
+        }
+
+        public bool Move(Direction dir)
+        {
+            if (!mover.HasValue)
+            {
+                return false;
+            }
+            var m = mover.Value;
+
+            switch (dir)
+            {
+                case Direction.Left:
+                case Direction.Right:
+                    var translated = m.Translate(dir, grid);
+                    if (translated.HasValue)
+                    {
+                        mover = translated.Value;
+                        return true;
+                    }
+                    return false;
+            }
+
+            return false;
         }
     }
 }
