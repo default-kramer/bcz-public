@@ -18,8 +18,9 @@ namespace FF2.Core
     {
         public readonly int Width;
         public readonly int Height;
-        private readonly Memory<Occupant> cells;
-        private readonly IMemoryOwner<Occupant> owner;
+        private readonly Occupant[] cells;
+        private readonly GridFallHelper.BlockedFlag[] blockedFlagBuffer;
+        private readonly bool[] assumeUnblockedBuffer;
 
         int IReadOnlyGrid.Width => this.Width;
         int IReadOnlyGrid.Height => this.Height;
@@ -29,9 +30,9 @@ namespace FF2.Core
             this.Width = width;
             this.Height = height;
             int size = width * height;
-            this.owner = MemoryPool<Occupant>.Shared.Rent(size);
-            this.cells = owner.Memory.Slice(0, size);
-            this.cells.Span.Fill(Occupant.None);
+            this.cells = new Occupant[size];
+            this.blockedFlagBuffer = new GridFallHelper.BlockedFlag[size];
+            this.assumeUnblockedBuffer = new bool[size];
         }
 
         public static Grid Create(int width, int height)
@@ -54,7 +55,7 @@ namespace FF2.Core
         public Grid Clone()
         {
             var clone = new Grid(this.Width, this.Height);
-            this.cells.CopyTo(clone.cells);
+            this.cells.AsSpan().CopyTo(clone.cells);
             return clone;
         }
 
@@ -70,12 +71,12 @@ namespace FF2.Core
 
         public Occupant Get(Loc loc)
         {
-            return cells.Span[Index(loc)];
+            return cells[Index(loc)];
         }
 
         public void Set(Loc loc, Occupant occ)
         {
-            cells.Span[Index(loc)] = occ;
+            cells[Index(loc)] = occ;
         }
 
         public bool IsVacant(Loc loc)
@@ -83,14 +84,11 @@ namespace FF2.Core
             return Get(loc) == Occupant.None;
         }
 
-        public void Dispose()
-        {
-            owner.Dispose();
-        }
+        public void Dispose() { }
 
         public bool Fall()
         {
-            return GridFallHelper.Fall(this);
+            return GridFallHelper.Fall(this, blockedFlagBuffer, assumeUnblockedBuffer);
         }
 
         public bool Destroy()

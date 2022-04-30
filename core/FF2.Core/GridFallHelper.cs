@@ -9,23 +9,16 @@ namespace FF2.Core
 {
     static class GridFallHelper
     {
-        enum BlockedFlag : int
+        public enum BlockedFlag : int
         {
             Unsure = 0,
             Blocked = 1,
             Unblocked = 2,
         }
 
-        public static bool Fall(Grid grid)
+        public static bool Fall(Grid grid, Span<BlockedFlag> results, Span<bool> assumeUnblocked)
         {
-            int size = grid.Width * grid.Height;
-
-            using var blockedFlagOwner = MemoryPool<BlockedFlag>.Shared.Rent(size);
-            var results = blockedFlagOwner.Memory.Slice(0, size).Span;
             results.Fill(BlockedFlag.Unsure);
-
-            using var assumeUnblockedOwner = MemoryPool<bool>.Shared.Rent(size);
-            var assumeUnblocked = assumeUnblockedOwner.Memory.Slice(0, size).Span;
             assumeUnblocked.Fill(false);
 
             CalcBlocked(grid, results, assumeUnblocked);
@@ -40,7 +33,12 @@ namespace FF2.Core
                 for (int x = 0; x < grid.Width; x++)
                 {
                     var loc = new Loc(x, y);
-                    bool blocked = IsBlocked(grid, results, assumeUnblocked, loc);
+                    // IsBlocked(...) is a recursive function.
+                    // This outermost call is the only level of recursion where assumeUnblocked is empty,
+                    // and it is only when assumeUnblocked is empty that we want to update the results array.
+                    // So we pass it as a ReadOnlySpan to guarantee this.
+                    ReadOnlySpan<BlockedFlag> readOnlyResults = results;
+                    bool blocked = IsBlocked(grid, readOnlyResults, assumeUnblocked, loc);
                     results[grid.Index(loc)] = blocked ? BlockedFlag.Blocked : BlockedFlag.Unblocked;
                 }
             }
@@ -54,11 +52,6 @@ namespace FF2.Core
         /// The non-trivial case is to assume that the loc is unblocked and recursively check
         /// that all of its dependencies are also unblocked.
         /// </summary>
-        /// <param name="results">
-        /// Contains the information we learned from checking previous Locs.
-        /// This is read-only because it should only be updated when <paramref name="assumeUnblocked"/> is empty,
-        /// which is done at the site of the outermost (non-recursive) call.
-        /// </param>
         private static bool IsBlocked(Grid grid, ReadOnlySpan<BlockedFlag> results, Span<bool> assumeUnblocked, Loc loc)
         {
             if (!grid.InBounds(loc))

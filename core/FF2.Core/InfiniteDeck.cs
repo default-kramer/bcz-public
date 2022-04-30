@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Buffers;
 using System.Collections.Generic;
 using System.Linq;
@@ -21,9 +21,9 @@ namespace FF2.Core
 
         public InfiniteDeck(IReadOnlyList<T> deck, PRNG prng)
         {
-            shuffle = ArrayPool<T>.Shared.Rent(deck.Count * 2);
-            this.index = 0;
             this.prng = prng;
+            this.shuffle = new T[deck.Count * 2];
+            this.index = 0;
 
             for (int i = 0; i < shuffle.Length; i++)
             {
@@ -38,7 +38,7 @@ namespace FF2.Core
             Span<T> otherSpan = other.shuffle; // retype as Span
 
             this.prng = other.prng.Clone();
-            this.shuffle = ArrayPool<T>.Shared.Rent(otherSpan.Length);
+            this.shuffle = new T[otherSpan.Length];
             otherSpan.CopyTo(this.shuffle);
             this.index = other.index;
         }
@@ -96,15 +96,6 @@ namespace FF2.Core
             }
         }
 
-        public void Dispose()
-        {
-            if (shuffle != null)
-            {
-                ArrayPool<T>.Shared.Return(shuffle);
-#pragma warning disable CS8625 // Cannot convert null literal to non-nullable reference type.
-                shuffle = null;
-#pragma warning restore CS8625 // Cannot convert null literal to non-nullable reference type.
-            }
-        }
+        public void Dispose() { }
     }
 }

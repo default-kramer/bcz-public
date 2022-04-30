@@ -1,4 +1,4 @@
-﻿using FF2.Core;
+using FF2.Core;
 using Godot;
 using System;
 
