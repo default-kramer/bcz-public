@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 
 namespace FF2.Core
 {
@@ -82,6 +82,11 @@ namespace FF2.Core
         public PRNG(State state)
         {
             SetState(state);
+        }
+
+        public PRNG Clone()
+        {
+            return new PRNG(GetState());
         }
 
         private static readonly Random seeder = new Random();

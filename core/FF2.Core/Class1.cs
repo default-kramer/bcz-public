@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Chess engines have an easy way to Make and Unmake a move.
  * All you need to store is (from-loc, to-loc, captured-piece).
  * But this game does not have that property.
@@ -77,6 +77,11 @@ namespace FF2.Core
         {
             return (Direction)(val & Direction1);
         }
+
+        public static Bits SetDirection(this Bits val, Direction dir)
+        {
+            return (val & Direction0) | (Bits)dir;
+        }
     }
 
     public struct Occupant
@@ -106,6 +111,11 @@ namespace FF2.Core
 
         public Direction Direction { get { return data.GetDirection(); } }
 
+        public Occupant SetDirection(Direction direction)
+        {
+            return new Occupant(this.data.SetDirection(direction));
+        }
+
         public static Occupant MakeCatalyst(Color color, Direction direction)
         {
             return new Occupant(OccupantKind.Catalyst, color, direction);
@@ -134,35 +144,6 @@ namespace FF2.Core
         public override int GetHashCode()
         {
             return data.GetHashCode();
-        }
-    }
-
-    public struct Loc
-    {
-        public readonly int X;
-        public readonly int Y;
-
-        public Loc(int x, int y)
-        {
-            this.X = x;
-            this.Y = y;
-        }
-
-        public Loc Neighbor(Direction direction)
-        {
-            switch (direction)
-            {
-                case Direction.Up:
-                    return new Loc(X, Y + 1);
-                case Direction.Right:
-                    return new Loc(X + 1, Y);
-                case Direction.Down:
-                    return new Loc(X, Y - 1);
-                case Direction.Left:
-                    return new Loc(X - 1, Y);
-                default:
-                    throw new ArgumentException("unexpected Direction: " + direction);
-            }
         }
     }
 }

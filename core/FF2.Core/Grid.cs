@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Buffers;
 using System.Collections.Generic;
 using System.Linq;
@@ -7,12 +7,22 @@ using System.Threading.Tasks;
 
 namespace FF2.Core
 {
-    public sealed partial class Grid : IDisposable
+    public interface IReadOnlyGrid
+    {
+        int Width { get; }
+        int Height { get; }
+        Occupant Get(Loc loc);
+    }
+
+    public sealed partial class Grid : IReadOnlyGrid, IDisposable
     {
         public readonly int Width;
         public readonly int Height;
         private readonly Memory<Occupant> cells;
         private readonly IMemoryOwner<Occupant> owner;
+
+        int IReadOnlyGrid.Width => this.Width;
+        int IReadOnlyGrid.Height => this.Height;
 
         private Grid(int width, int height)
         {
@@ -81,6 +91,11 @@ namespace FF2.Core
         public bool Fall()
         {
             return GridFallHelper.Fall(this);
+        }
+
+        public bool Destroy()
+        {
+            return false;
         }
     }
 }
