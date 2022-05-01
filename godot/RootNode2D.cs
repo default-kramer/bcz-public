@@ -137,7 +137,10 @@ public class RootNode2D : Node2D
         {
             // TODO obviously we should be doing something else here
             var ugly = State.Tick() || State.Tick() || State.Tick();
-            if (ugly) { this.Update(); }
+            if (ugly)
+            {
+                this.Update();
+            }
         }
 
         frames++;
@@ -145,9 +148,8 @@ public class RootNode2D : Node2D
         {
             sign = sign * -1;
             frames = 0;
+            this.Update();
         }
-
-        this.Update();
     }
 
     public override void _UnhandledKeyInput(InputEventKey @event)

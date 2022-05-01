@@ -19,14 +19,14 @@ namespace FF2.Core
         Unreachable = int.MaxValue,
     }
 
-    public struct M2
+    public struct Mover
     {
         public readonly Loc LocA;
         public readonly Loc LocB;
         public readonly Occupant OccA;
         public readonly Occupant OccB;
 
-        public M2(Loc locA, Occupant occA, Loc locB, Occupant occB)
+        public Mover(Loc locA, Occupant occA, Loc locB, Occupant occB)
         {
             this.LocA = locA;
             this.OccA = occA;
@@ -34,7 +34,7 @@ namespace FF2.Core
             this.OccB = occB;
         }
 
-        public bool Translate(int amount, Grid grid, out M2 result)
+        public bool Translate(int amount, Grid grid, out Mover result)
         {
             var x1 = LocA.X;
             var x2 = LocB.X;
@@ -46,11 +46,11 @@ namespace FF2.Core
                 return false;
             }
 
-            result = new M2(new Loc(x1, LocA.Y), OccA, new Loc(x2, LocB.Y), OccB);
+            result = new Mover(new Loc(x1, LocA.Y), OccA, new Loc(x2, LocB.Y), OccB);
             return true;
         }
 
-        public M2 PreviewPlummet(Grid grid)
+        public Mover PreviewPlummet(Grid grid)
         {
             var a = LocA;
             var b = LocB;
@@ -63,7 +63,7 @@ namespace FF2.Core
             a = a.Neighbor(Direction.Up);
             b = b.Neighbor(Direction.Up);
 
-            return new M2(a, OccA, b, OccB);
+            return new Mover(a, OccA, b, OccB);
         }
 
         public Occupant? GetOcc(Loc loc)
@@ -73,13 +73,13 @@ namespace FF2.Core
             return null;
         }
 
-        public M2? Translate(Direction dir, Grid grid)
+        public Mover? Translate(Direction dir, Grid grid)
         {
             var a = LocA.Neighbor(dir);
             var b = LocB.Neighbor(dir);
             if (grid.InBounds(a) && grid.InBounds(b))
             {
-                return new M2(a, OccA, b, OccB);
+                return new Mover(a, OccA, b, OccB);
             }
             return null;
         }
@@ -90,7 +90,7 @@ namespace FF2.Core
         private readonly Grid grid;
         private readonly InfiniteDeck<DeckItem> spawnDeck;
 
-        private M2? mover;
+        private Mover? mover;
 
         /// <summary>
         /// Holds the action that will be attempted on the next <see cref="Tick"/>.
@@ -145,7 +145,7 @@ namespace FF2.Core
             var occB = Occupant.MakeCatalyst(colors.Item2, Direction.Left);
             var locA = new Loc(grid.Width / 2 - 1, grid.Height - 1);
             var locB = locA.Neighbor(Direction.Right);
-            mover = new M2(locA, occA, locB, occB);
+            mover = new Mover(locA, occA, locB, occB);
             return true;
         }
 
@@ -170,7 +170,7 @@ namespace FF2.Core
             }
         }
 
-        public M2? PreviewPlummet()
+        public Mover? PreviewPlummet()
         {
             return mover?.PreviewPlummet(grid);
         }
