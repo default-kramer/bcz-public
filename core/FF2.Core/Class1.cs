@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Chess engines have an easy way to Make and Unmake a move.
  * All you need to store is (from-loc, to-loc, captured-piece).
  * But this game does not have that property.

@@ -12,6 +12,10 @@ namespace FF2.Core
         int Width { get; }
         int Height { get; }
         Occupant Get(Loc loc);
+
+        int Index(Loc loc);
+
+        bool InBounds(Loc loc);
     }
 
     public sealed partial class Grid : IReadOnlyGrid, IDisposable
@@ -21,6 +25,7 @@ namespace FF2.Core
         private readonly Occupant[] cells;
         private readonly GridFallHelper.BlockedFlag[] blockedFlagBuffer;
         private readonly bool[] assumeUnblockedBuffer;
+        private readonly GridDestroyHelper.Group[] groupsBuffer;
 
         int IReadOnlyGrid.Width => this.Width;
         int IReadOnlyGrid.Height => this.Height;
@@ -33,6 +38,7 @@ namespace FF2.Core
             this.cells = new Occupant[size];
             this.blockedFlagBuffer = new GridFallHelper.BlockedFlag[size];
             this.assumeUnblockedBuffer = new bool[size];
+            this.groupsBuffer = new GridDestroyHelper.Group[size];
         }
 
         public static Grid Create(int width, int height)
@@ -93,7 +99,7 @@ namespace FF2.Core
 
         public bool Destroy()
         {
-            return false;
+            return new GridDestroyHelper(this, groupsBuffer).Execute(this);
         }
     }
 }
