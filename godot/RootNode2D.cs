@@ -154,7 +154,6 @@ public class RootNode2D : Node2D
 
     public override void _UnhandledKeyInput(InputEventKey @event)
     {
-        Console.WriteLine("KEY");
         var e = @event;
 
         bool refresh = false;
