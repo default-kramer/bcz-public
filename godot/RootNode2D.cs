@@ -152,30 +152,30 @@ public class RootNode2D : Node2D
         }
     }
 
-    public override void _UnhandledKeyInput(InputEventKey @event)
+    public override void _UnhandledKeyInput(InputEventKey e)
     {
-        var e = @event;
-
-        bool refresh = false;
-        if (e.Pressed)
-        {
-            if (e.Scancode == (int)KeyList.A)
-            {
-                refresh = State.Move(Direction.Left);
-            }
-            if (e.Scancode == (int)KeyList.D)
-            {
-                refresh = State.Move(Direction.Right);
-            }
-            if (e.Scancode == (int)KeyList.H)
-            {
-                refresh = State.Plummet();
-            }
-        }
-
-        if (refresh)
+        if (e.Pressed && HandleInput((KeyList)e.Scancode))
         {
             this.Update();
         }
+    }
+
+    private bool HandleInput(KeyList scancode)
+    {
+        switch (scancode)
+        {
+            case KeyList.A:
+                return State.Move(Direction.Left);
+            case KeyList.D:
+                return State.Move(Direction.Right);
+            case KeyList.J:
+                return State.Rotate(clockwise: true);
+            case KeyList.K:
+                return State.Rotate(clockwise: false);
+            case KeyList.H:
+                return State.Plummet();
+        }
+
+        return false;
     }
 }

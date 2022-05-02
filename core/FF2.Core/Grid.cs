@@ -16,6 +16,8 @@ namespace FF2.Core
         int Index(Loc loc);
 
         bool InBounds(Loc loc);
+
+        bool IsVacant(Loc loc);
     }
 
     public sealed partial class Grid : IReadOnlyGrid, IDisposable

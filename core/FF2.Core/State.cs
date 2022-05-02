@@ -19,72 +19,6 @@ namespace FF2.Core
         Unreachable = int.MaxValue,
     }
 
-    public struct Mover
-    {
-        public readonly Loc LocA;
-        public readonly Loc LocB;
-        public readonly Occupant OccA;
-        public readonly Occupant OccB;
-
-        public Mover(Loc locA, Occupant occA, Loc locB, Occupant occB)
-        {
-            this.LocA = locA;
-            this.OccA = occA;
-            this.LocB = locB;
-            this.OccB = occB;
-        }
-
-        public bool Translate(int amount, Grid grid, out Mover result)
-        {
-            var x1 = LocA.X;
-            var x2 = LocB.X;
-            x1 += amount;
-            x2 += amount;
-            if (x1 < 0 || x2 < 0 || x1 >= grid.Width || x2 >= grid.Width)
-            {
-                result = this;
-                return false;
-            }
-
-            result = new Mover(new Loc(x1, LocA.Y), OccA, new Loc(x2, LocB.Y), OccB);
-            return true;
-        }
-
-        public Mover PreviewPlummet(Grid grid)
-        {
-            var a = LocA;
-            var b = LocB;
-            while (a.Y >= 0 && b.Y >= 0 && grid.IsVacant(a) && grid.IsVacant(b))
-            {
-                a = a.Neighbor(Direction.Down);
-                b = b.Neighbor(Direction.Down);
-            }
-
-            a = a.Neighbor(Direction.Up);
-            b = b.Neighbor(Direction.Up);
-
-            return new Mover(a, OccA, b, OccB);
-        }
-
-        public Occupant? GetOcc(Loc loc)
-        {
-            if (loc == LocA) { return OccA; }
-            if (loc == LocB) { return OccB; }
-            return null;
-        }
-
-        public Mover? Translate(Direction dir, Grid grid)
-        {
-            var a = LocA.Neighbor(dir);
-            var b = LocB.Neighbor(dir);
-            if (grid.InBounds(a) && grid.InBounds(b))
-            {
-                return new Mover(a, OccA, b, OccB);
-            }
-            return null;
-        }
-    }
-
     public sealed class State : IDisposable
     {
         private readonly Grid grid;
@@ -143,7 +77,7 @@ namespace FF2.Core
             var colors = spawnDeck.Pop();
             var occA = Occupant.MakeCatalyst(colors.Item1, Direction.Right);
             var occB = Occupant.MakeCatalyst(colors.Item2, Direction.Left);
-            var locA = new Loc(grid.Width / 2 - 1, grid.Height - 1);
+            var locA = new Loc(grid.Width / 2 - 1, 0);
             var locB = locA.Neighbor(Direction.Right);
             mover = new Mover(locA, occA, locB, occB);
             return true;
@@ -187,6 +121,10 @@ namespace FF2.Core
             {
                 m = m.PreviewPlummet(grid);
             }
+            else
+            {
+                m = m.ToTop(grid.Height);
+            }
             grid.Set(m.LocA, m.OccA);
             grid.Set(m.LocB, m.OccB);
 
@@ -219,7 +157,7 @@ namespace FF2.Core
             {
                 case Direction.Left:
                 case Direction.Right:
-                    var translated = m.Translate(dir, grid);
+                    var translated = m.Translate(dir, grid.Width);
                     if (translated.HasValue)
                     {
                         mover = translated.Value;
@@ -229,6 +167,16 @@ namespace FF2.Core
             }
 
             return false;
+        }
+
+        public bool Rotate(bool clockwise)
+        {
+            if (!mover.HasValue)
+            {
+                return false;
+            }
+            mover = mover.Value.Rotate(clockwise, grid.Width);
+            return true;
         }
     }
 }

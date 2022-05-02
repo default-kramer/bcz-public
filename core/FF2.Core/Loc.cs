@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -17,18 +17,23 @@ namespace FF2.Core
             this.Y = y;
         }
 
+        public Loc Add(int x, int y)
+        {
+            return new Loc(this.X + x, this.Y + y);
+        }
+
         public Loc Neighbor(Direction direction)
         {
             switch (direction)
             {
                 case Direction.Up:
-                    return new Loc(X, Y + 1);
+                    return Add(0, 1);
                 case Direction.Right:
-                    return new Loc(X + 1, Y);
+                    return Add(1, 0);
                 case Direction.Down:
-                    return new Loc(X, Y - 1);
+                    return Add(0, -1);
                 case Direction.Left:
-                    return new Loc(X - 1, Y);
+                    return Add(-1, 0);
                 default:
                     throw new ArgumentException("unexpected Direction: " + direction);
             }
