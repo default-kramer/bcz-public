@@ -1,4 +1,4 @@
-[gd_scene load_steps=7 format=2]
+[gd_scene load_steps=9 format=2]
 
 [ext_resource path="res://test.bmp" type="Texture" id=1]
 [ext_resource path="res://RootNode2D.tscn" type="PackedScene" id=2]
@@ -284,6 +284,46 @@ shader_param/clip_warp = false
 shader_param/vignette_intensity = 0.4
 shader_param/vignette_opacity = 0.5
 
+[sub_resource type="Shader" id=7]
+code = "shader_type canvas_item;
+
+const vec4 corruptColor = vec4(0.337, 0.161, 0.098, 1.0);
+
+void fragment() {
+    float timmy = smoothstep(-1.0, 1.0, sin(TIME * 5.0));
+    vec2 dist = abs(UV - vec2(0.5, 0.5));
+    vec4 color = texture(TEXTURE, UV);
+
+    // TESTING the contrast on possible other colors
+    float asdf = mod(TIME, 15.0);
+    if (asdf < 5.0) {
+        color = vec4(color.b, 0.22, 0.47, color.a);
+    } else if (asdf < 10.0) {
+        color = vec4(color.b, color.b, 0.42, color.a);
+    } else {
+        color = vec4(0.0, 0.58, color.b, color.a);
+    }
+
+    float corruption = max(dist.x, dist.y) * 2.0; // uniform range: 0.0 at center to 1.0 at edge/corner
+    corruption = dist.x + dist.y; // just kidding, let's go diagonal instead
+    corruption = 1.0 - corruption;
+    corruption += 0.02 * timmy;
+    corruption = smoothstep(0.7, 0.9, corruption);
+    color = mix(color, corruptColor, corruption);
+
+    // Make the center glow a little.
+    // This looks fine when it's huge, but off-center when it's small.
+    // Also looks bad against red...
+    float glow = 1.0 - smoothstep(0, 0.25, dist.x + dist.y);
+    glow *= (0.8 + timmy * 0.2);
+    //color = mix(color, corruptColor * (1.0 + glow * 0.4), glow);
+
+    COLOR = color;
+}"
+
+[sub_resource type="ShaderMaterial" id=8]
+shader = SubResource( 7 )
+
 [node name="Node" type="Node"]
 
 [node name="Test" type="Sprite" parent="."]
@@ -299,3 +339,8 @@ material = SubResource( 2 )
 anchor_right = 1.0
 anchor_bottom = 1.0
 color = Color( 1, 1, 1, 0 )
+
+[node name="Test2" type="Sprite" parent="."]
+material = SubResource( 8 )
+position = Vector2( 602.75, 111.75 )
+texture = ExtResource( 1 )
