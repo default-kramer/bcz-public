@@ -1,16 +1,21 @@
 using FF2.Core;
+using FF2.Godot;
 using Godot;
 using System;
-
+using System.Collections.Generic;
 using Color = FF2.Core.Color;
 
 public class GridViewerControl : Control
 {
     public State State { get; set; }
     private IReadOnlyGrid grid { get { return State.Grid; } }
+    private TrackedSprite[] activeSprites = new TrackedSprite[400]; // should be way more than we need
+
+    private SpritePool spritePool;
 
     public override void _Ready()
     {
+        spritePool = new SpritePool(this, SpriteKind.Single);
     }
 
     public override void _Draw()
@@ -40,6 +45,13 @@ public class GridViewerControl : Control
                 var screenY = canvasY * screenCellSize + extraY / 2;
                 var screenX = x * screenCellSize + extraX / 2;
 
+                var index = grid.Index(loc);
+                var previousSprite = activeSprites[index];
+                if (previousSprite.Sprite != null)
+                {
+                    spritePool.Return(previousSprite);
+                }
+
                 switch (occ.Kind)
                 {
                     case OccupantKind.Catalyst:
@@ -47,6 +59,10 @@ public class GridViewerControl : Control
                         break;
                     case OccupantKind.Enemy:
                         DrawEnemy(occ, screenX, screenY, screenCellSize);
+                        var sprite = spritePool.Rent(SpriteKind.Single);
+                        activeSprites[index] = sprite;
+                        sprite.Sprite.Position = new Vector2(screenX + screenCellSize / 2, screenY + screenCellSize / 2);
+                        sprite.Sprite.Scale = new Vector2(0.05f, 0.05f);
                         break;
                 }
             }
@@ -131,8 +147,10 @@ public class GridViewerControl : Control
             var ugly = State.Tick() || State.Tick() || State.Tick();
             if (ugly)
             {
-                this.Update();
+                //this.Update();
             }
         }
+
+        this.Update();
     }
 }
