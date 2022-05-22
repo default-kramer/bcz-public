@@ -4,35 +4,27 @@ using System;
 
 using Color = FF2.Core.Color;
 
-public class RootNode2D : Node2D
+public class GridViewerControl : Control
 {
-    private State __state;
-    private State State
-    {
-        get { return __state; }
-        set
-        {
-            __state?.Dispose();
-            __state = value;
-        }
-    }
-
+    public State State { get; set; }
     private IReadOnlyGrid grid { get { return State.Grid; } }
 
-    // Called when the node enters the scene tree for the first time.
     public override void _Ready()
     {
-        State = State.Create(PRNG.Create());
     }
 
     public override void _Draw()
     {
-        //Rotate((float)(frames * sign) / 5000);
+        var fullSize = this.RectSize;
 
-        var rect = this.GetViewportRect();
-        var cellX = rect.Size.x / grid.Width;
-        var cellY = rect.Size.y / grid.Height;
-        var screenCellSize = Math.Min(cellX, cellY);
+        // For debugging, show the excess width/height as brown:
+        DrawRect(new Rect2(0, 0, fullSize), Colors.Brown);
+
+        float screenCellSize = Math.Min(fullSize.x / grid.Width, fullSize.y / grid.Height);
+        float extraX = Math.Max(0, fullSize.x - screenCellSize * grid.Width);
+        float extraY = Math.Max(0, fullSize.y - screenCellSize * grid.Height);
+
+        DrawRect(new Rect2(extraX / 2, extraY / 2, fullSize.x - extraX, fullSize.y - extraY), Colors.Black);
 
         var temp = State.PreviewPlummet();
 
@@ -45,8 +37,8 @@ public class RootNode2D : Node2D
                 var occ = previewOcc ?? grid.Get(loc);
 
                 var canvasY = grid.Height - (y + 1);
-                var screenY = canvasY * screenCellSize;
-                var screenX = x * screenCellSize;
+                var screenY = canvasY * screenCellSize + extraY / 2;
+                var screenX = x * screenCellSize + extraX / 2;
 
                 switch (occ.Kind)
                 {
@@ -124,15 +116,15 @@ public class RootNode2D : Node2D
         }
     }
 
-    private static readonly Godot.Color Yellow = Godot.Colors.Yellow;
-    private static readonly Godot.Color Red = Godot.Colors.Red;
-    private static readonly Godot.Color Blue = Godot.Colors.Blue;
+    private static readonly Godot.Color Yellow = Colors.Yellow;
+    private static readonly Godot.Color Red = Colors.Red;
+    private static readonly Godot.Color Blue = Colors.Blue;
 
-    //  // Called every frame. 'delta' is the elapsed time since the previous frame.
     int frames = 0;
-    int sign = -1;
     public override void _Process(float delta)
     {
+        frames++;
+
         if (frames % 10 == 0)
         {
             // TODO obviously we should be doing something else here
@@ -142,40 +134,5 @@ public class RootNode2D : Node2D
                 this.Update();
             }
         }
-
-        frames++;
-        if (frames >= 60)
-        {
-            sign = sign * -1;
-            frames = 0;
-            this.Update();
-        }
-    }
-
-    public override void _UnhandledKeyInput(InputEventKey e)
-    {
-        if (e.Pressed && HandleInput((KeyList)e.Scancode))
-        {
-            this.Update();
-        }
-    }
-
-    private bool HandleInput(KeyList scancode)
-    {
-        switch (scancode)
-        {
-            case KeyList.A:
-                return State.Move(Direction.Left);
-            case KeyList.D:
-                return State.Move(Direction.Right);
-            case KeyList.J:
-                return State.Rotate(clockwise: true);
-            case KeyList.K:
-                return State.Rotate(clockwise: false);
-            case KeyList.H:
-                return State.Plummet();
-        }
-
-        return false;
     }
 }
