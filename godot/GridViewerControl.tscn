@@ -1,4 +1,4 @@
-[gd_scene load_steps=9 format=2]
+[gd_scene load_steps=17 format=2]
 
 [ext_resource path="res://GridViewerControl.cs" type="Script" id=1]
 [ext_resource path="res://Sprites/joined-d.bmp" type="Texture" id=2]
@@ -7,38 +7,119 @@
 [ext_resource path="res://Sprites/joined-r.bmp" type="Texture" id=5]
 [ext_resource path="res://Sprites/joined-l.bmp" type="Texture" id=6]
 
-[sub_resource type="Shader" id=1]
+[sub_resource type="Shader" id=7]
 code = "shader_type canvas_item;
+
+uniform vec3 my_color;
+uniform float my_alpha;
 
 void fragment() {
     vec4 color = texture(TEXTURE, UV);
-    color.r = 0.1;
-    color.b = 0.2;
+    color.rgb = my_color * color.rgb;
+    color.a = min(color.a, my_alpha);
+    COLOR = color;
+}"
+
+[sub_resource type="ShaderMaterial" id=8]
+shader = SubResource( 7 )
+shader_param/my_color = null
+shader_param/my_alpha = null
+
+[sub_resource type="Shader" id=9]
+code = "shader_type canvas_item;
+
+uniform vec3 my_color;
+uniform float my_alpha;
+
+void fragment() {
+    vec4 color = texture(TEXTURE, UV);
+    color.rgb = my_color * color.rgb;
+    color.a = min(color.a, my_alpha);
+    COLOR = color;
+}"
+
+[sub_resource type="ShaderMaterial" id=10]
+shader = SubResource( 9 )
+shader_param/my_color = null
+shader_param/my_alpha = null
+
+[sub_resource type="Shader" id=5]
+code = "shader_type canvas_item;
+
+uniform vec3 my_color;
+uniform float my_alpha;
+
+void fragment() {
+    vec4 color = texture(TEXTURE, UV);
+    color.rgb = my_color * color.rgb;
+    color.a = min(color.a, my_alpha);
+    COLOR = color;
+}"
+
+[sub_resource type="ShaderMaterial" id=6]
+shader = SubResource( 5 )
+shader_param/my_color = null
+shader_param/my_alpha = null
+
+[sub_resource type="Shader" id=4]
+code = "shader_type canvas_item;
+
+uniform vec3 my_color;
+uniform float my_alpha;
+
+void fragment() {
+    vec4 color = texture(TEXTURE, UV);
+    color.rgb = my_color * color.rgb;
+    color.a = min(color.a, my_alpha);
+    COLOR = color;
+}"
+
+[sub_resource type="ShaderMaterial" id=3]
+shader = SubResource( 4 )
+shader_param/my_color = null
+shader_param/my_alpha = null
+
+[sub_resource type="Shader" id=1]
+code = "shader_type canvas_item;
+
+uniform vec3 my_color;
+uniform float my_alpha;
+
+void fragment() {
+    vec4 color = texture(TEXTURE, UV);
+    color.rgb = my_color * color.rgb;
+    color.a = min(color.a, my_alpha);
     COLOR = color;
 }"
 
 [sub_resource type="ShaderMaterial" id=2]
 shader = SubResource( 1 )
+shader_param/my_color = null
+shader_param/my_alpha = null
 
 [node name="Control" type="Control"]
 margin_right = 40.0
 margin_bottom = 40.0
 script = ExtResource( 1 )
 
-[node name="Joined-d" type="Sprite" parent="."]
+[node name="JoinedDown" type="Sprite" parent="."]
 visible = false
+material = SubResource( 8 )
 texture = ExtResource( 2 )
 
-[node name="Joined-l" type="Sprite" parent="."]
+[node name="JoinedLeft" type="Sprite" parent="."]
 visible = false
+material = SubResource( 10 )
 texture = ExtResource( 6 )
 
-[node name="Joined-r" type="Sprite" parent="."]
+[node name="JoinedRight" type="Sprite" parent="."]
 visible = false
+material = SubResource( 6 )
 texture = ExtResource( 5 )
 
-[node name="Joined-u" type="Sprite" parent="."]
+[node name="JoinedUp" type="Sprite" parent="."]
 visible = false
+material = SubResource( 3 )
 texture = ExtResource( 4 )
 
 [node name="Single" type="Sprite" parent="."]

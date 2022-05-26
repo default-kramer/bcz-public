@@ -7,10 +7,10 @@
 
 (define size 360)
 (define size/2 180)
-(define thickness 20)
-(define thickness/2 10)
-(define body-color (make-color 255 255 255))
-(define border-color (make-color 200 200 200))
+(define thickness 36)
+(define thickness/2 18)
+(define body-color (make-color 215 215 215))
+(define border-color (make-color 255 255 255))
 
 (define (single-catalyst)
   (cc-superimpose
@@ -68,7 +68,7 @@
   (define bgcolor (make-color 0 0 0 0))
   (define (save-bitmap pict filename)
     (let* ([pict (backdrop pict bgcolor)]
-           [bmp (pict->bitmap pict 'unsmoothed)]
+           [bmp (pict->bitmap pict 'aligned)]
            [filename (format "~a~a" directory filename)]
            [quality 100])
       (set! results (cons pict (cons filename results)))

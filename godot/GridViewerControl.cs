@@ -15,7 +15,7 @@ public class GridViewerControl : Control
 
     public override void _Ready()
     {
-        spritePool = new SpritePool(this, SpriteKind.Single);
+        spritePool = new SpritePool(this, SpriteKind.Single, SpriteKind.JoinedUp, SpriteKind.JoinedDown, SpriteKind.JoinedLeft, SpriteKind.JoinedRight);
     }
 
     public override void _Draw()
@@ -28,6 +28,10 @@ public class GridViewerControl : Control
         float screenCellSize = Math.Min(fullSize.x / grid.Width, fullSize.y / grid.Height);
         float extraX = Math.Max(0, fullSize.x - screenCellSize * grid.Width);
         float extraY = Math.Max(0, fullSize.y - screenCellSize * grid.Height);
+
+        // Occupant sprites are always 360x360 pixels
+        float spriteScale = screenCellSize / 360.0f;
+        var spriteScale2 = new Vector2(spriteScale, spriteScale);
 
         DrawRect(new Rect2(extraX / 2, extraY / 2, fullSize.x - extraX, fullSize.y - extraY), Colors.Black);
 
@@ -45,31 +49,79 @@ public class GridViewerControl : Control
                 var screenY = canvasY * screenCellSize + extraY / 2;
                 var screenX = x * screenCellSize + extraX / 2;
 
-                var index = grid.Index(loc);
-                var previousSprite = activeSprites[index];
-                if (previousSprite.Sprite != null)
+                SpriteKind kind = SpriteKind.None;
+                if (occ.Kind == OccupantKind.Catalyst)
                 {
-                    spritePool.Return(previousSprite);
+                    kind = occ.Direction switch
+                    {
+                        Direction.None => SpriteKind.Single,
+                        Direction.Up => SpriteKind.JoinedUp,
+                        Direction.Down => SpriteKind.JoinedDown,
+                        Direction.Left => SpriteKind.JoinedLeft,
+                        Direction.Right => SpriteKind.JoinedRight,
+                        _ => SpriteKind.None,
+                    };
                 }
 
-                switch (occ.Kind)
+                var index = grid.Index(loc);
+                TrackedSprite previousSprite = activeSprites[index];
+                TrackedSprite currentSprite = default(TrackedSprite);
+
+                if (previousSprite.IsSomething)
                 {
-                    case OccupantKind.Catalyst:
-                        DrawCatalyst(occ, screenX, screenY, screenCellSize, previewOcc.HasValue);
-                        break;
-                    case OccupantKind.Enemy:
-                        DrawEnemy(occ, screenX, screenY, screenCellSize);
-                        var sprite = spritePool.Rent(SpriteKind.Single);
-                        activeSprites[index] = sprite;
-                        sprite.Sprite.Position = new Vector2(screenX + screenCellSize / 2, screenY + screenCellSize / 2);
-                        sprite.Sprite.Scale = new Vector2(0.05f, 0.05f);
-                        break;
+                    if (previousSprite.Kind == kind)
+                    {
+                        currentSprite = previousSprite;
+                    }
+                    else
+                    {
+                        spritePool.Return(previousSprite);
+                        activeSprites[index] = default(TrackedSprite);
+                    }
+                }
+
+                if (kind != SpriteKind.None && kind != currentSprite.Kind)
+                {
+                    currentSprite = spritePool.Rent(kind);
+                }
+
+                if (currentSprite.IsSomething)
+                {
+                    activeSprites[index] = currentSprite;
+
+                    var sprite = currentSprite.Sprite;
+                    sprite.Position = new Vector2(screenX + screenCellSize / 2, screenY + screenCellSize / 2);
+                    sprite.Scale = spriteScale2;
+                    var shader = (ShaderMaterial)sprite.Material;
+                    shader.SetShaderParam("my_color", ToVector(occ.Color));
+                    shader.SetShaderParam("my_alpha", previewOcc.HasValue ? 0.5f : 1.0f);
+                }
+                else
+                {
+                    switch (occ.Kind)
+                    {
+                        case OccupantKind.Enemy:
+                            DrawEnemy(occ, screenX, screenY, screenCellSize);
+                            break;
+                    }
                 }
             }
         }
     }
 
-    private static Godot.Color ConvertColor(Color color)
+    private static readonly Godot.Color Red = Godot.Color.Color8(255, 0, 0);
+    private static readonly Godot.Color Blue = Godot.Color.Color8(0, 148, 255);
+    private static readonly Godot.Color Yellow = Godot.Color.Color8(255, 243, 0);
+    private static readonly Vector3 RedV = ToVector(Red);
+    private static readonly Vector3 BlueV = ToVector(Blue);
+    private static readonly Vector3 YellowV = ToVector(Yellow);
+
+    private static Vector3 ToVector(Godot.Color color)
+    {
+        return new Vector3(color.r, color.g, color.b);
+    }
+
+    private static Godot.Color ToColor(Color color)
     {
         return color switch
         {
@@ -80,11 +132,22 @@ public class GridViewerControl : Control
         };
     }
 
+    private static Vector3 ToVector(Color color)
+    {
+        return color switch
+        {
+            Color.Red => RedV,
+            Color.Blue => BlueV,
+            Color.Yellow => YellowV,
+            _ => new Vector3(0.5f, 1.0f, 0.8f) // maybe this will jump out at me
+        };
+    }
+
     private readonly Vector2[] enemyPointBuffer = new Vector2[4];
 
     private void DrawEnemy(Occupant occ, float screenX, float screenY, float screenCellSize)
     {
-        var gColor = ConvertColor(occ.Color);
+        var gColor = ToColor(occ.Color);
         var half = screenCellSize / 2;
         enemyPointBuffer[0] = new Vector2(screenX + half, screenY);
         enemyPointBuffer[1] = new Vector2(screenX + screenCellSize, screenY + half);
@@ -92,49 +155,6 @@ public class GridViewerControl : Control
         enemyPointBuffer[3] = new Vector2(screenX, screenY + half);
         DrawColoredPolygon(enemyPointBuffer, gColor);
     }
-
-    private void DrawCatalyst(Occupant occ, float screenX, float screenY, float screenCellSize, bool lighten)
-    {
-        var gColor = ConvertColor(occ.Color);
-        if (lighten)
-        {
-            gColor = new Godot.Color(gColor, 0.5f);
-        }
-
-        // always draw the circle
-        var radius = screenCellSize / 2;
-        var centerX = screenX + radius;
-        var centerY = screenY + radius;
-        DrawCircle(new Vector2(centerX, centerY), radius, gColor);
-
-        // if we have a partner, draw the half-rectangle
-        var half = screenCellSize / 2;
-        Rect2 rect;
-
-        switch (occ.Direction)
-        {
-            case Direction.Left:
-                rect = new Rect2(screenX, screenY, half, screenCellSize);
-                DrawRect(rect, gColor);
-                break;
-            case Direction.Right:
-                rect = new Rect2(screenX + half, screenY, half, screenCellSize);
-                DrawRect(rect, gColor);
-                break;
-            case Direction.Up:
-                rect = new Rect2(screenX, screenY, screenCellSize, half);
-                DrawRect(rect, gColor);
-                break;
-            case Direction.Down:
-                rect = new Rect2(screenX, screenY + half, screenCellSize, half);
-                DrawRect(rect, gColor);
-                break;
-        }
-    }
-
-    private static readonly Godot.Color Yellow = Colors.Yellow;
-    private static readonly Godot.Color Red = Colors.Red;
-    private static readonly Godot.Color Blue = Colors.Blue;
 
     int frames = 0;
     public override void _Process(float delta)

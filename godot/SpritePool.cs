@@ -11,6 +11,10 @@ namespace FF2.Godot
     {
         None,
         Single,
+        JoinedDown,
+        JoinedUp,
+        JoinedLeft,
+        JoinedRight,
     }
 
     struct TrackedSprite
@@ -23,6 +27,9 @@ namespace FF2.Godot
             this.Kind = kind;
             this.Sprite = sprite;
         }
+
+        public bool IsNothing { get { return Kind == SpriteKind.None; } }
+        public bool IsSomething { get { return Kind != SpriteKind.None; } }
     }
 
     // TODO should implement IDisposable probably...
@@ -84,6 +91,9 @@ namespace FF2.Godot
                 else
                 {
                     var clone = (Sprite)template.Duplicate();
+                    // Until Godot 4.0 gives us per-instance uniforms, we need to duplicate the shader also.
+                    // https://godotengine.org/article/godot-40-gets-global-and-instance-shader-uniforms
+                    clone.Material = (ShaderMaterial)template.Material.Duplicate();
                     clone.Visible = true;
                     owner.AddChild(clone);
                     return new TrackedSprite(kind, clone);
