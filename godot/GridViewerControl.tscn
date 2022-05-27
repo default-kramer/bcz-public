@@ -1,4 +1,4 @@
-[gd_scene load_steps=17 format=2]
+[gd_scene load_steps=20 format=2]
 
 [ext_resource path="res://GridViewerControl.cs" type="Script" id=1]
 [ext_resource path="res://Sprites/joined-d.bmp" type="Texture" id=2]
@@ -6,6 +6,41 @@
 [ext_resource path="res://Sprites/joined-u.bmp" type="Texture" id=4]
 [ext_resource path="res://Sprites/joined-r.bmp" type="Texture" id=5]
 [ext_resource path="res://Sprites/joined-l.bmp" type="Texture" id=6]
+[ext_resource path="res://background.jpg" type="Texture" id=7]
+
+[sub_resource type="Shader" id=11]
+code = "shader_type canvas_item;
+
+const vec3 corruptColor = vec3(0.337, 0.161, 0.098);
+
+// Used by the noise functin to generate a pseudo random value between 0.0 and 1.0
+vec2 random(vec2 uv){
+    uv = vec2( dot(uv, vec2(127.1,311.7) ),
+               dot(uv, vec2(269.5,183.3) ) );
+    return -1.0 + 2.0 * fract(sin(uv) * 43758.5453123);
+}
+
+float corruptionCrawl(vec2 uv) {
+    vec2 randseed = uv;
+    float cycle = mod(TIME, 100.0) / 99.0;
+    randseed = mod(randseed + vec2(cycle, cycle), vec2(1.0, 1.0));
+    vec2 rand2 = random(ceil(randseed * 95.0));
+    float rand = step(-0.6, rand2.x);
+    return rand;
+}
+
+void fragment() {
+    vec4 tex = texture(TEXTURE, UV);
+    vec4 color = tex;
+    color.rgb = color.rgb * vec3(0.1, 0.35, 0.05);
+    float corruption = smoothstep(0.3, 0.4, UV.y);
+    float rand = corruptionCrawl(UV);
+    color.rgb = mix(color.rgb, tex.rgb * corruptColor, corruption * rand);
+    COLOR = color;
+}"
+
+[sub_resource type="ShaderMaterial" id=12]
+shader = SubResource( 11 )
 
 [sub_resource type="Shader" id=7]
 code = "shader_type canvas_item;
@@ -101,6 +136,13 @@ shader_param/my_alpha = null
 margin_right = 40.0
 margin_bottom = 40.0
 script = ExtResource( 1 )
+
+[node name="Background" type="TextureRect" parent="."]
+show_behind_parent = true
+material = SubResource( 12 )
+margin_right = 320.0
+margin_bottom = 1280.0
+texture = ExtResource( 7 )
 
 [node name="JoinedDown" type="Sprite" parent="."]
 visible = false

@@ -12,10 +12,14 @@ public class GridViewerControl : Control
     private TrackedSprite[] activeSprites = new TrackedSprite[400]; // should be way more than we need
 
     private SpritePool spritePool;
+    private TextureRect background;
+    private Vector2 backgroundDefaultSize;
 
     public override void _Ready()
     {
         spritePool = new SpritePool(this, SpriteKind.Single, SpriteKind.JoinedUp, SpriteKind.JoinedDown, SpriteKind.JoinedLeft, SpriteKind.JoinedRight);
+        background = GetNode<TextureRect>("Background");
+        backgroundDefaultSize = background.RectSize;
     }
 
     public override void _Draw()
@@ -23,7 +27,7 @@ public class GridViewerControl : Control
         var fullSize = this.RectSize;
 
         // For debugging, show the excess width/height as brown:
-        DrawRect(new Rect2(0, 0, fullSize), Colors.Brown);
+        //DrawRect(new Rect2(0, 0, fullSize), Colors.Brown);
 
         float screenCellSize = Math.Min(fullSize.x / grid.Width, fullSize.y / grid.Height);
         float extraX = Math.Max(0, fullSize.x - screenCellSize * grid.Width);
@@ -33,7 +37,11 @@ public class GridViewerControl : Control
         float spriteScale = screenCellSize / 360.0f;
         var spriteScale2 = new Vector2(spriteScale, spriteScale);
 
-        DrawRect(new Rect2(extraX / 2, extraY / 2, fullSize.x - extraX, fullSize.y - extraY), Colors.Black);
+        //DrawRect(new Rect2(extraX / 2, extraY / 2, fullSize.x - extraX, fullSize.y - extraY), Colors.Black);
+
+        var bgScale = grid.Width * screenCellSize / backgroundDefaultSize.x;
+        background.RectScale = new Vector2(bgScale, bgScale);
+        background.RectPosition = new Vector2(extraX / 2.0f, 0); // center it ourselves, anchor isn't doing exactly what I expected
 
         var temp = State.PreviewPlummet();
 
