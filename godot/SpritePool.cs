@@ -15,6 +15,7 @@ namespace FF2.Godot
         JoinedUp,
         JoinedLeft,
         JoinedRight,
+        Enemy,
     }
 
     struct TrackedSprite

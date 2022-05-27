@@ -52,6 +52,36 @@
         (send dc set-pen old-pen))
       size size))
 
+(define (red->transparent pict)
+  (define pixels (pict->argb-pixels pict 'unsmoothed))
+  (for ([i (in-range 0 (bytes-length pixels) 4)])
+    (let ([a (bytes-ref pixels i)]
+          [r (bytes-ref pixels (+ 1 i))]
+          [g (bytes-ref pixels (+ 2 i))]
+          [b (bytes-ref pixels (+ 3 i))])
+      (when (and (= 255 r) (= 0 g) (= 0 b))
+        (bytes-set! pixels i 0)
+        (bytes-set! pixels (+ 1 i) 0)
+        (bytes-set! pixels (+ 2 i) 0)
+        (bytes-set! pixels (+ 3 i) 0))))
+  (argb-pixels->pict pixels (inexact->exact (pict-width pict))))
+
+(define (enemy)
+  (define the-pict
+    (cc-superimpose
+     (blank size)
+     (let* ([size (- size thickness)])
+       (filled-rounded-rectangle
+        size size #:color body-color ;"transparent"
+        #:draw-border? #t #:border-color border-color #:border-width thickness))
+     ; Using `#:color "transparent"` does not actually leave a transparent hole
+     ; in the center. It leaves a black hole.
+     ; So let's paint it red and programmatically change it to transparent.
+     (filled-rounded-rectangle
+      size/2 size/2 #:color "red"
+      #:draw-border? #t #:border-color body-color #:border-width thickness)))
+  (red->transparent the-pict))
+
 (define (backdrop pict color)
   (cc-superimpose
    (filled-rectangle size size #:color color #:draw-border? #f)
@@ -61,6 +91,9 @@
 (let ([j (backdrop (joined-catalyst) "black")])
   (ht-append (rotate j (/ pi 2))
              (rotate j (- (/ pi 2)))))
+
+(blank 10)
+(backdrop (enemy) "blue")
 
 (define (save-images)
   (define results '())
@@ -84,5 +117,7 @@
       (save-bitmap pict (format "joined-~a.bmp" rotation))))
   ; single
   (save-bitmap (single-catalyst) "single.bmp")
+  ; enemy
+  (save-bitmap (enemy) "enemy.bmp")
   ; return value
   (reverse results))

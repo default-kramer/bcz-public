@@ -17,7 +17,9 @@ public class GridViewerControl : Control
 
     public override void _Ready()
     {
-        spritePool = new SpritePool(this, SpriteKind.Single, SpriteKind.JoinedUp, SpriteKind.JoinedDown, SpriteKind.JoinedLeft, SpriteKind.JoinedRight);
+        spritePool = new SpritePool(this, SpriteKind.Single, SpriteKind.JoinedUp, SpriteKind.JoinedDown,
+            SpriteKind.JoinedLeft, SpriteKind.JoinedRight, SpriteKind.Enemy);
+
         background = GetNode<TextureRect>("Background");
         backgroundDefaultSize = background.RectSize;
     }
@@ -70,6 +72,10 @@ public class GridViewerControl : Control
                         _ => SpriteKind.None,
                     };
                 }
+                else if (occ.Kind == OccupantKind.Enemy)
+                {
+                    kind = SpriteKind.Enemy;
+                }
 
                 var index = grid.Index(loc);
                 TrackedSprite previousSprite = activeSprites[index];
@@ -103,15 +109,6 @@ public class GridViewerControl : Control
                     var shader = (ShaderMaterial)sprite.Material;
                     shader.SetShaderParam("my_color", ToVector(occ.Color));
                     shader.SetShaderParam("my_alpha", previewOcc.HasValue ? 0.5f : 1.0f);
-                }
-                else
-                {
-                    switch (occ.Kind)
-                    {
-                        case OccupantKind.Enemy:
-                            DrawEnemy(occ, screenX, screenY, screenCellSize);
-                            break;
-                    }
                 }
             }
         }
@@ -149,19 +146,6 @@ public class GridViewerControl : Control
             Color.Yellow => YellowV,
             _ => new Vector3(0.5f, 1.0f, 0.8f) // maybe this will jump out at me
         };
-    }
-
-    private readonly Vector2[] enemyPointBuffer = new Vector2[4];
-
-    private void DrawEnemy(Occupant occ, float screenX, float screenY, float screenCellSize)
-    {
-        var gColor = ToColor(occ.Color);
-        var half = screenCellSize / 2;
-        enemyPointBuffer[0] = new Vector2(screenX + half, screenY);
-        enemyPointBuffer[1] = new Vector2(screenX + screenCellSize, screenY + half);
-        enemyPointBuffer[2] = new Vector2(screenX + half, screenY + screenCellSize);
-        enemyPointBuffer[3] = new Vector2(screenX, screenY + half);
-        DrawColoredPolygon(enemyPointBuffer, gColor);
     }
 
     int frames = 0;
