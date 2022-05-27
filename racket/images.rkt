@@ -9,8 +9,8 @@
 (define size/2 180)
 (define thickness 36)
 (define thickness/2 18)
-(define body-color (make-color 215 215 215))
-(define border-color (make-color 255 255 255))
+(define body-color (make-color 255 255 255))
+(define border-color (make-color 220 220 220))
 
 (define (single-catalyst)
   (cc-superimpose

@@ -117,9 +117,9 @@ public class GridViewerControl : Control
         }
     }
 
-    private static readonly Godot.Color Red = Godot.Color.Color8(255, 0, 0);
+    private static readonly Godot.Color Red = Godot.Color.Color8(255, 56, 120);
     private static readonly Godot.Color Blue = Godot.Color.Color8(0, 148, 255);
-    private static readonly Godot.Color Yellow = Godot.Color.Color8(255, 243, 0);
+    private static readonly Godot.Color Yellow = Godot.Color.Color8(255, 255, 107);
     private static readonly Vector3 RedV = ToVector(Red);
     private static readonly Vector3 BlueV = ToVector(Blue);
     private static readonly Vector3 YellowV = ToVector(Yellow);
