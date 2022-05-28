@@ -109,6 +109,11 @@ public class GridViewerControl : Control
                     var shader = (ShaderMaterial)sprite.Material;
                     shader.SetShaderParam("my_color", ToVector(occ.Color));
                     shader.SetShaderParam("my_alpha", previewOcc.HasValue ? 0.5f : 1.0f);
+
+                    if (currentSprite.Kind == SpriteKind.Enemy)
+                    {
+                        shader.SetShaderParam("is_corrupt", y < 2 ? 1.0f : 0.0f);
+                    }
                 }
             }
         }

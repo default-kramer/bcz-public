@@ -136,20 +136,80 @@ shader_param/my_alpha = null
 [sub_resource type="Shader" id=13]
 code = "shader_type canvas_item;
 
-uniform vec3 my_color;
-uniform float my_alpha;
+uniform vec3 my_color = vec3(0.2, 1.0, 0.5);
+uniform float my_alpha = 1.0;
+uniform float is_corrupt = 1.0; // boolean, 0.0 or 1.0
+const vec3 corruptColor = vec3(0.337, 0.161, 0.098);
+
+const float r1 = 0.21;
+const float r2 = 0.25;
+
+// Used by the noise functin to generate a pseudo random value between 0.0 and 1.0
+vec2 random(vec2 uv){
+    uv = vec2( dot(uv, vec2(127.1,311.7) ),
+               dot(uv, vec2(269.5,183.3) ) );
+    return -1.0 + 2.0 * fract(sin(uv) * 43758.5453123);
+}
+
+float getGlow(float glow, float width, vec2 uv, float y, vec2 screenUV) {
+    float y2 = mod(uv.y + TIME / 6.0, 1.0);
+    return max(glow, 1.0 - smoothstep(0.0, width, abs(y2 - y)));
+}
 
 void fragment() {
-    vec4 color = texture(TEXTURE, UV);
+    vec4 tex = texture(TEXTURE, UV);
+    vec4 color = tex;
     color.rgb = my_color * color.rgb;
     color.a = min(color.a, my_alpha);
+
+    if (1.0 < 0.0 && abs(0.5 - UV.x) < 0.3 && abs(0.5 - UV.y) < 0.3 && tex.a < 0.3) {
+        float dist = distance(UV, vec2(0.5, 0.5));
+        float limit = 0.2 + 0.7 * abs(sin(TIME));
+        float glow = 0.0;
+        glow = getGlow(glow, 0.08, UV, 0.2, SCREEN_UV);
+        glow = getGlow(glow, 0.014, UV, 0.31, SCREEN_UV);
+        glow = getGlow(glow, 0.08, UV, 0.48, SCREEN_UV);
+        glow = getGlow(glow, 0.014, UV, 0.68, SCREEN_UV);
+        glow = getGlow(glow, 0.06, UV, 0.8, SCREEN_UV);
+        glow = getGlow(glow, 0.09, UV, 0.88, SCREEN_UV);
+        glow = getGlow(glow, 0.04, UV, 0.96, SCREEN_UV);
+
+        vec4 corruption = vec4(corruptColor, 1.0);
+        corruption = mix(corruption, vec4(corruptColor, 1.0) * (1.0 + glow * 0.6), glow);
+        color = corruption;
+    }
+
+    if (1.0 < 0.0) {
+        float glow = smoothstep(0.15, 0.75, abs(sin(TIME * 2.8))) * 0.3 + 0.7;
+        vec4 corruption = vec4(corruptColor, 1.0);
+        corruption = mix(corruption, vec4(corruptColor, 1.0) * (1.3 + glow * 0.3), glow);
+
+        float blah = max(abs(0.5 - UV.x), abs(0.5 - UV.y));
+        blah = max(blah, distance(vec2(0.5, 0.5), UV) * 0.84);
+        blah = 1.0 - smoothstep(0.2, 0.24, blah);
+        color = mix(color, corruption, blah * is_corrupt);
+    }
+
+    if (1.0 > 0.0) {
+        vec2 rand2 = random(ceil(UV * 90.0) * TIME / 400000000.0) + 1.0;
+        rand2 *= 0.5;
+        if (is_corrupt > 0.5 && rand2.x < 0.8 && rand2.y < 0.8) {
+            float blah = max(abs(0.5 - UV.x), abs(0.5 - UV.y));
+            blah = max(blah, distance(vec2(0.5, 0.5), UV) * 0.84);
+            blah = 1.0 - smoothstep(0.2, 0.24, blah);
+
+            color = mix(color, vec4(corruptColor * 1.6, 1.0), blah);
+        }
+    }
+
     COLOR = color;
 }"
 
 [sub_resource type="ShaderMaterial" id=14]
 shader = SubResource( 13 )
-shader_param/my_color = null
-shader_param/my_alpha = null
+shader_param/my_color = Vector3( 0.2, 1, 0.5 )
+shader_param/my_alpha = 1.0
+shader_param/is_corrupt = 1.0
 
 [node name="Control" type="Control"]
 margin_right = 40.0
