@@ -52,6 +52,9 @@
         (send dc set-pen old-pen))
       size size))
 
+; In certain situations, using `#:color "transparent"` does not leave
+; a transparent hole. It leaves a black hole instead.
+; So you can paint it red instead and use this function.
 (define (red->transparent pict)
   (define pixels (pict->argb-pixels pict 'unsmoothed))
   (for ([i (in-range 0 (bytes-length pixels) 4)])
@@ -67,20 +70,13 @@
   (argb-pixels->pict pixels (inexact->exact (pict-width pict))))
 
 (define (enemy)
-  (define the-pict
-    (cc-superimpose
-     (blank size)
-     (let* ([size (- size thickness)])
-       (filled-rounded-rectangle
-        size size #:color body-color ;"transparent"
-        #:draw-border? #t #:border-color border-color #:border-width thickness))
-     ; Using `#:color "transparent"` does not actually leave a transparent hole
-     ; in the center. It leaves a black hole.
-     ; So let's paint it red and programmatically change it to transparent.
+  (cc-superimpose
+   (blank size)
+   (let* ([size (- size thickness thickness thickness/2)]
+          [thickness (+ thickness thickness)])
      (filled-rounded-rectangle
-      size/2 size/2 #:color "red"
-      #:draw-border? #t #:border-color body-color #:border-width thickness)))
-  (red->transparent the-pict))
+      size size #:color border-color
+      #:draw-border? #t #:border-color body-color #:border-width thickness))))
 
 (define (backdrop pict color)
   (cc-superimpose
