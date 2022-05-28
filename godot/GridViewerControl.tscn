@@ -136,7 +136,7 @@ shader_param/my_alpha = null
 [sub_resource type="Shader" id=13]
 code = "shader_type canvas_item;
 
-uniform vec3 my_color = vec3(0.2, 1.0, 0.5);
+uniform vec3 my_color = vec3(1.0, .102, 0.47);
 uniform float my_alpha = 1.0;
 uniform float is_corrupt = 1.0; // boolean, 0.0 or 1.0
 const vec3 corruptColor = vec3(0.337, 0.161, 0.098);
@@ -190,7 +190,7 @@ void fragment() {
         color = mix(color, corruption, blah * is_corrupt);
     }
 
-    if (1.0 > 0.0) {
+    if (1.0 < 0.0) {
         vec2 rand2 = random(ceil(UV * 90.0) * TIME / 400000000.0) + 1.0;
         rand2 *= 0.5;
         if (is_corrupt > 0.5 && rand2.x < 0.8 && rand2.y < 0.8) {
@@ -202,12 +202,23 @@ void fragment() {
         }
     }
 
+    if (1.0 > 0.0) {
+        float blah = max(abs(0.5 - UV.x), abs(0.5 - UV.y));
+        blah = max(blah, distance(vec2(0.5, 0.5), UV) * 0.84);
+        float glow = smoothstep(0.1, 0.24, blah) * abs(sin(TIME * 2.0));
+        blah = 1.0 - smoothstep(0.2, 0.24, blah);
+        vec3 corruption = corruptColor;
+        vec3 headroom = my_color - corruption;
+        corruption += headroom * glow * 1.0;
+        color = mix(color, vec4(corruption, 1.0), blah * max(1.0, is_corrupt)); // make them all corrupt
+    }
+
     COLOR = color;
 }"
 
 [sub_resource type="ShaderMaterial" id=14]
 shader = SubResource( 13 )
-shader_param/my_color = Vector3( 0.2, 1, 0.5 )
+shader_param/my_color = Vector3( 1, 0.102, 0.47 )
 shader_param/my_alpha = 1.0
 shader_param/is_corrupt = 1.0
 

@@ -112,7 +112,7 @@ public class GridViewerControl : Control
 
                     if (currentSprite.Kind == SpriteKind.Enemy)
                     {
-                        shader.SetShaderParam("is_corrupt", y < 2 ? 1.0f : 0.0f);
+                        shader.SetShaderParam("is_corrupt", y < 7 ? 1.0f : 0.0f);
                     }
                 }
             }
