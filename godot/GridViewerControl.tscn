@@ -214,15 +214,15 @@ void fragment() {
     }
 
     if (1.0 > 0.0) {
-        float y = mod(UV.y * 18.0 + TIME * 13.0 + UV.x * 220.0, 18.0);
-        y = ceil(y);
-        vec2 rand2 = random(vec2(y, y));
-
-        // Only mix onto less-than-white pixels.
+        // Only mix onto black pixels.
         // Remember that tex.r == tex.g == tex.b
-        float mixer = 1.0 - step(0.99, tex.r);
-        mixer *= step(0.5, rand2.y);
-        color = mix(color, vec4(corruptColor, color.a), mixer);
+        if (tex.r < 0.1 && tex.a > 0.5) {
+            vec2 rand2 = random(ceil(UV * 20.0) + TIME / 200000.0) + 1.0;
+            float mixer = step(1.2, rand2.y);
+            vec4 toMix = vec4(0.0, 0.0, 0.0, 0.0);
+            toMix = vec4(my_color * 0.5, 1.0); // TODO we could allow the bitmap to control this
+            color = mix(toMix, vec4(corruptColor, color.a), mixer);
+        }
     }
 
     COLOR = color;

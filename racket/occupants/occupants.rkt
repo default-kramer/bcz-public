@@ -75,8 +75,8 @@
    (let* ([size (- size thickness thickness thickness/2)]
           [thickness (+ thickness thickness)])
      (filled-rounded-rectangle
-      size size #:color border-color
-      #:draw-border? #t #:border-color body-color #:border-width thickness))))
+      size size #:color "black"
+      #:draw-border? #t #:border-color border-color #:border-width thickness))))
 
 (define (backdrop pict color)
   (cc-superimpose
