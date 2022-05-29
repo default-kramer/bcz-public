@@ -14,6 +14,7 @@ public class GridViewerControl : Control
     private SpritePool spritePool;
     private TextureRect background;
     private Vector2 backgroundDefaultSize;
+    private ShaderMaterial bgShader;
 
     public override void _Ready()
     {
@@ -22,6 +23,48 @@ public class GridViewerControl : Control
 
         background = GetNode<TextureRect>("Background");
         backgroundDefaultSize = background.RectSize;
+        bgShader = (ShaderMaterial)background.Material;
+    }
+
+    private void AdjustBackground(float screenCellSize, float extraX)
+    {
+        var bgScale = grid.Width * screenCellSize / backgroundDefaultSize.x;
+        background.RectScale = new Vector2(bgScale, bgScale);
+        background.RectPosition = new Vector2(extraX / 2.0f, 0); // center it ourselves, anchor isn't doing exactly what I expected
+
+        float usedBgHeight = backgroundDefaultSize.x / grid.Width * grid.Height;
+        bgShader.SetShaderParam("maxY", usedBgHeight / backgroundDefaultSize.y);
+    }
+
+    // When does destruction intensity enter the max value?
+    const float DestructionPeakStart = 0.1f;
+    // When does destruction intensity exit the max value?
+    const float DestructionPeakEnd = 0.3f;
+    // When does destruction intensity finish completely?
+    const float DestructionEnd = 0.55f;
+
+    private void SendBackgroundDestructionInfo()
+    {
+        bgShader.SetShaderParam("numColumns", grid.Width);
+        bgShader.SetShaderParam("numRows", grid.Height);
+        bgShader.SetShaderParam("columnActivation", columnDestructionBitmap);
+        bgShader.SetShaderParam("rowActivation", rowDestructionBitmap);
+
+        float intensity = 0f;
+
+        if (timeSinceDestruction < DestructionPeakStart)
+        {
+            intensity = timeSinceDestruction / DestructionPeakStart;
+        }
+        else if (timeSinceDestruction < DestructionPeakEnd)
+        {
+            intensity = 1.0f;
+        }
+        else if (timeSinceDestruction < DestructionEnd)
+        {
+            intensity = 1.0f - (timeSinceDestruction - DestructionPeakEnd) / (DestructionEnd - DestructionPeakEnd);
+        }
+        bgShader.SetShaderParam("destructionIntensity", intensity);
     }
 
     public override void _Draw()
@@ -30,6 +73,7 @@ public class GridViewerControl : Control
 
         // For debugging, show the excess width/height as brown:
         //DrawRect(new Rect2(0, 0, fullSize), Colors.Brown);
+        //DrawRect(new Rect2(extraX / 2, extraY / 2, fullSize.x - extraX, fullSize.y - extraY), Colors.Black);
 
         float screenCellSize = Math.Min(fullSize.x / grid.Width, fullSize.y / grid.Height);
         float extraX = Math.Max(0, fullSize.x - screenCellSize * grid.Width);
@@ -39,11 +83,8 @@ public class GridViewerControl : Control
         float spriteScale = screenCellSize / 360.0f;
         var spriteScale2 = new Vector2(spriteScale, spriteScale);
 
-        //DrawRect(new Rect2(extraX / 2, extraY / 2, fullSize.x - extraX, fullSize.y - extraY), Colors.Black);
-
-        var bgScale = grid.Width * screenCellSize / backgroundDefaultSize.x;
-        background.RectScale = new Vector2(bgScale, bgScale);
-        background.RectPosition = new Vector2(extraX / 2.0f, 0); // center it ourselves, anchor isn't doing exactly what I expected
+        AdjustBackground(screenCellSize, extraX);
+        SendBackgroundDestructionInfo();
 
         var temp = State.PreviewPlummet();
 
@@ -153,19 +194,39 @@ public class GridViewerControl : Control
         };
     }
 
+    private readonly TickCalculations tickCalculations = new TickCalculations();
     int frames = 0;
+
+    int rowDestructionBitmap = 0;
+    int columnDestructionBitmap = 0;
+    float timeSinceDestruction = float.MaxValue;
+
     public override void _Process(float delta)
     {
+        tickCalculations.Reset();
+
         frames++;
 
-        if (frames % 10 == 0)
+        if (frames % 10 == 0 && timeSinceDestruction >= DestructionEnd)
         {
             // TODO obviously we should be doing something else here
-            var ugly = State.Tick() || State.Tick() || State.Tick();
+
+            var ugly = State.Tick(tickCalculations) || State.Tick(tickCalculations) || State.Tick(tickCalculations);
             if (ugly)
             {
                 //this.Update();
             }
+        }
+
+        if (tickCalculations.RowDestructionBitmap != 0 || tickCalculations.ColumnDestructionBitmap != 0)
+        {
+            rowDestructionBitmap = tickCalculations.RowDestructionBitmap;
+            columnDestructionBitmap = tickCalculations.ColumnDestructionBitmap;
+            timeSinceDestruction = 0.0f;
+        }
+        else
+        {
+            timeSinceDestruction += delta;
         }
 
         this.Update();

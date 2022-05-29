@@ -87,7 +87,7 @@ namespace FF2.Core
         /// Return false if nothing changes, or if <see cref="Kind"/> is the only thing that changes.
         /// Otherwise return true after executing some "significant" change.
         /// </summary>
-        public bool Tick()
+        public bool Tick(TickCalculations calculations)
         {
             switch (Kind)
             {
@@ -98,7 +98,7 @@ namespace FF2.Core
                 case StateKind.Falling:
                     return ChangeKind(grid.Fall(), StateKind.Falling, StateKind.Destroying);
                 case StateKind.Destroying:
-                    return ChangeKind(grid.Destroy(), StateKind.Falling, StateKind.Spawning);
+                    return ChangeKind(grid.Destroy(calculations), StateKind.Falling, StateKind.Spawning);
                 default:
                     throw new Exception("Unexpected kind: " + Kind);
             }

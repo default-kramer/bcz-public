@@ -14,11 +14,13 @@ namespace FF2.Core
     {
         private readonly IReadOnlyGrid grid;
         private readonly Group[] groups;
+        private readonly TickCalculations calculations;
 
-        public GridDestroyHelper(IReadOnlyGrid grid, Group[] groupsBuffer)
+        public GridDestroyHelper(IReadOnlyGrid grid, Group[] groupsBuffer, TickCalculations calculations)
         {
             this.grid = grid;
             this.groups = groupsBuffer;
+            this.calculations = calculations;
 
             groups.AsSpan().Fill(Group.None);
             FindGroups();
@@ -45,7 +47,20 @@ namespace FF2.Core
                     var loc = new Loc(x, y);
                     var index = grid.Index(loc);
                     var group = groups[index];
-                    if (group.HorizontalCount >= groupCount || group.VerticalCount >= groupCount)
+
+                    bool destroy = false;
+                    if (group.HorizontalCount >= groupCount)
+                    {
+                        calculations.AddRowDestruction(y, grid);
+                        destroy = true;
+                    }
+                    if (group.VerticalCount >= groupCount)
+                    {
+                        calculations.AddColumnDestruction(x);
+                        destroy = true;
+                    }
+
+                    if (destroy)
                     {
                         grid.Set(loc, Occupant.None);
                         anyDestroyed = true;

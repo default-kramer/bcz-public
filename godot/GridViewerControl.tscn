@@ -12,7 +12,24 @@
 [sub_resource type="Shader" id=11]
 code = "shader_type canvas_item;
 
+// TODO the problem is that UV.y extends off the screen.
+// We should probably just build images that have the correct aspect
+// ratio(s) for the known grid sizes.
+// But for now, pass in `maxY` which is the maximum value of UV.y
+// that is actually visible.
+uniform float maxY = 0.4;
+
+// The following inputs tell us which columns and rows to light up.
+uniform int numColumns = 8;
+uniform int columnActivation = 18; // bit N lights up column N
+uniform int numRows = 20;
+uniform int rowActivation = 4; // bit N lights up row N
+uniform float destructionIntensity = 0.0;
+
+
 const vec3 corruptColor = vec3(0.337, 0.161, 0.098);
+const vec3 darkGreen = vec3(0.1, 0.35, 0.05);
+const vec3 greenAdder = vec3(0.4, 0.6, 0.4);
 
 // Used by the noise functin to generate a pseudo random value between 0.0 and 1.0
 vec2 random(vec2 uv){
@@ -30,11 +47,36 @@ float corruptionCrawl(vec2 uv) {
     return rand;
 }
 
+float getHilite(float xy, int lineCount, int lineActivation) {
+    float intensity = destructionIntensity;
+    //intensity = abs(sin(TIME * 2.8));
+
+    float lineCountF = float(lineCount);
+    int lineIndex = int(min(0.99, xy) * lineCountF);
+    float widthPerLine = 1.0 / lineCountF;
+    float middleOfLine = float(lineIndex) * widthPerLine + widthPerLine * 0.5;
+    float stepStart = widthPerLine - (widthPerLine * 2.0 / 3.0) * intensity;
+    float hilite = smoothstep(stepStart, widthPerLine, widthPerLine - abs(xy - middleOfLine));
+    int mask = 1 << lineIndex;
+    hilite = min(hilite, float(mask & lineActivation));
+    return hilite;
+}
+
 void fragment() {
     vec4 tex = texture(TEXTURE, UV);
+    vec2 uv = vec2(UV.x, min(1.0, UV.y / maxY)); // scale UV.y to what is actually visible
     vec4 color = tex;
-    color.rgb = color.rgb * vec3(0.1, 0.35, 0.05);
-    float corruption = smoothstep(0.3, 0.4, UV.y);
+
+    // Apply hilite
+    color.rgb = color.rgb * darkGreen;
+    float hilite = getHilite(uv.x, numColumns, columnActivation);
+    hilite = max(hilite, getHilite(uv.y, numRows, rowActivation));
+    const float glow = 0.65; // try 0.0 and 1.0 to see
+    color.rgb += greenAdder * hilite * max(glow, tex.r);
+
+    // Apply corruption
+    float corruption = smoothstep(0.74, 0.76, uv.y);
+    corruption = max(0.0, corruption - hilite);
     float rand = corruptionCrawl(UV);
     color.rgb = mix(color.rgb, tex.rgb * corruptColor, corruption * rand);
     COLOR = color;
@@ -42,6 +84,12 @@ void fragment() {
 
 [sub_resource type="ShaderMaterial" id=12]
 shader = SubResource( 11 )
+shader_param/maxY = 0.4
+shader_param/numColumns = 8
+shader_param/columnActivation = 18
+shader_param/numRows = 20
+shader_param/rowActivation = 4
+shader_param/destructionIntensity = 0.0
 
 [sub_resource type="Shader" id=7]
 code = "shader_type canvas_item;
@@ -220,7 +268,7 @@ void fragment() {
             vec2 rand2 = random(ceil(UV * 20.0) + TIME / 200000.0) + 1.0;
             float mixer = step(1.2, rand2.y);
             vec4 toMix = vec4(0.0, 0.0, 0.0, 0.0);
-            toMix = vec4(my_color * 0.5, 1.0); // TODO we could allow the bitmap to control this
+            toMix = vec4(my_color * 0.6, 1.0); // TODO we could allow the bitmap to control this
             color = mix(toMix, vec4(corruptColor, color.a), mixer);
         }
     }

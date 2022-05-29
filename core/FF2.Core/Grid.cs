@@ -99,9 +99,9 @@ namespace FF2.Core
             return GridFallHelper.Fall(this, blockedFlagBuffer, assumeUnblockedBuffer);
         }
 
-        public bool Destroy()
+        public bool Destroy(TickCalculations calculations)
         {
-            return new GridDestroyHelper(this, groupsBuffer).Execute(this);
+            return new GridDestroyHelper(this, groupsBuffer, calculations).Execute(this);
         }
     }
 }
