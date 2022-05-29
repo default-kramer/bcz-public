@@ -96,6 +96,12 @@ public class GridViewerControl : Control
                 var previewOcc = temp?.GetOcc(loc);
                 var occ = previewOcc ?? grid.Get(loc);
 
+                var destroyedOcc = tickCalculations.GetDestroyedOccupant(loc, grid);
+                if (destroyedOcc != Occupant.None)
+                {
+                    occ = destroyedOcc;
+                }
+
                 var canvasY = grid.Height - (y + 1);
                 var screenY = canvasY * screenCellSize + extraY / 2;
                 var screenX = x * screenCellSize + extraX / 2;
@@ -151,6 +157,13 @@ public class GridViewerControl : Control
                     shader.SetShaderParam("my_color", ToVector(occ.Color));
                     shader.SetShaderParam("my_alpha", previewOcc.HasValue ? 0.5f : 1.0f);
 
+                    float destructionProgress = 0f;
+                    if (destroyedOcc == occ)
+                    {
+                        destructionProgress = Math.Min(1f, timeSinceDestruction / DestructionEnd);
+                    }
+                    shader.SetShaderParam("destructionProgress", destructionProgress);
+
                     if (currentSprite.Kind == SpriteKind.Enemy)
                     {
                         shader.SetShaderParam("is_corrupt", y < 7 ? 1.0f : 0.0f);
@@ -199,18 +212,24 @@ public class GridViewerControl : Control
 
     int rowDestructionBitmap = 0;
     int columnDestructionBitmap = 0;
-    float timeSinceDestruction = float.MaxValue;
+    float timeSinceDestruction = DestructionEnd + 1f;
 
     public override void _Process(float delta)
     {
+        timeSinceDestruction += delta;
+        if (timeSinceDestruction < DestructionEnd)
+        {
+            this.Update();
+            return;
+        }
+
         tickCalculations.Reset();
 
         frames++;
 
-        if (frames % 10 == 0 && timeSinceDestruction >= DestructionEnd)
+        if (frames % 10 == 0)
         {
             // TODO obviously we should be doing something else here
-
             var ugly = State.Tick(tickCalculations) || State.Tick(tickCalculations) || State.Tick(tickCalculations);
             if (ugly)
             {
@@ -223,10 +242,6 @@ public class GridViewerControl : Control
             rowDestructionBitmap = tickCalculations.RowDestructionBitmap;
             columnDestructionBitmap = tickCalculations.ColumnDestructionBitmap;
             timeSinceDestruction = 0.0f;
-        }
-        else
-        {
-            timeSinceDestruction += delta;
         }
 
         this.Update();

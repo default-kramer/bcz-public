@@ -23,10 +23,13 @@ namespace FF2.Core
         /// </summary>
         public int RowDestructionBitmap;
 
+        private Occupant[] destroyedOccupants = new Occupant[Grid.DefaultWidth * Grid.DefaultHeight];
+
         public void Reset()
         {
             ColumnDestructionBitmap = 0;
             RowDestructionBitmap = 0;
+            destroyedOccupants.AsSpan().Fill(Occupant.None);
         }
 
         public void AddColumnDestruction(int x)
@@ -38,6 +41,22 @@ namespace FF2.Core
         {
             y = grid.Height - 1 - y; // the shader uses Y=0 at the top
             RowDestructionBitmap |= 1 << y;
+        }
+
+        public void AddDestroyedOccupant(Loc loc, Occupant occupant, IReadOnlyGrid grid)
+        {
+            int size = grid.Width * grid.Height;
+            if (destroyedOccupants.Length < size)
+            {
+                destroyedOccupants = new Occupant[size];
+            }
+
+            destroyedOccupants[grid.Index(loc)] = occupant;
+        }
+
+        public Occupant GetDestroyedOccupant(Loc loc, IReadOnlyGrid grid)
+        {
+            return destroyedOccupants[grid.Index(loc)];
         }
     }
 }

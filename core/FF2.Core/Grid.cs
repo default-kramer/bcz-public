@@ -48,12 +48,12 @@ namespace FF2.Core
             return new Grid(width, height);
         }
 
+        public const int DefaultWidth = 8;
+        public const int DefaultHeight = 20;
+
         public static Grid Create(PRNG rand)
         {
-            const int gridHeight = 20;
-            const int gridWidth = 8;
-
-            var grid = Grid.Create(gridWidth, gridHeight);
+            var grid = Grid.Create(DefaultWidth, DefaultHeight);
             GridCreateHelper.SetupSimpleGrid(grid, rand);
             GridCreateHelper.SetupHardcodedGrid(grid);
 

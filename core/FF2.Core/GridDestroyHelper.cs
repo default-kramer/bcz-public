@@ -62,6 +62,8 @@ namespace FF2.Core
 
                     if (destroy)
                     {
+                        var destroyedOccupant = grid.Get(loc);
+                        calculations.AddDestroyedOccupant(loc, destroyedOccupant, grid);
                         grid.Set(loc, Occupant.None);
                         anyDestroyed = true;
                     }
