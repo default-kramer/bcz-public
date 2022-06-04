@@ -12,19 +12,23 @@ namespace FF2.Core
     // State.Kind contains the action we are about to attempt.
     public enum StateKind : int
     {
-        Spawning = 0,
-        Waiting = 1,
-        Falling = 2,
-        Destroying = 3,
+        Empty = 0,
+        Spawning = 1,
+        Waiting = 2,
+        Falling = 3,
+        Destroying = 4,
         Unreachable = int.MaxValue,
     }
 
+    // Does timing-related stuff belong in the state class? Or at a higher level?
+    // Meh, I don't know, so just start hacking and we can always refactor later
     public sealed class State : IDisposable
     {
         private readonly Grid grid;
         private readonly InfiniteDeck<DeckItem> spawnDeck;
-
         private Mover? mover;
+        private CorruptionManager corruption;
+        private Combo currentCombo;
 
         /// <summary>
         /// Holds the action that will be attempted on the next <see cref="Tick"/>.
@@ -37,6 +41,8 @@ namespace FF2.Core
             this.spawnDeck = spawnDeck;
             mover = null;
             Kind = StateKind.Spawning;
+            corruption = new CorruptionManager();
+            currentCombo = Combo.Empty;
         }
 
         public IReadOnlyGrid Grid { get { return grid; } }
@@ -63,6 +69,16 @@ namespace FF2.Core
             return new State(grid, deck);
         }
 
+        public void Elapse(int millis)
+        {
+            if (Kind == StateKind.Waiting)
+            {
+                corruption = corruption.Elapse(millis);
+            }
+        }
+
+        public decimal CorruptionProgress { get { return corruption.Progress; } }
+
         private bool Spawn()
         {
             if (Kind != StateKind.Spawning)
@@ -83,6 +99,21 @@ namespace FF2.Core
             return true;
         }
 
+        private bool Destroy(TickCalculations calculations)
+        {
+            var result = grid.Destroy(calculations);
+            if (result)
+            {
+                currentCombo = currentCombo.AfterDestruction(calculations);
+            }
+            else
+            {
+                corruption = corruption.OnComboCompleted(currentCombo);
+                currentCombo = Combo.Empty;
+            }
+            return result;
+        }
+
         /// <summary>
         /// Return false if nothing changes, or if <see cref="Kind"/> is the only thing that changes.
         /// Otherwise return true after executing some "significant" change.
@@ -98,7 +129,7 @@ namespace FF2.Core
                 case StateKind.Falling:
                     return ChangeKind(grid.Fall(), StateKind.Falling, StateKind.Destroying);
                 case StateKind.Destroying:
-                    return ChangeKind(grid.Destroy(calculations), StateKind.Falling, StateKind.Spawning);
+                    return ChangeKind(Destroy(calculations), StateKind.Falling, StateKind.Spawning);
                 default:
                     throw new Exception("Unexpected kind: " + Kind);
             }
@@ -117,7 +148,7 @@ namespace FF2.Core
             }
 
             var m = mover.Value;
-            if ("plummet".ToString() == "nope")
+            if (true)//"plummet".ToString() == "nope")
             {
                 m = m.PreviewPlummet(grid);
             }

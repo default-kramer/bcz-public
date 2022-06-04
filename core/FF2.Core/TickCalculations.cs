@@ -25,20 +25,27 @@ namespace FF2.Core
 
         private Occupant[] destroyedOccupants = new Occupant[Grid.DefaultWidth * Grid.DefaultHeight];
 
+        public int NumVerticalGroups;
+        public int NumHorizontalGroups;
+
         public void Reset()
         {
             ColumnDestructionBitmap = 0;
             RowDestructionBitmap = 0;
             destroyedOccupants.AsSpan().Fill(Occupant.None);
+            NumVerticalGroups = 0;
+            NumHorizontalGroups = 0;
         }
 
         public void AddColumnDestruction(int x)
         {
+            NumVerticalGroups++;
             ColumnDestructionBitmap |= 1 << x;
         }
 
         public void AddRowDestruction(int y, IReadOnlyGrid grid)
         {
+            NumHorizontalGroups++;
             y = grid.Height - 1 - y; // the shader uses Y=0 at the top
             RowDestructionBitmap |= 1 << y;
         }

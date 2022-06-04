@@ -34,6 +34,9 @@ public class GridViewerControl : Control
 
         float usedBgHeight = backgroundDefaultSize.x / grid.Width * grid.Height;
         bgShader.SetShaderParam("maxY", usedBgHeight / backgroundDefaultSize.y);
+
+        float corruptionProgress = Convert.ToSingle(State.CorruptionProgress);
+        bgShader.SetShaderParam("corruptionProgress", corruptionProgress);
     }
 
     // When does destruction intensity enter the max value?
@@ -213,9 +216,25 @@ public class GridViewerControl : Control
     int rowDestructionBitmap = 0;
     int columnDestructionBitmap = 0;
     float timeSinceDestruction = DestructionEnd + 1f;
+    DateTime startTime = default(DateTime);
+    DateTime lastProcess = default(DateTime);
 
     public override void _Process(float delta)
     {
+        if (startTime == default(DateTime))
+        {
+            startTime = DateTime.UtcNow;
+            lastProcess = startTime;
+        }
+        else
+        {
+            var now = DateTime.UtcNow;
+            var diff = now - lastProcess;
+            lastProcess = now;
+
+            State.Elapse(diff.Milliseconds);
+        }
+
         timeSinceDestruction += delta;
         if (timeSinceDestruction < DestructionEnd)
         {
@@ -229,12 +248,7 @@ public class GridViewerControl : Control
 
         if (frames % 10 == 0)
         {
-            // TODO obviously we should be doing something else here
-            var ugly = State.Tick(tickCalculations) || State.Tick(tickCalculations) || State.Tick(tickCalculations);
-            if (ugly)
-            {
-                //this.Update();
-            }
+            State.Tick(tickCalculations);
         }
 
         if (tickCalculations.RowDestructionBitmap != 0 || tickCalculations.ColumnDestructionBitmap != 0)

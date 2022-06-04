@@ -19,6 +19,9 @@ code = "shader_type canvas_item;
 // that is actually visible.
 uniform float maxY = 0.4;
 
+// 0.0 indicates no corruption, 1.0 indicates max corruption
+uniform float corruptionProgress = 0.33;
+
 // The following inputs tell us which columns and rows to light up.
 uniform int numColumns = 8;
 uniform int columnActivation = 18; // bit N lights up column N
@@ -75,16 +78,18 @@ void fragment() {
     color.rgb += greenAdder * hilite * max(glow, tex.r);
 
     // Apply corruption
-    float corruption = smoothstep(0.74, 0.76, uv.y);
+    float corruption = smoothstep(1.0 - corruptionProgress, 1.05 - corruptionProgress, uv.y);
     corruption = max(0.0, corruption - hilite);
     float rand = corruptionCrawl(UV);
     color.rgb = mix(color.rgb, tex.rgb * corruptColor, corruption * rand);
+
     COLOR = color;
 }"
 
 [sub_resource type="ShaderMaterial" id=12]
 shader = SubResource( 11 )
 shader_param/maxY = 0.4
+shader_param/corruptionProgress = 0.33
 shader_param/numColumns = 8
 shader_param/columnActivation = 18
 shader_param/numRows = 20

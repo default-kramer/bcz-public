@@ -23,7 +23,6 @@ namespace FF2.Core
             this.calculations = calculations;
 
             groups.AsSpan().Fill(Group.None);
-            FindGroups();
         }
 
         public bool Execute(Grid grid, int groupCount = 4)
@@ -32,6 +31,8 @@ namespace FF2.Core
             {
                 throw new ArgumentException("grid must be the same grid from the constructor...");
             }
+
+            FindGroups(groupCount, calculations);
 
             return Destroy(grid, groupCount);
         }
@@ -48,19 +49,7 @@ namespace FF2.Core
                     var index = grid.Index(loc);
                     var group = groups[index];
 
-                    bool destroy = false;
-                    if (group.HorizontalCount >= groupCount)
-                    {
-                        calculations.AddRowDestruction(y, grid);
-                        destroy = true;
-                    }
-                    if (group.VerticalCount >= groupCount)
-                    {
-                        calculations.AddColumnDestruction(x);
-                        destroy = true;
-                    }
-
-                    if (destroy)
+                    if (group.HorizontalCount >= groupCount || group.VerticalCount >= groupCount)
                     {
                         var destroyedOccupant = grid.Get(loc);
                         calculations.AddDestroyedOccupant(loc, destroyedOccupant, grid);
@@ -106,7 +95,7 @@ namespace FF2.Core
             }
         }
 
-        void FindGroups()
+        void FindGroups(int groupCount, TickCalculations calculations)
         {
             // For each row, find runs Left-to-Right
             for (int y = 0; y < grid.Height; y++)
@@ -114,7 +103,7 @@ namespace FF2.Core
                 var cursor = new Loc(0, y);
                 do
                 {
-                    cursor = HandleRun(cursor, Direction.Right);
+                    cursor = HandleRun(cursor, Direction.Right, groupCount, calculations);
                 } while (grid.InBounds(cursor));
             }
 
@@ -124,12 +113,12 @@ namespace FF2.Core
                 var cursor = new Loc(x, 0);
                 do
                 {
-                    cursor = HandleRun(cursor, Direction.Up);
+                    cursor = HandleRun(cursor, Direction.Up, groupCount, calculations);
                 } while (grid.InBounds(cursor));
             }
         }
 
-        private Loc HandleRun(Loc loc, Direction direction)
+        private Loc HandleRun(Loc loc, Direction direction, int groupCount, TickCalculations calculations)
         {
             var occ = grid.Get(loc);
             var runColor = occ.Color;
@@ -161,6 +150,22 @@ namespace FF2.Core
                 {
                     var index = grid.Index(iter);
                     groups[index] = groups[index].AdjustCount(direction, runCount);
+                }
+
+                if (runCount >= groupCount)
+                {
+                    if (direction == Direction.Up)
+                    {
+                        calculations.AddColumnDestruction(loc.X);
+                    }
+                    else if (direction == Direction.Right)
+                    {
+                        calculations.AddRowDestruction(loc.Y, grid);
+                    }
+                    else
+                    {
+                        throw new Exception("Assert fail: " + direction);
+                    }
                 }
 
                 return cursor;
