@@ -9,7 +9,7 @@ namespace FF2.Core
     /// <summary>
     /// Immutable. Tracks the 2 Occupants that the player has control of.
     /// </summary>
-    public struct Mover
+    public readonly struct Mover
     {
         public readonly Loc LocA;
         public readonly Loc LocB;

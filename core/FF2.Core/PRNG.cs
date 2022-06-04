@@ -146,7 +146,7 @@ namespace FF2.Core
             return (int)(NextDouble() * maxValue);
         }
 
-        public struct State
+        public readonly struct State
         {
             public readonly long s10;
             public readonly long s11;

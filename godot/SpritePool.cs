@@ -18,7 +18,7 @@ namespace FF2.Godot
         Enemy,
     }
 
-    struct TrackedSprite
+    readonly struct TrackedSprite
     {
         public readonly SpriteKind Kind;
         public readonly Sprite Sprite;

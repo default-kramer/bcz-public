@@ -84,7 +84,7 @@ namespace FF2.Core
         }
     }
 
-    public struct Occupant
+    public readonly struct Occupant
     {
         private readonly Bits data;
 

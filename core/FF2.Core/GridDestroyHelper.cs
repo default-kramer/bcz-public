@@ -10,7 +10,7 @@ namespace FF2.Core
     /// This struct should be very short-lived -- just create it, use it, and get rid of it
     /// within a single method.
     /// </summary>
-    struct GridDestroyHelper
+    readonly struct GridDestroyHelper
     {
         private readonly IReadOnlyGrid grid;
         private readonly Group[] groups;
@@ -172,7 +172,7 @@ namespace FF2.Core
             }
         }
 
-        public struct Group
+        public readonly struct Group
         {
             public readonly Color Color;
             public readonly int HorizontalCount;
