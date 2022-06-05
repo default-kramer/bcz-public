@@ -1,13 +1,13 @@
 [gd_scene load_steps=23 format=2]
 
-[ext_resource path="res://GridViewerControl.cs" type="Script" id=1]
+[ext_resource path="res://Controls/GridViewerControl.cs" type="Script" id=1]
 [ext_resource path="res://Sprites/joined-d.bmp" type="Texture" id=2]
-[ext_resource path="res://Sprites/single.bmp" type="Texture" id=3]
-[ext_resource path="res://Sprites/joined-u.bmp" type="Texture" id=4]
-[ext_resource path="res://Sprites/joined-r.bmp" type="Texture" id=5]
-[ext_resource path="res://Sprites/joined-l.bmp" type="Texture" id=6]
-[ext_resource path="res://background.jpg" type="Texture" id=7]
-[ext_resource path="res://Sprites/enemy.bmp" type="Texture" id=8]
+[ext_resource path="res://Sprites/enemy.bmp" type="Texture" id=3]
+[ext_resource path="res://Sprites/joined-r.bmp" type="Texture" id=4]
+[ext_resource path="res://background.jpg" type="Texture" id=5]
+[ext_resource path="res://Sprites/single.bmp" type="Texture" id=6]
+[ext_resource path="res://Sprites/joined-l.bmp" type="Texture" id=7]
+[ext_resource path="res://Sprites/joined-u.bmp" type="Texture" id=8]
 
 [sub_resource type="Shader" id=11]
 code = "shader_type canvas_item;
@@ -441,7 +441,7 @@ show_behind_parent = true
 material = SubResource( 12 )
 margin_right = 320.0
 margin_bottom = 1280.0
-texture = ExtResource( 7 )
+texture = ExtResource( 5 )
 
 [node name="JoinedDown" type="Sprite" parent="."]
 visible = false
@@ -451,24 +451,24 @@ texture = ExtResource( 2 )
 [node name="JoinedLeft" type="Sprite" parent="."]
 visible = false
 material = SubResource( 10 )
-texture = ExtResource( 6 )
+texture = ExtResource( 7 )
 
 [node name="JoinedRight" type="Sprite" parent="."]
 visible = false
 material = SubResource( 6 )
-texture = ExtResource( 5 )
+texture = ExtResource( 4 )
 
 [node name="JoinedUp" type="Sprite" parent="."]
 visible = false
 material = SubResource( 3 )
-texture = ExtResource( 4 )
+texture = ExtResource( 8 )
 
 [node name="Single" type="Sprite" parent="."]
 visible = false
 material = SubResource( 2 )
-texture = ExtResource( 3 )
+texture = ExtResource( 6 )
 
 [node name="Enemy" type="Sprite" parent="."]
 visible = false
 material = SubResource( 14 )
-texture = ExtResource( 8 )
+texture = ExtResource( 3 )
