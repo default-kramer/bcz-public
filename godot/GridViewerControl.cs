@@ -70,6 +70,17 @@ public class GridViewerControl : Control
         bgShader.SetShaderParam("destructionIntensity", intensity);
     }
 
+    private float GetCellSize(Vector2 maxSize)
+    {
+        return Math.Min(maxSize.x / grid.Width, maxSize.y / grid.Height);
+    }
+
+    public Vector2 DesiredSize(Vector2 maxSize)
+    {
+        float cellSize = GetCellSize(maxSize);
+        return new Vector2(cellSize * grid.Width, cellSize * grid.Height);
+    }
+
     public override void _Draw()
     {
         var fullSize = this.RectSize;
@@ -78,7 +89,7 @@ public class GridViewerControl : Control
         //DrawRect(new Rect2(0, 0, fullSize), Colors.Brown);
         //DrawRect(new Rect2(extraX / 2, extraY / 2, fullSize.x - extraX, fullSize.y - extraY), Colors.Black);
 
-        float screenCellSize = Math.Min(fullSize.x / grid.Width, fullSize.y / grid.Height);
+        float screenCellSize = GetCellSize(fullSize);
         float extraX = Math.Max(0, fullSize.x - screenCellSize * grid.Width);
         float extraY = Math.Max(0, fullSize.y - screenCellSize * grid.Height);
 
