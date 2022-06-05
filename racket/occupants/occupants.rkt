@@ -9,16 +9,18 @@
 (define size/2 180)
 (define thickness 36)
 (define thickness/2 18)
-(define body-color (make-color 255 255 255))
-(define border-color (make-color 220 220 220))
+(define body-color (make-parameter (make-color 255 255 255)))
+(define border-color (make-parameter (make-color 220 220 220)))
 
-(define (single-catalyst)
+(define (single-catalyst [border-color (border-color)]
+                         [body-color (body-color)])
   (cc-superimpose
    (blank size)
    (disk (- size thickness) #:color body-color
          #:border-color border-color #:border-width thickness)))
 
-(define (joined-catalyst)
+(define (joined-catalyst [border-color (border-color)]
+                         [body-color (body-color)])
   (define path
     (let ([path (new dc-path%)])
       ; arc from right -> top -> left
@@ -69,7 +71,7 @@
         (bytes-set! pixels (+ 3 i) 0))))
   (argb-pixels->pict pixels (inexact->exact (pict-width pict))))
 
-(define (enemy)
+(define (enemy [border-color (border-color)])
   (cc-superimpose
    (blank size)
    (let* ([size (- size thickness thickness thickness/2)]
@@ -102,17 +104,14 @@
            [quality 100])
       (set! results (cons pict (cons filename results)))
       (send bmp save-file filename 'bmp quality)))
-  ; joined
-  (for ([rotation '(d r u l)])
-    (let* ([pict (joined-catalyst)]
-           [pict (rotate pict (case rotation
-                                [(d) 0]
-                                [(r) (/ pi 2)]
-                                [(u) pi]
-                                [(l) (- (/ pi 2))]))])
-      (save-bitmap pict (format "joined-~a.bmp" rotation))))
-  ; single
+  ; normal catalysts
+  (save-bitmap (joined-catalyst) "joined.bmp")
   (save-bitmap (single-catalyst) "single.bmp")
+  ; blank catalysts
+  (parameterize ([border-color (make-color 255 255 255)]
+                 [body-color (make-color 0 0 0 0)])
+    (save-bitmap (joined-catalyst) "blank-joined.bmp")
+    (save-bitmap (single-catalyst) "blank-single.bmp"))
   ; enemy
   (save-bitmap (enemy) "enemy.bmp")
   ; return value

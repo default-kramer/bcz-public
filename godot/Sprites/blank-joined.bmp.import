@@ -2,15 +2,15 @@
 
 importer="texture"
 type="StreamTexture"
-path="res://.import/joined-d.bmp-28bdf5e4cca8464ca007a322fe6d804a.stex"
+path="res://.import/blank-joined.bmp-bab4fb09ecea9f3aa6f89f64edaf57c0.stex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Sprites/joined-d.bmp"
-dest_files=[ "res://.import/joined-d.bmp-28bdf5e4cca8464ca007a322fe6d804a.stex" ]
+source_file="res://Sprites/blank-joined.bmp"
+dest_files=[ "res://.import/blank-joined.bmp-bab4fb09ecea9f3aa6f89f64edaf57c0.stex" ]
 
 [params]
 

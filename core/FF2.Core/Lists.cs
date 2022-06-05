@@ -14,6 +14,11 @@ namespace FF2.Core
             {
                 Color.Red, Color.Yellow, Color.Blue,
             };
+
+            public static readonly Color[] RYBBlank = new Color[]
+            {
+                Color.Red, Color.Yellow, Color.Blue, Color.Blank,
+            };
         }
 
         public static class Directions

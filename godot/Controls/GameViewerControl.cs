@@ -108,6 +108,8 @@ public class GameViewerControl : Control
                 return State.Rotate(clockwise: false);
             case KeyList.H:
                 return State.Plummet();
+            case KeyList.Space:
+                return State.Burst();
         }
 
         return false;

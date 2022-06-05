@@ -57,7 +57,7 @@ namespace FF2.Core
         static State()
         {
             var temp = new List<DeckItem>();
-            foreach (var color in Lists.Colors.RYB)
+            foreach (var color in Lists.Colors.RYBBlank)
             {
                 foreach (var color2 in Lists.Colors.RYB)
                 {
@@ -176,6 +176,17 @@ namespace FF2.Core
 
             mover = null;
             Kind = StateKind.Falling;
+            return true;
+        }
+
+        public bool Burst()
+        {
+            if (!Plummet())
+            {
+                return false;
+            }
+
+            grid.Burst();
             return true;
         }
 

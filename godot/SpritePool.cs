@@ -11,10 +11,9 @@ namespace FF2.Godot
     {
         None,
         Single,
-        JoinedDown,
-        JoinedUp,
-        JoinedLeft,
-        JoinedRight,
+        Joined,
+        BlankJoined,
+        BlankSingle,
         Enemy,
     }
 

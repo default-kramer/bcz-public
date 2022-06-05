@@ -18,8 +18,8 @@ public class GridViewerControl : Control
 
     public override void _Ready()
     {
-        spritePool = new SpritePool(this, SpriteKind.Single, SpriteKind.JoinedUp, SpriteKind.JoinedDown,
-            SpriteKind.JoinedLeft, SpriteKind.JoinedRight, SpriteKind.Enemy);
+        spritePool = new SpritePool(this, SpriteKind.Single, SpriteKind.Joined,
+            SpriteKind.Enemy, SpriteKind.BlankJoined, SpriteKind.BlankSingle);
 
         background = GetNode<TextureRect>("Background");
         backgroundDefaultSize = background.RectSize;
@@ -120,23 +120,7 @@ public class GridViewerControl : Control
                 var screenY = canvasY * screenCellSize + extraY / 2;
                 var screenX = x * screenCellSize + extraX / 2;
 
-                SpriteKind kind = SpriteKind.None;
-                if (occ.Kind == OccupantKind.Catalyst)
-                {
-                    kind = occ.Direction switch
-                    {
-                        Direction.None => SpriteKind.Single,
-                        Direction.Up => SpriteKind.JoinedUp,
-                        Direction.Down => SpriteKind.JoinedDown,
-                        Direction.Left => SpriteKind.JoinedLeft,
-                        Direction.Right => SpriteKind.JoinedRight,
-                        _ => SpriteKind.None,
-                    };
-                }
-                else if (occ.Kind == OccupantKind.Enemy)
-                {
-                    kind = SpriteKind.Enemy;
-                }
+                SpriteKind kind = GetSpriteKind(occ);
 
                 var index = grid.Index(loc);
                 TrackedSprite previousSprite = activeSprites[index];
@@ -167,6 +151,19 @@ public class GridViewerControl : Control
                     var sprite = currentSprite.Sprite;
                     sprite.Position = new Vector2(screenX + screenCellSize / 2, screenY + screenCellSize / 2);
                     sprite.Scale = spriteScale2;
+
+                    if (kind == SpriteKind.Joined || kind == SpriteKind.BlankJoined)
+                    {
+                        sprite.RotationDegrees = occ.Direction switch
+                        {
+                            Direction.Down => 0,
+                            Direction.Left => 90,
+                            Direction.Up => 180,
+                            Direction.Right => 270,
+                            _ => throw new Exception($"assert failed: {occ.Direction}"),
+                        };
+                    }
+
                     var shader = (ShaderMaterial)sprite.Material;
                     shader.SetShaderParam("my_color", ToVector(occ.Color));
                     shader.SetShaderParam("my_alpha", previewOcc.HasValue ? 0.5f : 1.0f);
@@ -193,6 +190,7 @@ public class GridViewerControl : Control
     private static readonly Vector3 RedV = ToVector(Red);
     private static readonly Vector3 BlueV = ToVector(Blue);
     private static readonly Vector3 YellowV = ToVector(Yellow);
+    private static readonly Vector3 WhiteV = new Vector3(1, 1, 1);
 
     private static Vector3 ToVector(Godot.Color color)
     {
@@ -217,8 +215,44 @@ public class GridViewerControl : Control
             Color.Red => RedV,
             Color.Blue => BlueV,
             Color.Yellow => YellowV,
+            Color.Blank => WhiteV,
             _ => new Vector3(0.5f, 1.0f, 0.8f) // maybe this will jump out at me
         };
+    }
+
+    private static SpriteKind GetSpriteKind(Occupant occ)
+    {
+        if (occ.Kind == OccupantKind.Catalyst)
+        {
+            if (occ.Direction == Direction.None)
+            {
+                if (occ.Color == Color.Blank)
+                {
+                    return SpriteKind.BlankSingle;
+                }
+                else
+                {
+                    return SpriteKind.Single;
+                }
+            }
+            else
+            {
+                if (occ.Color == Color.Blank)
+                {
+                    return SpriteKind.BlankJoined;
+                }
+                else
+                {
+                    return SpriteKind.Joined;
+                }
+            }
+        }
+        if (occ.Kind == OccupantKind.Enemy)
+        {
+            return SpriteKind.Enemy;
+        }
+
+        return SpriteKind.None;
     }
 
     private readonly TickCalculations tickCalculations = new TickCalculations();

@@ -1,13 +1,12 @@
-[gd_scene load_steps=23 format=2]
+[gd_scene load_steps=20 format=2]
 
 [ext_resource path="res://Controls/GridViewerControl.cs" type="Script" id=1]
-[ext_resource path="res://Sprites/joined-d.bmp" type="Texture" id=2]
+[ext_resource path="res://Sprites/joined.bmp" type="Texture" id=2]
 [ext_resource path="res://Sprites/enemy.bmp" type="Texture" id=3]
-[ext_resource path="res://Sprites/joined-r.bmp" type="Texture" id=4]
 [ext_resource path="res://background.jpg" type="Texture" id=5]
 [ext_resource path="res://Sprites/single.bmp" type="Texture" id=6]
-[ext_resource path="res://Sprites/joined-l.bmp" type="Texture" id=7]
-[ext_resource path="res://Sprites/joined-u.bmp" type="Texture" id=8]
+[ext_resource path="res://Sprites/blank-joined.bmp" type="Texture" id=9]
+[ext_resource path="res://Sprites/blank-single.bmp" type="Texture" id=10]
 
 [sub_resource type="Shader" id=11]
 code = "shader_type canvas_item;
@@ -95,178 +94,6 @@ shader_param/columnActivation = 18
 shader_param/numRows = 20
 shader_param/rowActivation = 4
 shader_param/destructionIntensity = 0.0
-
-[sub_resource type="Shader" id=7]
-code = "shader_type canvas_item;
-
-uniform vec3 my_color;
-uniform float my_alpha;
-uniform float destructionProgress;
-
-// Used by the noise functin to generate a pseudo random value between 0.0 and 1.0
-vec2 random(vec2 uv){
-    uv = vec2( dot(uv, vec2(127.1,311.7) ),
-               dot(uv, vec2(269.5,183.3) ) );
-    return -1.0 + 2.0 * fract(sin(uv) * 43758.5453123);
-}
-
-vec4 applyFizzle(vec4 color, vec2 uv) {
-    float fizzle = destructionProgress;
-    //fizzle = max(0.0, sin(TIME * 2.2));
-    vec2 rand2 = random(ceil(uv * 30.0)) + 1.0;
-    rand2 *= 0.5;
-    if (rand2.x < fizzle) {
-        color.a = 0.0;
-    } else {
-        vec3 headroom = vec3(1.0, 1.0, 1.0) - color.rgb;
-        headroom = min(vec3(0.6, 0.6, 0.6), headroom);
-        color.rgb += headroom * fizzle * fizzle;
-    }
-    return color;
-}
-
-void fragment() {
-    vec4 color = texture(TEXTURE, UV);
-    color.rgb = my_color * color.rgb;
-    color.a = min(color.a, my_alpha);
-    color = applyFizzle(color, UV);
-    COLOR = color;
-}"
-
-[sub_resource type="ShaderMaterial" id=8]
-shader = SubResource( 7 )
-shader_param/my_color = null
-shader_param/my_alpha = null
-shader_param/destructionProgress = null
-
-[sub_resource type="Shader" id=9]
-code = "shader_type canvas_item;
-
-uniform vec3 my_color;
-uniform float my_alpha;
-uniform float destructionProgress;
-
-// Used by the noise functin to generate a pseudo random value between 0.0 and 1.0
-vec2 random(vec2 uv){
-    uv = vec2( dot(uv, vec2(127.1,311.7) ),
-               dot(uv, vec2(269.5,183.3) ) );
-    return -1.0 + 2.0 * fract(sin(uv) * 43758.5453123);
-}
-
-vec4 applyFizzle(vec4 color, vec2 uv) {
-    float fizzle = destructionProgress;
-    //fizzle = max(0.0, sin(TIME * 2.2));
-    vec2 rand2 = random(ceil(uv * 30.0)) + 1.0;
-    rand2 *= 0.5;
-    if (rand2.x < fizzle) {
-        color.a = 0.0;
-    } else {
-        vec3 headroom = vec3(1.0, 1.0, 1.0) - color.rgb;
-        headroom = min(vec3(0.6, 0.6, 0.6), headroom);
-        color.rgb += headroom * fizzle * fizzle;
-    }
-    return color;
-}
-
-void fragment() {
-    vec4 color = texture(TEXTURE, UV);
-    color.rgb = my_color * color.rgb;
-    color.a = min(color.a, my_alpha);
-    color = applyFizzle(color, UV);
-    COLOR = color;
-}"
-
-[sub_resource type="ShaderMaterial" id=10]
-shader = SubResource( 9 )
-shader_param/my_color = null
-shader_param/my_alpha = null
-shader_param/destructionProgress = null
-
-[sub_resource type="Shader" id=5]
-code = "shader_type canvas_item;
-
-uniform vec3 my_color;
-uniform float my_alpha;
-uniform float destructionProgress;
-
-// Used by the noise functin to generate a pseudo random value between 0.0 and 1.0
-vec2 random(vec2 uv){
-    uv = vec2( dot(uv, vec2(127.1,311.7) ),
-               dot(uv, vec2(269.5,183.3) ) );
-    return -1.0 + 2.0 * fract(sin(uv) * 43758.5453123);
-}
-
-vec4 applyFizzle(vec4 color, vec2 uv) {
-    float fizzle = destructionProgress;
-    //fizzle = max(0.0, sin(TIME * 2.2));
-    vec2 rand2 = random(ceil(uv * 30.0)) + 1.0;
-    rand2 *= 0.5;
-    if (rand2.x < fizzle) {
-        color.a = 0.0;
-    } else {
-        vec3 headroom = vec3(1.0, 1.0, 1.0) - color.rgb;
-        headroom = min(vec3(0.6, 0.6, 0.6), headroom);
-        color.rgb += headroom * fizzle * fizzle;
-    }
-    return color;
-}
-
-void fragment() {
-    vec4 color = texture(TEXTURE, UV);
-    color.rgb = my_color * color.rgb;
-    color.a = min(color.a, my_alpha);
-    color = applyFizzle(color, UV);
-    COLOR = color;
-}"
-
-[sub_resource type="ShaderMaterial" id=6]
-shader = SubResource( 5 )
-shader_param/my_color = null
-shader_param/my_alpha = null
-shader_param/destructionProgress = null
-
-[sub_resource type="Shader" id=4]
-code = "shader_type canvas_item;
-
-uniform vec3 my_color;
-uniform float my_alpha;
-uniform float destructionProgress;
-
-// Used by the noise functin to generate a pseudo random value between 0.0 and 1.0
-vec2 random(vec2 uv){
-    uv = vec2( dot(uv, vec2(127.1,311.7) ),
-               dot(uv, vec2(269.5,183.3) ) );
-    return -1.0 + 2.0 * fract(sin(uv) * 43758.5453123);
-}
-
-vec4 applyFizzle(vec4 color, vec2 uv) {
-    float fizzle = destructionProgress;
-    //fizzle = max(0.0, sin(TIME * 2.2));
-    vec2 rand2 = random(ceil(uv * 30.0)) + 1.0;
-    rand2 *= 0.5;
-    if (rand2.x < fizzle) {
-        color.a = 0.0;
-    } else {
-        vec3 headroom = vec3(1.0, 1.0, 1.0) - color.rgb;
-        headroom = min(vec3(0.6, 0.6, 0.6), headroom);
-        color.rgb += headroom * fizzle * fizzle;
-    }
-    return color;
-}
-
-void fragment() {
-    vec4 color = texture(TEXTURE, UV);
-    color.rgb = my_color * color.rgb;
-    color.a = min(color.a, my_alpha);
-    color = applyFizzle(color, UV);
-    COLOR = color;
-}"
-
-[sub_resource type="ShaderMaterial" id=3]
-shader = SubResource( 4 )
-shader_param/my_color = null
-shader_param/my_alpha = null
-shader_param/destructionProgress = null
 
 [sub_resource type="Shader" id=1]
 code = "shader_type canvas_item;
@@ -431,6 +258,135 @@ shader_param/my_alpha = 1.0
 shader_param/is_corrupt = 1.0
 shader_param/destructionProgress = 0.0
 
+[sub_resource type="Shader" id=15]
+code = "shader_type canvas_item;
+
+uniform vec3 my_color;
+uniform float my_alpha;
+uniform float destructionProgress;
+
+// Used by the noise functin to generate a pseudo random value between 0.0 and 1.0
+vec2 random(vec2 uv){
+    uv = vec2( dot(uv, vec2(127.1,311.7) ),
+               dot(uv, vec2(269.5,183.3) ) );
+    return -1.0 + 2.0 * fract(sin(uv) * 43758.5453123);
+}
+
+vec4 applyFizzle(vec4 color, vec2 uv) {
+    float fizzle = destructionProgress;
+    //fizzle = max(0.0, sin(TIME * 2.2));
+    vec2 rand2 = random(ceil(uv * 30.0)) + 1.0;
+    rand2 *= 0.5;
+    if (rand2.x < fizzle) {
+        color.a = 0.0;
+    } else {
+        vec3 headroom = vec3(1.0, 1.0, 1.0) - color.rgb;
+        headroom = min(vec3(0.6, 0.6, 0.6), headroom);
+        color.rgb += headroom * fizzle * fizzle;
+    }
+    return color;
+}
+
+void fragment() {
+    vec4 color = texture(TEXTURE, UV);
+    color.rgb = my_color * color.rgb;
+    color.a = min(color.a, my_alpha);
+    color = applyFizzle(color, UV);
+    COLOR = color;
+}"
+
+[sub_resource type="ShaderMaterial" id=16]
+shader = SubResource( 15 )
+shader_param/my_color = null
+shader_param/my_alpha = null
+shader_param/destructionProgress = null
+
+[sub_resource type="Shader" id=17]
+code = "shader_type canvas_item;
+
+uniform vec3 my_color;
+uniform float my_alpha;
+uniform float destructionProgress;
+
+// Used by the noise functin to generate a pseudo random value between 0.0 and 1.0
+vec2 random(vec2 uv){
+    uv = vec2( dot(uv, vec2(127.1,311.7) ),
+               dot(uv, vec2(269.5,183.3) ) );
+    return -1.0 + 2.0 * fract(sin(uv) * 43758.5453123);
+}
+
+vec4 applyFizzle(vec4 color, vec2 uv) {
+    float fizzle = destructionProgress;
+    //fizzle = max(0.0, sin(TIME * 2.2));
+    vec2 rand2 = random(ceil(uv * 30.0)) + 1.0;
+    rand2 *= 0.5;
+    if (rand2.x < fizzle) {
+        color.a = 0.0;
+    } else {
+        vec3 headroom = vec3(1.0, 1.0, 1.0) - color.rgb;
+        headroom = min(vec3(0.6, 0.6, 0.6), headroom);
+        color.rgb += headroom * fizzle * fizzle;
+    }
+    return color;
+}
+
+void fragment() {
+    vec4 color = texture(TEXTURE, UV);
+    color.rgb = my_color * color.rgb;
+    color.a = min(color.a, my_alpha);
+    color = applyFizzle(color, UV);
+    COLOR = color;
+}"
+
+[sub_resource type="ShaderMaterial" id=18]
+shader = SubResource( 17 )
+shader_param/my_color = null
+shader_param/my_alpha = null
+shader_param/destructionProgress = null
+
+[sub_resource type="Shader" id=19]
+code = "shader_type canvas_item;
+
+uniform vec3 my_color;
+uniform float my_alpha;
+uniform float destructionProgress;
+
+// Used by the noise functin to generate a pseudo random value between 0.0 and 1.0
+vec2 random(vec2 uv){
+    uv = vec2( dot(uv, vec2(127.1,311.7) ),
+               dot(uv, vec2(269.5,183.3) ) );
+    return -1.0 + 2.0 * fract(sin(uv) * 43758.5453123);
+}
+
+vec4 applyFizzle(vec4 color, vec2 uv) {
+    float fizzle = destructionProgress;
+    //fizzle = max(0.0, sin(TIME * 2.2));
+    vec2 rand2 = random(ceil(uv * 30.0)) + 1.0;
+    rand2 *= 0.5;
+    if (rand2.x < fizzle) {
+        color.a = 0.0;
+    } else {
+        vec3 headroom = vec3(1.0, 1.0, 1.0) - color.rgb;
+        headroom = min(vec3(0.6, 0.6, 0.6), headroom);
+        color.rgb += headroom * fizzle * fizzle;
+    }
+    return color;
+}
+
+void fragment() {
+    vec4 color = texture(TEXTURE, UV);
+    color.rgb = my_color * color.rgb;
+    color.a = min(color.a, my_alpha);
+    color = applyFizzle(color, UV);
+    COLOR = color;
+}"
+
+[sub_resource type="ShaderMaterial" id=20]
+shader = SubResource( 19 )
+shader_param/my_color = null
+shader_param/my_alpha = null
+shader_param/destructionProgress = null
+
 [node name="Control" type="Control"]
 margin_right = 40.0
 margin_bottom = 40.0
@@ -443,26 +399,6 @@ margin_right = 320.0
 margin_bottom = 1280.0
 texture = ExtResource( 5 )
 
-[node name="JoinedDown" type="Sprite" parent="."]
-visible = false
-material = SubResource( 8 )
-texture = ExtResource( 2 )
-
-[node name="JoinedLeft" type="Sprite" parent="."]
-visible = false
-material = SubResource( 10 )
-texture = ExtResource( 7 )
-
-[node name="JoinedRight" type="Sprite" parent="."]
-visible = false
-material = SubResource( 6 )
-texture = ExtResource( 4 )
-
-[node name="JoinedUp" type="Sprite" parent="."]
-visible = false
-material = SubResource( 3 )
-texture = ExtResource( 8 )
-
 [node name="Single" type="Sprite" parent="."]
 visible = false
 material = SubResource( 2 )
@@ -472,3 +408,21 @@ texture = ExtResource( 6 )
 visible = false
 material = SubResource( 14 )
 texture = ExtResource( 3 )
+
+[node name="BlankJoined" type="Sprite" parent="."]
+visible = false
+material = SubResource( 16 )
+position = Vector2( 726, 224 )
+texture = ExtResource( 9 )
+
+[node name="BlankSingle" type="Sprite" parent="."]
+visible = false
+material = SubResource( 18 )
+position = Vector2( 990, 270 )
+texture = ExtResource( 10 )
+
+[node name="Joined" type="Sprite" parent="."]
+visible = false
+material = SubResource( 20 )
+position = Vector2( 675, 294 )
+texture = ExtResource( 2 )

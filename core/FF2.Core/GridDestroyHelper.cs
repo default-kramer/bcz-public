@@ -70,7 +70,7 @@ namespace FF2.Core
         /// <summary>
         /// Update catalysts whose partner was just destroyed.
         /// </summary>
-        void PostDestroy(Grid grid)
+        public static void PostDestroy(Grid grid)
         {
             for (int y = 0; y < grid.Height; y++)
             {

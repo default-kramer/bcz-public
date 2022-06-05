@@ -103,5 +103,22 @@ namespace FF2.Core
         {
             return new GridDestroyHelper(this, groupsBuffer, calculations).Execute(this);
         }
+
+        public void Burst()
+        {
+            for (int x = 0; x < Width; x++)
+            {
+                for (int y = 0; y < Height; y++)
+                {
+                    var loc = new Loc(x, y);
+                    var occ = Get(loc);
+                    if (occ.Kind != OccupantKind.None && occ.Color == Color.Blank)
+                    {
+                        Set(loc, Occupant.None);
+                    }
+                }
+            }
+            GridDestroyHelper.PostDestroy(this);
+        }
     }
 }
