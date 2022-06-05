@@ -9,21 +9,32 @@ namespace FF2.Core
     readonly struct CorruptionManager
     {
         private readonly int corruption;
-        private readonly int corruptionRate; // how much should corruption increase per millisecond
+        private readonly int baseCorruptionRate; // how much should corruption increase per millisecond
+        private readonly int corruptionRate;
         private const int maxCorruption = 100 * 1000 * 1000;
         private readonly PayoutTable payoutTable;
 
         public CorruptionManager()
         {
             corruption = 0;
-            corruptionRate = 1000;
+            baseCorruptionRate = 1000;
+            corruptionRate = baseCorruptionRate;
             this.payoutTable = PayoutTable.DefaultCorruptionPayoutTable;
         }
 
         private CorruptionManager(CorruptionManager current, int newCorruption)
         {
             this.corruption = newCorruption;
+            this.baseCorruptionRate = current.baseCorruptionRate;
             this.corruptionRate = current.corruptionRate;
+            this.payoutTable = current.payoutTable;
+        }
+
+        private CorruptionManager(CorruptionManager current, int newCorruption, int newCorruptionRate)
+        {
+            this.corruption = newCorruption;
+            this.baseCorruptionRate = current.baseCorruptionRate;
+            this.corruptionRate = newCorruptionRate;
             this.payoutTable = current.payoutTable;
         }
 
@@ -39,5 +50,15 @@ namespace FF2.Core
         }
 
         public decimal Progress { get { return Convert.ToDecimal(corruption) / maxCorruption; } }
+
+        public CorruptionManager OnPenaltiesChanged(PenaltyManager penalties)
+        {
+            int numerator = penalties.CorruptionAccelerationPayoutTable.GetPayout(penalties.Count);
+            int newRate = baseCorruptionRate * numerator / CorruptionAccelerationDenominator;
+            //Console.WriteLine($"New Corruption Rate: {newRate} ({corruptionRate} : {numerator} : {penalties.Count})");
+            return new CorruptionManager(this, this.corruption, newRate);
+        }
+
+        public static readonly int CorruptionAccelerationDenominator = 100;
     }
 }

@@ -15,6 +15,15 @@ namespace FF2.Core
             this.payouts = payouts;
         }
 
+        private PayoutTable(int baseValue, params decimal[] decimals)
+        {
+            payouts = new int[decimals.Length];
+            for (int i = 0; i < payouts.Length; i++)
+            {
+                payouts[i] = Convert.ToInt32(decimals[i] * baseValue);
+            }
+        }
+
         public int GetPayout(int N)
         {
             if (N < payouts.Length)
@@ -34,5 +43,8 @@ namespace FF2.Core
 
         public static readonly PayoutTable DefaultCorruptionPayoutTable
             = new PayoutTable(0, 0, 1 * factor, 3 * factor, 6 * factor, 10 * factor, 15 * factor);
+
+        public static readonly PayoutTable DefaultCorruptionAccelerationPayoutTable
+            = new PayoutTable(CorruptionManager.CorruptionAccelerationDenominator, 1m, 1.2m, 1.4m, 1.7m, 2m, 2.5m);
     }
 }

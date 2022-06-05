@@ -29,6 +29,9 @@ namespace FF2.Core
         private Mover? mover;
         private CorruptionManager corruption;
         private Combo currentCombo;
+        private readonly PenaltyManager penalties;
+        private PenaltySchedule penaltySchedule;
+        private int waitingMillis = 0;
 
         /// <summary>
         /// Holds the action that will be attempted on the next <see cref="Tick"/>.
@@ -43,6 +46,8 @@ namespace FF2.Core
             Kind = StateKind.Spawning;
             corruption = new CorruptionManager();
             currentCombo = Combo.Empty;
+            penalties = new PenaltyManager();
+            penaltySchedule = PenaltySchedule.BasicSchedule(10 * 1000);
         }
 
         public IReadOnlyGrid Grid { get { return grid; } }
@@ -73,7 +78,17 @@ namespace FF2.Core
         {
             if (Kind == StateKind.Waiting)
             {
+                waitingMillis += millis;
+
                 corruption = corruption.Elapse(millis);
+
+                if (penaltySchedule.TryAdvance(waitingMillis, out var nextPS))
+                {
+                    penalties.Add(penaltySchedule.Penalty);
+                    penaltySchedule = nextPS;
+
+                    corruption = corruption.OnPenaltiesChanged(penalties);
+                }
             }
         }
 
