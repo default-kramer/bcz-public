@@ -90,40 +90,31 @@ public class GameViewerControl : Control
         base._Draw();
     }
 
-    public override void _UnhandledKeyInput(InputEventKey e)
-    {
-        if (e.Pressed && HandleInput((KeyList)e.Scancode))
-        {
-            this.Update();
-            gridViewer.Update();
-            penaltyViewer?.Update();
-        }
-    }
-
-    private bool HandleInput(KeyList scancode)
-    {
-        switch (scancode)
-        {
-            case KeyList.A:
-                return State.Move(Direction.Left);
-            case KeyList.D:
-                return State.Move(Direction.Right);
-            case KeyList.J:
-                return State.Rotate(clockwise: true);
-            case KeyList.K:
-                return State.Rotate(clockwise: false);
-            case KeyList.H:
-                return State.Plummet();
-            case KeyList.Space:
-                return State.Burst();
-        }
-
-        return false;
-    }
-
     public override void _Process(float delta)
     {
-        timing._Process(delta);
+        var input = GameKeys.None;
+        if (Input.IsActionJustPressed("game_left"))
+        {
+            input |= GameKeys.Left;
+        }
+        if (Input.IsActionJustPressed("game_right"))
+        {
+            input |= GameKeys.Right;
+        }
+        if (Input.IsActionJustPressed("game_rotate_cw"))
+        {
+            input |= GameKeys.RotateCW;
+        }
+        if (Input.IsActionJustPressed("game_rotate_ccw"))
+        {
+            input |= GameKeys.RotateCCW;
+        }
+        if (Input.IsActionPressed("game_drop"))
+        {
+            input |= GameKeys.Drop;
+        }
+
+        timing._Process(delta, input);
         gridViewer.Update();
     }
 }

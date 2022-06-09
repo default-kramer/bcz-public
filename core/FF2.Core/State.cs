@@ -179,15 +179,9 @@ namespace FF2.Core
             return true;
         }
 
-        public bool Burst()
+        public void Burst()
         {
-            if (!Plummet())
-            {
-                return false;
-            }
-
             grid.Burst();
-            return true;
         }
 
         private bool ChangeKind(bool significantChange, StateKind a, StateKind b)
