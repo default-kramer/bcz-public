@@ -20,16 +20,19 @@ namespace FF2.Godot
 
         DateTime startTime = default(DateTime);
         DateTime lastProcess = default(DateTime);
-        float timeSinceDestruction = DestructionEnd + 1f;
+
+        // Initial value should not be near int.MaxValue to avoid rollover,
+        // but it must be > DestructionEnd
+        int timeSinceDestruction = (int)DestructionEnd + 1;
 
         int frames = 0;
 
         // When does destruction intensity enter the max value?
-        const float DestructionPeakStart = 0.1f;
+        const float DestructionPeakStart = 100;
         // When does destruction intensity exit the max value?
-        const float DestructionPeakEnd = 0.3f;
+        const float DestructionPeakEnd = 300;
         // When does destruction intensity finish completely?
-        const float DestructionEnd = 0.55f;
+        const float DestructionEnd = 550;
 
         public float DestructionIntensity()
         {
@@ -69,10 +72,15 @@ namespace FF2.Godot
                 var diff = now - lastProcess;
                 lastProcess = now;
 
-                state.Elapse(diff.Milliseconds);
+                Elapse(diff.Milliseconds);
             }
+        }
 
-            timeSinceDestruction += delta;
+        public void Elapse(int milliseconds)
+        {
+            state.Elapse(milliseconds);
+
+            timeSinceDestruction += milliseconds;
             if (timeSinceDestruction < DestructionEnd)
             {
                 return;
@@ -89,7 +97,7 @@ namespace FF2.Godot
 
             if (tickCalculations.RowDestructionBitmap != 0 || tickCalculations.ColumnDestructionBitmap != 0)
             {
-                timeSinceDestruction = 0.0f;
+                timeSinceDestruction = 0;
             }
         }
     }
