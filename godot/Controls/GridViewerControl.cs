@@ -1,14 +1,16 @@
 using FF2.Core;
 using FF2.Godot;
+using FF2.Godot.Controls;
 using Godot;
 using System;
 using System.Collections.Generic;
 using Color = FF2.Core.Color;
 
+
 public class GridViewerControl : Control
 {
-    public State State { get; set; }
-    private IReadOnlyGrid grid { get { return State.Grid; } }
+    public GridViewerModel Model { get; set; }
+    private IReadOnlyGrid grid { get { return Model.Grid; } }
     private TrackedSprite[] activeSprites = new TrackedSprite[400]; // should be way more than we need
 
     private SpritePool spritePool;
@@ -35,39 +37,17 @@ public class GridViewerControl : Control
         float usedBgHeight = backgroundDefaultSize.x / grid.Width * grid.Height;
         bgShader.SetShaderParam("maxY", usedBgHeight / backgroundDefaultSize.y);
 
-        float corruptionProgress = Convert.ToSingle(State.CorruptionProgress);
+        float corruptionProgress = Convert.ToSingle(Model.CorruptionProgress);
         bgShader.SetShaderParam("corruptionProgress", corruptionProgress);
     }
-
-    // When does destruction intensity enter the max value?
-    const float DestructionPeakStart = 0.1f;
-    // When does destruction intensity exit the max value?
-    const float DestructionPeakEnd = 0.3f;
-    // When does destruction intensity finish completely?
-    const float DestructionEnd = 0.55f;
 
     private void SendBackgroundDestructionInfo()
     {
         bgShader.SetShaderParam("numColumns", grid.Width);
         bgShader.SetShaderParam("numRows", grid.Height);
-        bgShader.SetShaderParam("columnActivation", columnDestructionBitmap);
-        bgShader.SetShaderParam("rowActivation", rowDestructionBitmap);
-
-        float intensity = 0f;
-
-        if (timeSinceDestruction < DestructionPeakStart)
-        {
-            intensity = timeSinceDestruction / DestructionPeakStart;
-        }
-        else if (timeSinceDestruction < DestructionPeakEnd)
-        {
-            intensity = 1.0f;
-        }
-        else if (timeSinceDestruction < DestructionEnd)
-        {
-            intensity = 1.0f - (timeSinceDestruction - DestructionPeakEnd) / (DestructionEnd - DestructionPeakEnd);
-        }
-        bgShader.SetShaderParam("destructionIntensity", intensity);
+        bgShader.SetShaderParam("columnActivation", Model.ColumnDestructionBitmap);
+        bgShader.SetShaderParam("rowActivation", Model.RowDestructionBitmap);
+        bgShader.SetShaderParam("destructionIntensity", Model.DestructionIntensity());
     }
 
     private float GetCellSize(Vector2 maxSize)
@@ -100,7 +80,7 @@ public class GridViewerControl : Control
         AdjustBackground(screenCellSize, extraX);
         SendBackgroundDestructionInfo();
 
-        var temp = State.PreviewPlummet();
+        var temp = Model.PreviewPlummet();
 
         for (int x = 0; x < grid.Width; x++)
         {
@@ -110,7 +90,7 @@ public class GridViewerControl : Control
                 var previewOcc = temp?.GetOcc(loc);
                 var occ = previewOcc ?? grid.Get(loc);
 
-                var destroyedOcc = tickCalculations.GetDestroyedOccupant(loc, grid);
+                var destroyedOcc = Model.GetDestroyedOccupant(loc);
                 if (destroyedOcc != Occupant.None)
                 {
                     occ = destroyedOcc;
@@ -167,13 +147,7 @@ public class GridViewerControl : Control
                     var shader = (ShaderMaterial)sprite.Material;
                     shader.SetShaderParam("my_color", ToVector(occ.Color));
                     shader.SetShaderParam("my_alpha", previewOcc.HasValue ? 0.5f : 1.0f);
-
-                    float destructionProgress = 0f;
-                    if (destroyedOcc == occ)
-                    {
-                        destructionProgress = Math.Min(1f, timeSinceDestruction / DestructionEnd);
-                    }
-                    shader.SetShaderParam("destructionProgress", destructionProgress);
+                    shader.SetShaderParam("destructionProgress", Model.DestructionProgress(loc));
 
                     if (currentSprite.Kind == SpriteKind.Enemy)
                     {
@@ -253,56 +227,5 @@ public class GridViewerControl : Control
         }
 
         return SpriteKind.None;
-    }
-
-    private readonly TickCalculations tickCalculations = new TickCalculations();
-    int frames = 0;
-
-    int rowDestructionBitmap = 0;
-    int columnDestructionBitmap = 0;
-    float timeSinceDestruction = DestructionEnd + 1f;
-    DateTime startTime = default(DateTime);
-    DateTime lastProcess = default(DateTime);
-
-    public override void _Process(float delta)
-    {
-        if (startTime == default(DateTime))
-        {
-            startTime = DateTime.UtcNow;
-            lastProcess = startTime;
-        }
-        else
-        {
-            var now = DateTime.UtcNow;
-            var diff = now - lastProcess;
-            lastProcess = now;
-
-            State.Elapse(diff.Milliseconds);
-        }
-
-        timeSinceDestruction += delta;
-        if (timeSinceDestruction < DestructionEnd)
-        {
-            this.Update();
-            return;
-        }
-
-        tickCalculations.Reset();
-
-        frames++;
-
-        if (frames % 10 == 0)
-        {
-            State.Tick(tickCalculations);
-        }
-
-        if (tickCalculations.RowDestructionBitmap != 0 || tickCalculations.ColumnDestructionBitmap != 0)
-        {
-            rowDestructionBitmap = tickCalculations.RowDestructionBitmap;
-            columnDestructionBitmap = tickCalculations.ColumnDestructionBitmap;
-            timeSinceDestruction = 0.0f;
-        }
-
-        this.Update();
     }
 }

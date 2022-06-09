@@ -2,6 +2,7 @@
   <PropertyGroup>
     <TargetFramework>net48</TargetFramework>
 	<LangVersion>10.0</LangVersion>
+	<RootNamespace>FF2.Godot</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="System.Buffers" Version="4.5.1" />

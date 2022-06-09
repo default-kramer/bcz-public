@@ -1,4 +1,6 @@
 using FF2.Core;
+using FF2.Godot;
+using FF2.Godot.Controls;
 using Godot;
 using System;
 
@@ -6,6 +8,9 @@ using System;
 
 public class GameViewerControl : Control
 {
+    private readonly TickCalculations tickCalculations = new TickCalculations();
+
+    private Timing timing = null!;
     private State? __state;
     private State State
     {
@@ -14,7 +19,8 @@ public class GameViewerControl : Control
         {
             __state?.Dispose();
             __state = value;
-            gridViewer.State = value;
+            timing = new Timing(value, tickCalculations);
+            gridViewer.Model = new GridViewerModel(value, timing, tickCalculations);
         }
     }
 
@@ -113,5 +119,11 @@ public class GameViewerControl : Control
         }
 
         return false;
+    }
+
+    public override void _Process(float delta)
+    {
+        timing._Process(delta);
+        gridViewer.Update();
     }
 }
