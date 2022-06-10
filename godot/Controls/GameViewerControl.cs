@@ -10,7 +10,7 @@ public class GameViewerControl : Control
 {
     private readonly TickCalculations tickCalculations = new TickCalculations();
 
-    private Timing timing = null!;
+    private DotnetTicker timing = null!;
     private State? __state;
     private State State
     {
@@ -19,7 +19,7 @@ public class GameViewerControl : Control
         {
             __state?.Dispose();
             __state = value;
-            timing = new Timing(value, tickCalculations);
+            timing = new DotnetTicker(value, tickCalculations);
             gridViewer.Model = new GridViewerModel(value, timing, tickCalculations);
         }
     }

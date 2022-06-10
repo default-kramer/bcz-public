@@ -17,6 +17,12 @@ namespace FF2.Core
         Waiting = 2,
         Falling = 3,
         Destroying = 4,
+
+        // Values larger than 100 are not used by the State class.
+        // It's just convenient to add them to this enum.
+        Bursting = 101,
+
+        // To be used as an "assertion failed" state:
         Unreachable = int.MaxValue,
     }
 
@@ -32,6 +38,7 @@ namespace FF2.Core
         private readonly PenaltyManager penalties;
         private PenaltySchedule penaltySchedule;
         private int waitingMillis = 0;
+        private Moment lastMoment = new Moment(0); // TODO should see about enforcing "cannot change Kind without providing a Moment"
 
         /// <summary>
         /// Holds the action that will be attempted on the next <see cref="Tick"/>.
@@ -74,7 +81,13 @@ namespace FF2.Core
             return new State(grid, deck);
         }
 
-        public void Elapse(int millis)
+        public void Elapse(Moment now)
+        {
+            Elapse(now.Millis - lastMoment.Millis);
+            lastMoment = now;
+        }
+
+        private void Elapse(int millis)
         {
             if (Kind == StateKind.Waiting)
             {
@@ -133,8 +146,10 @@ namespace FF2.Core
         /// Return false if nothing changes, or if <see cref="Kind"/> is the only thing that changes.
         /// Otherwise return true after executing some "significant" change.
         /// </summary>
-        public bool Tick(TickCalculations calculations)
+        public bool Tick(Moment now, TickCalculations calculations)
         {
+            Elapse(now);
+
             switch (Kind)
             {
                 case StateKind.Spawning:

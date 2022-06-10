@@ -10,10 +10,10 @@ namespace FF2.Godot.Controls
     public sealed class GridViewerModel
     {
         private readonly State state;
-        private readonly Timing timing;
+        private readonly Ticker timing;
         private readonly TickCalculations tickCalculations;
 
-        public GridViewerModel(State state, Timing timing, TickCalculations tickCalculations)
+        public GridViewerModel(State state, Ticker timing, TickCalculations tickCalculations)
         {
             this.state = state;
             this.timing = timing;
