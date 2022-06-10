@@ -14,14 +14,6 @@ namespace FF2.Core
         private readonly State state;
         private readonly TickCalculations tickCalculations;
         private Moment lastMoment = new Moment(0);
-        // Do *NOT* add a "now" or "currentMoment" member.
-        // It gets too confusing during the Advance functions because our goal is
-        // to reach that "now" moment.
-
-        // When not null, the drop button is held down and this is the start time.
-        // We need to track this separately from the burst animation because the user can
-        // continue to hold the drop button down even after the burst animation completes.
-        private Moment? dropBegin = null;
 
         // When `state.Tick(...)` returns true, we store the Kind from *before* the tick,
         // because this is the Kind of thing that succeeded.
@@ -77,53 +69,40 @@ namespace FF2.Core
             return Math.Min(1f, timeSinceDestruction(now ?? lastMoment) / DestructionEnd);
         }
 
-        public bool HandleInput(GameKeys input, Moment now)
+        public bool HandleCommand(Command command, Moment now)
         {
             state.Elapse(now);
 
-            bool hasChange = false;
-
-            if (input.HasFlag(GameKeys.Left))
+            if (command == Command.BurstBegin)
             {
-                hasChange |= state.Move(Direction.Left);
-            }
-            if (input.HasFlag(GameKeys.Right))
-            {
-                hasChange |= state.Move(Direction.Right);
-            }
-            if (input.HasFlag(GameKeys.RotateCW))
-            {
-                hasChange |= state.Rotate(clockwise: true);
-            }
-            if (input.HasFlag(GameKeys.RotateCCW))
-            {
-                hasChange |= state.Rotate(clockwise: false);
-            }
-            if (input.HasFlag(GameKeys.Drop))
-            {
-                if (!dropBegin.HasValue)
+                if (state.Plummet())
                 {
-                    // begin bursting
-                    dropBegin = now;
-                    if (state.Plummet())
-                    {
-                        currentAnimation = (StateKind.Bursting, now);
-                        hasChange = true;
-                    }
+                    currentAnimation = (StateKind.Bursting, now);
+                    return true;
                 }
+                return false;
             }
-            else if (dropBegin.HasValue)
+            else if (command == Command.BurstCancel)
             {
-                dropBegin = null;
                 if (currentAnimation.HasValue && currentAnimation.Value.Item1 == StateKind.Bursting)
                 {
-                    Console.WriteLine("Quit burst");
                     currentAnimation = null;
-                    hasChange = true;
+                    return true;
                 }
+                return false;
             }
-
-            return hasChange;
+            else
+            {
+                return command switch
+                {
+                    Command.Left => state.Move(Direction.Left),
+                    Command.Right => state.Move(Direction.Right),
+                    Command.RotateCW => state.Rotate(clockwise: true),
+                    Command.RotateCCW => state.Rotate(clockwise: false),
+                    Command.Plummet => state.Plummet(),
+                    _ => throw new Exception($"Bad command: {command}"),
+                };
+            }
         }
 
         protected void Advance(Moment target)
@@ -217,24 +196,28 @@ namespace FF2.Core
     public sealed class DotnetTicker : Ticker
     {
         private DateTime startTime = default(DateTime);
+        private Moment now;
 
         public DotnetTicker(State state, TickCalculations tickCalculations)
             : base(state, tickCalculations)
         {
         }
 
-        public void _Process(float delta, GameKeys input)
+        public void _Process(float delta)
         {
             if (startTime == default(DateTime))
             {
                 startTime = DateTime.UtcNow;
             }
 
-            var now = DateTime.UtcNow;
-            var millis = (now - startTime).TotalMilliseconds;
-            var moment = new Moment(Convert.ToInt32(millis));
-            Advance(moment);
-            HandleInput(input, moment);
+            var millis = (DateTime.UtcNow - startTime).TotalMilliseconds;
+            now = new Moment(Convert.ToInt32(millis));
+            Advance(now);
+        }
+
+        public bool HandleCommand(Command command)
+        {
+            return HandleCommand(command, now);
         }
     }
 }

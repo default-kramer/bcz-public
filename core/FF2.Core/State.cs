@@ -89,6 +89,11 @@ namespace FF2.Core
 
         private void Elapse(int millis)
         {
+            if (millis <= 0)
+            {
+                return;
+            }
+
             if (Kind == StateKind.Waiting)
             {
                 waitingMillis += millis;

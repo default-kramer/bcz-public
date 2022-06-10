@@ -10,7 +10,7 @@ public class GameViewerControl : Control
 {
     private readonly TickCalculations tickCalculations = new TickCalculations();
 
-    private DotnetTicker timing = null!;
+    private DotnetTicker ticker = null!;
     private State? __state;
     private State State
     {
@@ -19,8 +19,8 @@ public class GameViewerControl : Control
         {
             __state?.Dispose();
             __state = value;
-            timing = new DotnetTicker(value, tickCalculations);
-            gridViewer.Model = new GridViewerModel(value, timing, tickCalculations);
+            ticker = new DotnetTicker(value, tickCalculations);
+            gridViewer.Model = new GridViewerModel(value, ticker, tickCalculations);
         }
     }
 
@@ -90,31 +90,42 @@ public class GameViewerControl : Control
         base._Draw();
     }
 
+    bool bursting = false;
+
     public override void _Process(float delta)
     {
-        var input = GameKeys.None;
+        ticker._Process(delta);
+
         if (Input.IsActionJustPressed("game_left"))
         {
-            input |= GameKeys.Left;
+            ticker.HandleCommand(Command.Left);
         }
         if (Input.IsActionJustPressed("game_right"))
         {
-            input |= GameKeys.Right;
+            ticker.HandleCommand(Command.Right);
         }
         if (Input.IsActionJustPressed("game_rotate_cw"))
         {
-            input |= GameKeys.RotateCW;
+            ticker.HandleCommand(Command.RotateCW);
         }
         if (Input.IsActionJustPressed("game_rotate_ccw"))
         {
-            input |= GameKeys.RotateCCW;
-        }
-        if (Input.IsActionPressed("game_drop"))
-        {
-            input |= GameKeys.Drop;
+            ticker.HandleCommand(Command.RotateCCW);
         }
 
-        timing._Process(delta, input);
+        if (Input.IsActionPressed("game_drop"))
+        {
+            bursting |= ticker.HandleCommand(Command.BurstBegin);
+        }
+        else
+        {
+            if (bursting)
+            {
+                ticker.HandleCommand(Command.BurstCancel);
+            }
+            bursting = false;
+        }
+
         gridViewer.Update();
     }
 }
