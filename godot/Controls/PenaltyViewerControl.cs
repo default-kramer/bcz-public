@@ -5,6 +5,14 @@ using System;
 public class PenaltyViewerControl : Control
 {
     public PenaltyManager Model { get; set; }
+    private Font font;
+
+    public override void _Ready()
+    {
+        var label = new Label();
+        font = label.GetFont("");
+        label.Free();
+    }
 
     public override void _Draw()
     {
@@ -24,6 +32,7 @@ public class PenaltyViewerControl : Control
             float y = penaltyMargin * (i + 1) + penaltyH * i;
             y = yBase - y;
             DrawRect(new Rect2(x, y, penaltySize), GameColors.Corrupt);
+            DrawString(font, new Vector2(x + 4f, y + 20f), Model[i].Level.ToString());
         }
     }
 }
