@@ -82,6 +82,8 @@ public class GridViewerControl : Control
 
         var temp = Model.PreviewPlummet();
 
+        float burstProgress = Model.BurstProgress();
+
         for (int x = 0; x < grid.Width; x++)
         {
             for (int y = 0; y < grid.Height; y++)
@@ -152,6 +154,11 @@ public class GridViewerControl : Control
                     if (currentSprite.Kind == SpriteKind.Enemy)
                     {
                         shader.SetShaderParam("is_corrupt", y < 7 ? 1.0f : 0.0f);
+                    }
+
+                    if (currentSprite.Kind == SpriteKind.BlankSingle || currentSprite.Kind == SpriteKind.BlankJoined)
+                    {
+                        shader.SetShaderParam("destructionProgress", burstProgress);
                     }
                 }
             }

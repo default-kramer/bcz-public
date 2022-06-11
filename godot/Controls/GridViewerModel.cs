@@ -29,6 +29,8 @@ namespace FF2.Godot.Controls
         public int ColumnDestructionBitmap { get { return tickCalculations.ColumnDestructionBitmap; } }
         public int RowDestructionBitmap { get { return tickCalculations.RowDestructionBitmap; } }
 
+        public float BurstProgress() { return timing.BurstProgress(); }
+
         public float DestructionIntensity()
         {
             return timing.DestructionIntensity();

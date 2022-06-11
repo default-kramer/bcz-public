@@ -69,6 +69,23 @@ namespace FF2.Core
             return Math.Min(1f, timeSinceDestruction(now ?? lastMoment) / DestructionEnd);
         }
 
+        public float BurstProgress(Moment? now = null)
+        {
+            if (currentAnimation.HasValue && currentAnimation.Value.Item1 == StateKind.Bursting)
+            {
+                const int delay = 70;
+                const float duration2 = BurstDuration - delay;
+
+                now = now ?? lastMoment;
+                int completed = now.Value.Millis - currentAnimation.Value.Item2.Millis - delay;
+                return Math.Max(0f, Math.Min(1f, completed / duration2));
+            }
+
+            return 0;
+        }
+
+        private const int BurstDuration = 500;
+
         public bool HandleCommand(Command command, Moment now)
         {
             state.Elapse(now);
@@ -147,14 +164,13 @@ namespace FF2.Core
             {
                 if (currentAnimation.HasValue)
                 {
-                    StateKind kind = currentAnimation.Value.Item1;
-                    Moment startTime = currentAnimation.Value.Item2;
+                    (StateKind kind, Moment startTime) = currentAnimation.Value;
                     int duration = kind switch
                     {
                         StateKind.Falling => 250,
                         StateKind.Spawning => 100,
                         StateKind.Destroying => DestructionEndInt,
-                        StateKind.Bursting => 500,
+                        StateKind.Bursting => BurstDuration,
                         _ => throw new Exception($"TODO: {kind}"),
                     };
                     var endTime = startTime.AddMillis(duration);
@@ -181,7 +197,7 @@ namespace FF2.Core
                 else if (state.Kind != StateKind.Waiting)
                 {
                     // TODO figure out why this is necessary beyond the first tick...
-                    Console.WriteLine("BOOTSTRAP TICK");
+                    Console.WriteLine($"BOOTSTRAP TICK: {state.Kind}");
                     DoTick(cursor);
                     cursor = target;
                 }
