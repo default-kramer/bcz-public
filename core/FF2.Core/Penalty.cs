@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace FF2.Core
 {
-    enum PenaltyKind
+    public enum PenaltyKind
     {
         None = 0,
         Permanent = 1,
@@ -14,7 +14,7 @@ namespace FF2.Core
         Levelled = 3,
     }
 
-    readonly struct Penalty
+    public readonly struct Penalty
     {
         public readonly PenaltyKind Kind;
         public readonly int Level;

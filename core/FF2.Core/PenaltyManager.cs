@@ -6,11 +6,11 @@ using System.Threading.Tasks;
 
 namespace FF2.Core
 {
-    sealed class PenaltyManager
+    public sealed class PenaltyManager
     {
         private readonly Penalty[] penalties;
         private int index;
-        public readonly PayoutTable CorruptionAccelerationPayoutTable;
+        internal readonly PayoutTable CorruptionAccelerationPayoutTable;
 
         public PenaltyManager(int capacity = 10)
         {

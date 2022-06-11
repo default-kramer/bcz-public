@@ -35,7 +35,7 @@ namespace FF2.Core
         private Mover? mover;
         private CorruptionManager corruption;
         private Combo currentCombo;
-        private readonly PenaltyManager penalties;
+        public readonly PenaltyManager penalties;
         private PenaltySchedule penaltySchedule;
         private int waitingMillis = 0;
         private Moment lastMoment = new Moment(0); // TODO should see about enforcing "cannot change Kind without providing a Moment"

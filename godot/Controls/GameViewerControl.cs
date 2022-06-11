@@ -21,6 +21,7 @@ public class GameViewerControl : Control
             __state = value;
             ticker = new DotnetTicker(value, tickCalculations);
             gridViewer.Model = new GridViewerModel(value, ticker, tickCalculations);
+            penaltyViewer.Model = value.penalties;
         }
     }
 
@@ -46,7 +47,7 @@ public class GameViewerControl : Control
 
     public void OnSizeChanged()
     {
-        const float pvWidth = 35;
+        const float pvWidth = 50;
 
         float availWidth = RectSize.x;
         if (ShowPenalties)
@@ -127,5 +128,6 @@ public class GameViewerControl : Control
         }
 
         gridViewer.Update();
+        penaltyViewer.Update();
     }
 }

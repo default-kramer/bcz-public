@@ -147,7 +147,7 @@ public class GridViewerControl : Control
                     }
 
                     var shader = (ShaderMaterial)sprite.Material;
-                    shader.SetShaderParam("my_color", ToVector(occ.Color));
+                    shader.SetShaderParam("my_color", GameColors.ToVector(occ.Color));
                     shader.SetShaderParam("my_alpha", previewOcc.HasValue ? 0.5f : 1.0f);
                     shader.SetShaderParam("destructionProgress", Model.DestructionProgress(loc));
 
@@ -163,42 +163,6 @@ public class GridViewerControl : Control
                 }
             }
         }
-    }
-
-    private static readonly Godot.Color Red = Godot.Color.Color8(255, 56, 120);
-    private static readonly Godot.Color Blue = Godot.Color.Color8(0, 148, 255);
-    private static readonly Godot.Color Yellow = Godot.Color.Color8(255, 255, 107);
-    private static readonly Vector3 RedV = ToVector(Red);
-    private static readonly Vector3 BlueV = ToVector(Blue);
-    private static readonly Vector3 YellowV = ToVector(Yellow);
-    private static readonly Vector3 WhiteV = new Vector3(1, 1, 1);
-
-    private static Vector3 ToVector(Godot.Color color)
-    {
-        return new Vector3(color.r, color.g, color.b);
-    }
-
-    private static Godot.Color ToColor(Color color)
-    {
-        return color switch
-        {
-            Color.Red => Red,
-            Color.Blue => Blue,
-            Color.Yellow => Yellow,
-            _ => throw new Exception("unexpected color: " + color),
-        };
-    }
-
-    private static Vector3 ToVector(Color color)
-    {
-        return color switch
-        {
-            Color.Red => RedV,
-            Color.Blue => BlueV,
-            Color.Yellow => YellowV,
-            Color.Blank => WhiteV,
-            _ => new Vector3(0.5f, 1.0f, 0.8f) // maybe this will jump out at me
-        };
     }
 
     private static SpriteKind GetSpriteKind(Occupant occ)
