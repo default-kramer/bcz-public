@@ -81,6 +81,11 @@ namespace FF2.Core
             return new State(grid, deck);
         }
 
+        public Viewmodels.QueueModel MakeQueueModel()
+        {
+            return new Viewmodels.QueueModel(this.spawnDeck);
+        }
+
         public void Elapse(Moment now)
         {
             Elapse(now.Millis - lastMoment.Millis);

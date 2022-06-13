@@ -13,16 +13,13 @@ public class GridViewerControl : Control
     private IReadOnlyGrid grid { get { return Model.Grid; } }
     private TrackedSprite[] activeSprites = new TrackedSprite[400]; // should be way more than we need
 
-    private SpritePool spritePool;
+    private SpritePool spritePool = null!;
     private TextureRect background;
     private Vector2 backgroundDefaultSize;
     private ShaderMaterial bgShader;
 
     public override void _Ready()
     {
-        spritePool = new SpritePool(this, SpriteKind.Single, SpriteKind.Joined,
-            SpriteKind.Enemy, SpriteKind.BlankJoined, SpriteKind.BlankSingle);
-
         background = GetNode<TextureRect>("Background");
         backgroundDefaultSize = background.RectSize;
         bgShader = (ShaderMaterial)background.Material;
@@ -61,8 +58,13 @@ public class GridViewerControl : Control
         return new Vector2(cellSize * grid.Width, cellSize * grid.Height);
     }
 
+    internal Vector2 CurrentSpriteScale { get; set; }
+    internal float CurrentCellSize { get; set; }
+
     public override void _Draw()
     {
+        spritePool = spritePool ?? NewRoot.GetSpritePool(this);
+
         var fullSize = this.RectSize;
 
         // For debugging, show the excess width/height as brown:
@@ -76,6 +78,8 @@ public class GridViewerControl : Control
         // Occupant sprites are always 360x360 pixels
         float spriteScale = screenCellSize / 360.0f;
         var spriteScale2 = new Vector2(spriteScale, spriteScale);
+        CurrentSpriteScale = spriteScale2;
+        CurrentCellSize = screenCellSize;
 
         AdjustBackground(screenCellSize, extraX);
         SendBackgroundDestructionInfo();
@@ -123,7 +127,7 @@ public class GridViewerControl : Control
 
                 if (kind != SpriteKind.None && kind != currentSprite.Kind)
                 {
-                    currentSprite = spritePool.Rent(kind);
+                    currentSprite = spritePool.Rent(kind, this);
                 }
 
                 if (currentSprite.IsSomething)
@@ -165,7 +169,7 @@ public class GridViewerControl : Control
         }
     }
 
-    private static SpriteKind GetSpriteKind(Occupant occ)
+    internal static SpriteKind GetSpriteKind(Occupant occ)
     {
         if (occ.Kind == OccupantKind.Catalyst)
         {

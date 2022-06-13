@@ -35,24 +35,22 @@ namespace FF2.Godot
     // TODO should implement IDisposable probably...
     sealed class SpritePool
     {
-        private readonly Control owner;
         private readonly IReadOnlyDictionary<SpriteKind, Pool> pools;
 
         public SpritePool(Control owner, params SpriteKind[] kinds)
         {
-            this.owner = owner;
-
             var pools = new Dictionary<SpriteKind, Pool>();
             foreach (var kind in kinds)
             {
-                pools[kind] = new Pool(owner, kind);
+                var template = owner.GetNode<Sprite>(kind.ToString());
+                pools[kind] = new Pool(template, kind);
             }
             this.pools = pools;
         }
 
-        public TrackedSprite Rent(SpriteKind kind)
+        public TrackedSprite Rent(SpriteKind kind, Control owner)
         {
-            return pools[kind].Rent();
+            return pools[kind].Rent(owner);
         }
 
         public void Return(TrackedSprite sprite)
@@ -63,19 +61,17 @@ namespace FF2.Godot
         sealed class Pool
         {
             private readonly SpriteKind kind;
-            private readonly Control owner;
             private readonly Sprite template;
             private readonly Stack<TrackedSprite> available = new Stack<TrackedSprite>();
             private int RentCount = 0;
 
-            public Pool(Control owner, SpriteKind kind)
+            public Pool(Sprite template, SpriteKind kind)
             {
+                this.template = template;
                 this.kind = kind;
-                this.owner = owner;
-                template = owner.GetNode<Sprite>(kind.ToString());
             }
 
-            public TrackedSprite Rent()
+            public TrackedSprite Rent(Control owner)
             {
                 if (++RentCount > 100)
                 {
@@ -86,6 +82,12 @@ namespace FF2.Godot
                 {
                     var item = available.Pop();
                     item.Sprite.Visible = true;
+                    if (item.Sprite.Owner != owner)
+                    {
+                        item.Sprite.Owner.RemoveChild(item.Sprite);
+                        owner.AddChild(item.Sprite);
+                        item.Sprite.Owner = owner;
+                    }
                     return item;
                 }
                 else
@@ -96,6 +98,7 @@ namespace FF2.Godot
                     clone.Material = (ShaderMaterial)template.Material.Duplicate();
                     clone.Visible = true;
                     owner.AddChild(clone);
+                    clone.Owner = owner;
                     return new TrackedSprite(kind, clone);
                 }
             }

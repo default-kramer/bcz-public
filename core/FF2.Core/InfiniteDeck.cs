@@ -45,23 +45,10 @@ namespace FF2.Core
 
         public InfiniteDeck<T> Clone() { return new InfiniteDeck<T>(this); }
 
-        public void Peek(T[] buffer)
+        public T Peek(int i)
         {
-            if (buffer.Length > shuffle.Length)
-            {
-                throw new ArgumentException("Cannot preview that much!");
-            }
-
-            int index = this.index;
-            for (int i = 0; i < buffer.Length; i++)
-            {
-                buffer[i] = shuffle[index];
-                index++;
-                if (index == shuffle.Length)
-                {
-                    index = 0;
-                }
-            }
+            i = (index + i) % shuffle.Length;
+            return shuffle[i];
         }
 
         public T Pop()

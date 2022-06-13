@@ -22,11 +22,13 @@ public class GameViewerControl : Control
             ticker = new DotnetTicker(value, tickCalculations);
             gridViewer.Model = new GridViewerModel(value, ticker, tickCalculations);
             penaltyViewer.Model = value.penalties;
+            queueViewer.Model = value.MakeQueueModel();
         }
     }
 
     private GridViewerControl gridViewer = null!;
     private PenaltyViewerControl penaltyViewer = null!;
+    private QueueViewerControl queueViewer = null!;
 
     public bool ShowPenalties
     {
@@ -34,10 +36,20 @@ public class GameViewerControl : Control
         set { penaltyViewer.Visible = value; }
     }
 
+    public bool ShowQueue
+    {
+        get { return queueViewer.Visible; }
+        set { queueViewer.Visible = value; }
+    }
+
     public override void _Ready()
     {
         gridViewer = GetNode<GridViewerControl>("GridViewer");
+
         penaltyViewer = GetNode<PenaltyViewerControl>("PenaltyViewer");
+
+        queueViewer = GetNode<QueueViewerControl>("QueueViewer");
+        queueViewer.GridViewer = gridViewer;
 
         State = State.Create(PRNG.Create());
 
@@ -48,11 +60,16 @@ public class GameViewerControl : Control
     public void OnSizeChanged()
     {
         const float pvWidth = 50;
+        const float queueWidth = 140;
 
         float availWidth = RectSize.x;
         if (ShowPenalties)
         {
             availWidth -= pvWidth;
+        }
+        if (ShowQueue)
+        {
+            availWidth -= queueWidth;
         }
 
         var gvSize = gridViewer.DesiredSize(new Vector2(availWidth, RectSize.y));
@@ -61,6 +78,10 @@ public class GameViewerControl : Control
         if (ShowPenalties)
         {
             totalWidth += pvWidth;
+        }
+        if (ShowQueue)
+        {
+            totalWidth += queueWidth;
         }
 
         float meCenter = RectSize.x / 2f;
@@ -75,7 +96,14 @@ public class GameViewerControl : Control
 
         gridViewer.RectSize = gvSize;
         gridViewer.RectPosition = new Vector2(left, 0);
-        //left += gvWidth;
+        left += gvSize.x;
+
+        if (ShowQueue)
+        {
+            queueViewer.RectSize = new Vector2(queueWidth, RectSize.y);
+            queueViewer.RectPosition = new Vector2(left, 0);
+            left += queueWidth;
+        }
     }
 
     private bool _firstDraw = true;
@@ -129,5 +157,6 @@ public class GameViewerControl : Control
 
         gridViewer.Update();
         penaltyViewer.Update();
+        queueViewer.Update();
     }
 }
