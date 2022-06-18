@@ -92,7 +92,7 @@ namespace FF2.Core
 
             if (command == Command.BurstBegin)
             {
-                if (state.Plummet())
+                if (state.HandleCommand(Command.Plummet, now))
                 {
                     currentAnimation = (StateKind.Bursting, now);
                     return true;
@@ -110,15 +110,7 @@ namespace FF2.Core
             }
             else
             {
-                return command switch
-                {
-                    Command.Left => state.Move(Direction.Left),
-                    Command.Right => state.Move(Direction.Right),
-                    Command.RotateCW => state.Rotate(clockwise: true),
-                    Command.RotateCCW => state.Rotate(clockwise: false),
-                    Command.Plummet => state.Plummet(),
-                    _ => throw new Exception($"Bad command: {command}"),
-                };
+                return state.HandleCommand(command, now);
             }
         }
 
@@ -162,6 +154,8 @@ namespace FF2.Core
         {
             while (cursor < target)
             {
+                state.Elapse(cursor);
+
                 if (currentAnimation.HasValue)
                 {
                     (StateKind kind, Moment startTime) = currentAnimation.Value;
@@ -183,7 +177,7 @@ namespace FF2.Core
 
                         if (kind == StateKind.Bursting)
                         {
-                            state.Burst();
+                            state.Burst(endTime);
                         }
 
                         DoTick(cursor);
@@ -206,6 +200,8 @@ namespace FF2.Core
                     cursor = target;
                 }
             }
+
+            state.Elapse(cursor);
         }
     }
 

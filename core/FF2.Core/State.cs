@@ -120,6 +120,21 @@ namespace FF2.Core
             }
         }
 
+        public bool HandleCommand(Command command, Moment now)
+        {
+            Elapse(now);
+
+            return command switch
+            {
+                Command.Left => Move(Direction.Left),
+                Command.Right => Move(Direction.Right),
+                Command.RotateCW => Rotate(clockwise: true),
+                Command.RotateCCW => Rotate(clockwise: false),
+                Command.Plummet => Plummet(),
+                _ => throw new Exception($"Bad command: {command}"),
+            };
+        }
+
         public decimal CorruptionProgress { get { return corruption.Progress; } }
 
         private bool Spawn()
@@ -186,7 +201,7 @@ namespace FF2.Core
             return mover?.PreviewPlummet(grid);
         }
 
-        public bool Plummet()
+        private bool Plummet()
         {
             if (Kind != StateKind.Waiting || mover == null)
             {
@@ -210,8 +225,9 @@ namespace FF2.Core
             return true;
         }
 
-        public void Burst()
+        public void Burst(Moment now)
         {
+            Elapse(now);
             grid.Burst();
         }
 
@@ -227,7 +243,7 @@ namespace FF2.Core
             spawnDeck.Dispose();
         }
 
-        public bool Move(Direction dir)
+        private bool Move(Direction dir)
         {
             if (!mover.HasValue)
             {
@@ -251,7 +267,7 @@ namespace FF2.Core
             return false;
         }
 
-        public bool Rotate(bool clockwise)
+        private bool Rotate(bool clockwise)
         {
             if (!mover.HasValue)
             {
