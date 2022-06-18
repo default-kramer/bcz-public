@@ -119,7 +119,7 @@ public class GameViewerControl : Control
         base._Draw();
     }
 
-    bool bursting = false;
+    bool holdingDrop = false;
 
     public override void _Process(float delta)
     {
@@ -144,15 +144,19 @@ public class GameViewerControl : Control
 
         if (Input.IsActionPressed("game_drop"))
         {
-            bursting |= ticker.HandleCommand(Command.BurstBegin);
+            if (!holdingDrop)
+            {
+                ticker.HandleCommand(Command.BurstBegin);
+                holdingDrop = true;
+            }
         }
         else
         {
-            if (bursting)
+            if (holdingDrop)
             {
                 ticker.HandleCommand(Command.BurstCancel);
+                holdingDrop = false;
             }
-            bursting = false;
         }
 
         gridViewer.Update();
