@@ -42,6 +42,15 @@ namespace FF2.Core
                 index++;
                 //Console.WriteLine($"Added penalty: {penalty}");
             }
+            else
+            {
+                var min = FindLevelled(false);
+                if (min.HasValue && penalties[min.Value].Level < penalty.Level)
+                {
+                    Remove(min.Value);
+                    Add(penalty);
+                }
+            }
         }
 
         public void OnComboCompleted(Combo combo)
@@ -52,23 +61,34 @@ namespace FF2.Core
                 return;
             }
 
-            int removeIndex = -1;
-            int removeLevel = -1;
+            var max = FindLevelled(true, payout);
+
+            if (max.HasValue)
+            {
+                Remove(max.Value);
+            }
+        }
+
+        private int? FindLevelled(bool findMax, int maxLevel = int.MaxValue)
+        {
+            int? retval = null;
+            int bestLevel = findMax ? int.MinValue : int.MaxValue;
 
             for (int i = 0; i < index; i++)
             {
                 var penalty = penalties[i];
-                if (penalty.Kind == PenaltyKind.Levelled && penalty.Level <= payout && penalty.Level > removeLevel)
+                if (penalty.Kind == PenaltyKind.Levelled && penalty.Level <= maxLevel)
                 {
-                    removeIndex = i;
-                    removeLevel = penalty.Level;
+                    if ((findMax && penalty.Level > bestLevel)
+                        || (!findMax && penalty.Level < bestLevel))
+                    {
+                        retval = i;
+                        bestLevel = penalty.Level;
+                    }
                 }
             }
 
-            if (removeIndex >= 0)
-            {
-                Remove(removeIndex);
-            }
+            return retval;
         }
 
         private void Remove(int target)
