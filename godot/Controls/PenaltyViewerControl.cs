@@ -1,10 +1,11 @@
 using FF2.Core;
+using FF2.Core.Viewmodels;
 using Godot;
 using System;
 
 public class PenaltyViewerControl : Control
 {
-    public PenaltyManager Model { get; set; }
+    public PenaltyModel Model { get; set; }
     private Font font;
 
     public override void _Ready()

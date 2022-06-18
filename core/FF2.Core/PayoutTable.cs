@@ -39,10 +39,8 @@ namespace FF2.Core
             }
         }
 
-        const int factor = 2000 * 1000;
-
         public static readonly PayoutTable DefaultCorruptionPayoutTable
-            = new PayoutTable(0, 0, 1 * factor, 3 * factor, 6 * factor, 10 * factor, 15 * factor);
+            = new PayoutTable(2000 * 1000, 0m, 0m, 1m, 3m, 6m, 10m, 15m);
 
         public static readonly PayoutTable DefaultCorruptionAccelerationPayoutTable
             = new PayoutTable(CorruptionManager.CorruptionAccelerationDenominator, 1m, 1.2m, 1.4m, 1.7m, 2m, 2.5m);

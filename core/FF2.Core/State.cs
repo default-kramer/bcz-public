@@ -35,7 +35,7 @@ namespace FF2.Core
         private Mover? mover;
         private CorruptionManager corruption;
         private Combo currentCombo;
-        public readonly PenaltyManager penalties;
+        private readonly PenaltyManager penalties;
         private PenaltySchedule penaltySchedule;
         private int waitingMillis = 0;
         private Moment lastMoment = new Moment(0); // TODO should see about enforcing "cannot change Kind without providing a Moment"
@@ -84,6 +84,11 @@ namespace FF2.Core
         public Viewmodels.QueueModel MakeQueueModel()
         {
             return new Viewmodels.QueueModel(this.spawnDeck);
+        }
+
+        public Viewmodels.PenaltyModel MakePenaltyModel()
+        {
+            return new Viewmodels.PenaltyModel(penalties);
         }
 
         public void Elapse(Moment now)
@@ -147,6 +152,7 @@ namespace FF2.Core
             else
             {
                 corruption = corruption.OnComboCompleted(currentCombo);
+                penalties.OnComboCompleted(currentCombo);
                 currentCombo = Combo.Empty;
             }
             return result;

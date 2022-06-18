@@ -21,7 +21,7 @@ public class GameViewerControl : Control
             __state = value;
             ticker = new DotnetTicker(value, tickCalculations);
             gridViewer.Model = new GridViewerModel(value, ticker, tickCalculations);
-            penaltyViewer.Model = value.penalties;
+            penaltyViewer.Model = value.MakePenaltyModel();
             queueViewer.Model = value.MakeQueueModel();
         }
     }

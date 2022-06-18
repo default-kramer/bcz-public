@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace FF2.Core
 {
-    public sealed class PenaltyManager
+    sealed class PenaltyManager
     {
         private readonly Penalty[] penalties;
         private int index;
@@ -42,6 +42,42 @@ namespace FF2.Core
                 index++;
                 //Console.WriteLine($"Added penalty: {penalty}");
             }
+        }
+
+        public void OnComboCompleted(Combo combo)
+        {
+            int payout = combo.AdjustedGroupCount;
+            if (payout < 2)
+            {
+                return;
+            }
+
+            int removeIndex = -1;
+            int removeLevel = -1;
+
+            for (int i = 0; i < index; i++)
+            {
+                var penalty = penalties[i];
+                if (penalty.Kind == PenaltyKind.Levelled && penalty.Level <= payout && penalty.Level > removeLevel)
+                {
+                    removeIndex = i;
+                    removeLevel = penalty.Level;
+                }
+            }
+
+            if (removeIndex >= 0)
+            {
+                Remove(removeIndex);
+            }
+        }
+
+        private void Remove(int target)
+        {
+            for (int i = target; i < index - 1; i++)
+            {
+                penalties[i] = penalties[i + 1];
+            }
+            index--;
         }
     }
 }
