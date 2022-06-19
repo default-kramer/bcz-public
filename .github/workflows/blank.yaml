@@ -38,6 +38,7 @@ jobs:
 
       - name: Install the Godot export templates
         run: |
+          unzip ./.github/downloads/Godot_v3.4.4-stable_mono_export_templates.zip
           mkdir --parents /home/runner/.local/share/godot/templates
           mv ./.github/downloads/Godot_v3.4.4-stable_mono_export_templates/templates /home/runner/.local/share/godot/templates/3.4.4.stable.mono
 
