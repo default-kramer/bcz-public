@@ -28,5 +28,7 @@ jobs:
       - uses: actions/checkout@v3
       - run: ls -lh
       - run: cd ./godot && ls -lh
+      # The base Docker image seems to have the templates in an outdated location, so link them:
+      - run: ln -s /root/.local/share/godot/templates/ /github/home/.local/share/godot/templates
       - run: godot ./godot/project.godot --export "HTML5"
       - run: cd ./godot/.export/HTML5 && ls -lh
