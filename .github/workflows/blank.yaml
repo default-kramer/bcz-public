@@ -27,7 +27,6 @@ jobs:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v3
       - run: ls -lh
-      - run: cd ./godot
-      - run: ls -lh
-      - run: godot ./project.godot --export "HTML5"
-      - run: cd /.export/HTML5 && ls -lh
+      - run: cd ./godot && ls -lh
+      - run: godot ./godot/project.godot --export "HTML5"
+      - run: cd ./godot/.export/HTML5 && ls -lh
