@@ -3,4 +3,6 @@ obj/
 .vs/
 
 .import
+*.import
 .mono
+.export
