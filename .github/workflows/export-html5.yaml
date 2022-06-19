@@ -1,0 +1,59 @@
+name: ExportHTML5
+
+# Controls when the workflow will run
+on:
+  # Triggers the workflow on push or pull request events but only for the "main" branch
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  build:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-20.04
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v3
+
+      - name: Setup .NET Core SDK
+        uses: actions/setup-dotnet@v2.1.0
+        with:
+          dotnet-version: 6.0.x
+
+      - name: Install the Godot Mono Headless binary
+        run: |
+          cd ./.github/downloads
+          unzip ./Godot_v3.4.4-stable_mono_linux_headless_64.zip
+          mv ./Godot_v3.4.4-stable_mono_linux_headless_64/* /usr/local/bin/
+          mv /usr/local/bin/Godot_v3.4.4-stable_mono_linux_headless.64 /usr/local/bin/godot
+
+      #- run: godot --help # Works but exits with code 255 anyway
+
+      - name: Install the Godot export templates
+        run: |
+          cd ./.github/downloads
+          unzip ./Godot_v3.4.4-stable_mono_export_templates.zip
+          mkdir --parents /home/runner/.local/share/godot/templates
+          mv ./Godot_v3.4.4-stable_mono_export_templates/templates /home/runner/.local/share/godot/templates/3.4.4.stable.mono
+
+      - name: Export project to HTML5
+        run: |
+          cd ./godot
+          mkdir --parents ./.export/HTML5
+          godot ./project.godot --export "HTML5"
+          ls -lh
+          cd .export/HTML5
+          ls -lh
+
+      - uses: actions/upload-artifact@v3
+        with:
+          name: ff2-html5
+          path: ./godot/.export/HTML5
