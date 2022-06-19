@@ -1,6 +1,4 @@
-# This is a basic workflow to help you get started with Actions
-
-name: CI
+name: ExportHTML5
 
 # Controls when the workflow will run
 on:
@@ -19,17 +17,35 @@ jobs:
   build:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
-    container:
-      image: docker://barichello/godot-ci:mono-3.4.4
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v3
-      - run: ls -lh
-      - run: cd ./godot && ls -lh
-      # The base Docker image seems to have the templates in an outdated location, so link them:
-      - run: mkdir -p /github/home/.local/share/godot
-      - run: ln -s /root/.local/share/godot/templates/ /github/home/.local/share/godot/templates
-      - run: godot ./godot/project.godot --export "HTML5"
-      - run: cd ./godot/.export/HTML5 && ls -lh
+
+      - name: Setup .NET Core SDK
+        uses: actions/setup-dotnet@v2.1.0
+        with:
+          dotnet-version: 6.0.x
+
+      - name: Install the Godot Mono Headless binary
+        run: |
+          unzip ./.github/downloads/Godot_v3.4.4-stable_mono_linux_headless_64.zip
+          mv ./Godot_v3.4.4-stable_mono_linux_headless_64/* /usr/local/bin/
+          mv /usr/local/bin/Godot_v3.4.4-stable_mono_linux_headless.64 /usr/local/bin/godot
+
+      #- run: godot --help # Works but exits with code 255 anyway
+
+      - name: Install the Godot export templates
+        run: |
+          mkdir --parents /home/runner/.local/share/godot/templates
+          mv ./.github/downloads/Godot_v3.4.4-stable_mono_export_templates/templates /home/runner/.local/share/godot/templates/3.4.4.stable.mono
+
+      - name: Export project to HTML5
+        run: |
+          cd ./godot
+          mkdir --parents ./.export/HTML5
+          godot ./project.godot --export "HTML5"
+          ls -lh
+          cd .export/HTML5
+          ls -lh
