@@ -10,12 +10,12 @@
  * Modeling it this way might have other benefits...
  */
 
-using System;
-using System.Buffers;
 using Bits = System.UInt32;
 
 namespace FF2.Core
 {
+    // The enums in this file get packed into a single value so they must not share any bits.
+
     public enum OccupantKind : Bits
     {
         None = 0,

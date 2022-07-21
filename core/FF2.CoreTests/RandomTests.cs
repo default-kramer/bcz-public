@@ -37,7 +37,7 @@ namespace FF2.CoreTests
             return pattern.Replace("{seed}", seedStr);
         }
 
-        int ValidateDoubles(PRNG.State seed)
+        private static int ValidateDoubles(PRNG.State seed)
         {
             var filename = GetFilename(seed, "rand-doubles-{seed}.txt");
             var rand = new PRNG(seed);
@@ -55,7 +55,7 @@ namespace FF2.CoreTests
         /// Finally, we return the number of assertions that we performed
         /// (which is also the number of lines in the file).
         /// </summary>
-        private int Validate<T>(string filename, Func<string, T> expectedFunc, Func<T> actualFunc)
+        private static int Validate<T>(string filename, Func<string, T> expectedFunc, Func<T> actualFunc)
         {
             var asm = System.Reflection.Assembly.GetExecutingAssembly();
             var resourceName = string.Format("{0}.RandomExpectations.{1}", asm.GetName().Name, filename);
