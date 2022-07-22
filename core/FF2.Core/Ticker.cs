@@ -9,9 +9,10 @@ namespace FF2.Core
     /// <summary>
     /// The ticker layers timing-related concerns on top of a <see cref="State"/>.
     /// </summary>
-    public abstract class Ticker
+    public class Ticker
     {
         private readonly State state;
+        private readonly IReplayCollector replayCollector;
         private readonly TickCalculations tickCalculations;
         private Moment lastMoment = new Moment(0);
 
@@ -28,9 +29,10 @@ namespace FF2.Core
             return DestructionEndInt + 1;
         }
 
-        public Ticker(State state, TickCalculations tickCalculations)
+        public Ticker(State state, TickCalculations tickCalculations, IReplayCollector replayCollector)
         {
             this.state = state;
+            this.replayCollector = replayCollector;
             this.tickCalculations = tickCalculations;
         }
 
@@ -86,9 +88,24 @@ namespace FF2.Core
 
         private const int BurstDuration = 500;
 
+        public bool HandleCommand(Stamped<Command> command)
+        {
+            return HandleCommand(command.Value, command.Moment);
+        }
+
         public bool HandleCommand(Command command, Moment now)
         {
-            state.Elapse(now);
+            if (DoHandleCommand(command, now))
+            {
+                replayCollector.Collect(new Stamped<Command>(now, command));
+                return true;
+            }
+            return false;
+        }
+
+        private bool DoHandleCommand(Command command, Moment now)
+        {
+            Advance(now);
 
             if (command == Command.BurstBegin)
             {
@@ -114,7 +131,10 @@ namespace FF2.Core
             }
         }
 
-        protected void Advance(Moment target)
+        /// <summary>
+        /// TODO can we make this private?
+        /// </summary>
+        internal void Advance(Moment target)
         {
             Advance(lastMoment, target);
             this.lastMoment = target;
@@ -210,10 +230,12 @@ namespace FF2.Core
         private DateTime startTime = default(DateTime);
         private Moment now;
 
-        public DotnetTicker(State state, TickCalculations tickCalculations)
-            : base(state, tickCalculations)
+        public DotnetTicker(State state, TickCalculations tickCalculations, IReplayCollector replayCollector)
+            : base(state, tickCalculations, replayCollector)
         {
         }
+
+        public Moment Now { get { return now; } }
 
         public void _Process(float delta)
         {

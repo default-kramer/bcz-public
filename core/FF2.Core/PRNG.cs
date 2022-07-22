@@ -31,7 +31,7 @@ namespace FF2.Core
             return new State(s10, s11, s12, s20, s21, s22);
         }
 
-        public void SetState(State state)
+        private void SetState(State state)
         {
             if (state.s10 == 0 && state.s11 == 0 && state.s12 == 0)
             {
@@ -57,9 +57,6 @@ namespace FF2.Core
             s20 = state.s20;
             s21 = state.s21;
             s22 = state.s22;
-
-            // Throw away one value to align output with L'Ecuyer original version
-            NextDouble();
         }
 
         private static void EnsureNonnegative(long n, string name)

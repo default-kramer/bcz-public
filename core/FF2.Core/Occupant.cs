@@ -145,5 +145,10 @@ namespace FF2.Core
         {
             return data.GetHashCode();
         }
+
+        public override string ToString()
+        {
+            return $"Occupant:{Kind}{Color}{Direction}";
+        }
     }
 }
