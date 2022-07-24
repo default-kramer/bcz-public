@@ -12,6 +12,7 @@ public class MenuChoiceControl : Control
         public readonly Button ButtonLeft;
         public readonly Button ButtonRight;
         public readonly Label LabelValue;
+        public readonly Color FocusColor;
 
         public Members(MenuChoiceControl me)
         {
@@ -19,6 +20,8 @@ public class MenuChoiceControl : Control
             ButtonLeft = node.GetNode<Button>("ButtonLeft");
             ButtonRight = node.GetNode<Button>("ButtonRight");
             LabelValue = node.GetNode<Label>("LabelValue");
+
+            FocusColor = ButtonLeft.GetColor("font_color_focus");
 
             ButtonLeft.Connect("pressed", me, nameof(LeftPressed));
             ButtonRight.Connect("pressed", me, nameof(RightPressed));
@@ -49,27 +52,27 @@ public class MenuChoiceControl : Control
 
     private void StyleFocus(Control control)
     {
-        control.AddColorOverride("accent_color", Color.Color8(200, 100, 0));
-        control.AddColorOverride("font_color", Color.Color8(0, 255, 0));
+        control.AddColorOverride("font_color", members.FocusColor);
     }
 
     private void StyleUnfocus(Control control)
     {
         // https://godotengine.org/qa/11535/remove-color-override
         // Seems this is the only way to undo AddColorOverride
-        control.Set("custom_colors/accent_color", null);
         control.Set("custom_colors/font_color", null);
     }
 
     private void GotFocus()
     {
         StyleFocus(members.ButtonLeft);
+        StyleFocus(members.LabelValue);
         StyleFocus(members.ButtonRight);
     }
 
     private void LostFocus()
     {
         StyleUnfocus(members.ButtonLeft);
+        StyleUnfocus(members.LabelValue);
         StyleUnfocus(members.ButtonRight);
     }
 

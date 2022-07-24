@@ -1,0 +1,11 @@
+[gd_resource type="Theme" format=2]
+
+[resource]
+Button/colors/font_color_focus = Color( 0.113725, 0.968627, 0.0627451, 1 )
+CheckBox/colors/font_color_focus = Color( 0.113725, 0.968627, 0.0627451, 1 )
+CheckButton/colors/font_color_focus = Color( 0.113725, 0.968627, 0.0627451, 1 )
+ColorPickerButton/colors/font_color_focus = Color( 0.113725, 0.968627, 0.0627451, 1 )
+LinkButton/colors/font_color_focus = Color( 0.113725, 0.968627, 0.0627451, 1 )
+MenuButton/colors/font_color_focus = Color( 0.113725, 0.968627, 0.0627451, 1 )
+OptionButton/colors/font_color_focus = Color( 0.113725, 0.968627, 0.0627451, 1 )
+ToolButton/colors/font_color_focus = Color( 0.113725, 0.968627, 0.0627451, 1 )
