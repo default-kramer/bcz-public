@@ -46,11 +46,11 @@ public class GameViewerControl : Control
         __state = State.Create(prng);
         var replayCollector = new ReplayCollector();
         ticker = new DotnetTicker(__state, tickCalculations, replayCollector);
-        gridViewer.Model = new GridViewerModel(__state, ticker, tickCalculations);
-        penaltyViewer.Model = __state.MakePenaltyModel();
-        queueViewer.Model = __state.MakeQueueModel();
+        members.GridViewer.Model = new GridViewerModel(__state, ticker, tickCalculations);
+        members.PenaltyViewer.Model = __state.MakePenaltyModel();
+        members.QueueViewer.Model = __state.MakeQueueModel();
 
-        (this.replayDriver, replayViewer.Model) = BuildReplay(prng2, replayCollector.Commands);
+        (this.replayDriver, members.ReplayViewer.Model) = BuildReplay(prng2, replayCollector.Commands);
     }
 
     private static (ReplayDriver, GridViewerModel) BuildReplay(PRNG prng, IReadOnlyList<Stamped<Command>> commands)
@@ -63,34 +63,46 @@ public class GameViewerControl : Control
         return (replay, model);
     }
 
-    private GridViewerControl gridViewer = null!;
-    private PenaltyViewerControl penaltyViewer = null!;
-    private QueueViewerControl queueViewer = null!;
-    private GridViewerControl replayViewer = null!;
+    struct Members
+    {
+        public readonly PenaltyViewerControl PenaltyViewer;
+        public readonly GridViewerControl GridViewer;
+        public readonly QueueViewerControl QueueViewer;
+        public readonly GridViewerControl ReplayViewer;
+        public readonly GameOverMenu GameOverMenu;
+
+        public Members(Control me)
+        {
+            me.FindNode(out PenaltyViewer, nameof(PenaltyViewer));
+            me.FindNode(out GridViewer, nameof(GridViewer));
+            me.FindNode(out QueueViewer, nameof(QueueViewer));
+            me.FindNode(out ReplayViewer, nameof(ReplayViewer));
+            me.FindNode(out GameOverMenu, nameof(GameOverMenu));
+
+            QueueViewer.GridViewer = GridViewer;
+        }
+    }
+
+    private Members members;
 
     public bool ShowPenalties
     {
-        get { return penaltyViewer.Visible; }
-        set { penaltyViewer.Visible = value; }
+        get { return members.PenaltyViewer.Visible; }
+        set { members.PenaltyViewer.Visible = value; }
     }
 
     public bool ShowQueue
     {
-        get { return queueViewer.Visible; }
-        set { queueViewer.Visible = value; }
+        get { return members.QueueViewer.Visible; }
+        set { members.QueueViewer.Visible = value; }
     }
 
     public override void _Ready()
     {
-        gridViewer = GetNode<GridViewerControl>("GridViewer");
-        replayViewer = GetNode<GridViewerControl>("ReplayViewer");
+        this.members = new Members(this);
 
-        penaltyViewer = GetNode<PenaltyViewerControl>("PenaltyViewer");
-
-        queueViewer = GetNode<QueueViewerControl>("QueueViewer");
-        queueViewer.GridViewer = gridViewer;
-
-        NewGame(PRNG.Create());
+        // TODO needed to avoid null refs, should fix this so we can exist without a state
+        StartGame();
 
         GetTree().Root.Connect("size_changed", this, nameof(OnSizeChanged));
         OnSizeChanged();
@@ -112,7 +124,7 @@ public class GameViewerControl : Control
         }
 
         // Divide by 2 for both gridviewers
-        var gvSize = gridViewer.DesiredSize(new Vector2(availWidth / 2, RectSize.y));
+        var gvSize = members.GridViewer.DesiredSize(new Vector2(availWidth / 2, RectSize.y));
 
         float totalWidth = gvSize.x;
         if (ShowPenalties)
@@ -129,24 +141,24 @@ public class GameViewerControl : Control
 
         if (ShowPenalties)
         {
-            penaltyViewer.RectSize = new Vector2(pvWidth, RectSize.y);
-            penaltyViewer.RectPosition = new Vector2(left, 0);
+            members.PenaltyViewer.RectSize = new Vector2(pvWidth, RectSize.y);
+            members.PenaltyViewer.RectPosition = new Vector2(left, 0);
             left += pvWidth;
         }
 
-        gridViewer.RectSize = gvSize;
-        gridViewer.RectPosition = new Vector2(left, 0);
+        members.GridViewer.RectSize = gvSize;
+        members.GridViewer.RectPosition = new Vector2(left, 0);
         left += gvSize.x;
 
         if (ShowQueue)
         {
-            queueViewer.RectSize = new Vector2(queueWidth, RectSize.y);
-            queueViewer.RectPosition = new Vector2(left, 0);
+            members.QueueViewer.RectSize = new Vector2(queueWidth, RectSize.y);
+            members.QueueViewer.RectPosition = new Vector2(left, 0);
             left += queueWidth;
         }
 
-        replayViewer.RectSize = gvSize;
-        replayViewer.RectPosition = new Vector2(left, 0);
+        members.ReplayViewer.RectSize = gvSize;
+        members.ReplayViewer.RectPosition = new Vector2(left, 0);
         left += gvSize.x;
     }
 
@@ -209,9 +221,16 @@ public class GameViewerControl : Control
             }
         }
 
-        gridViewer.Update();
-        replayViewer.Update();
-        penaltyViewer.Update();
-        queueViewer.Update();
+        members.GridViewer.Update();
+        members.ReplayViewer.Update();
+        members.PenaltyViewer.Update();
+        members.QueueViewer.Update();
+    }
+
+    public void StartGame()
+    {
+        // TODO should we use SetProcess(false/true) when a game is or is not active?
+        NewGame(PRNG.Create());
+        members.GameOverMenu.Visible = false;
     }
 }
