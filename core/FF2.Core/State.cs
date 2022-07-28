@@ -60,6 +60,7 @@ namespace FF2.Core
         public IReadOnlyGrid Grid { get { return grid; } }
 
         private static readonly IReadOnlyList<DeckItem> MainDeck;
+        private static readonly IReadOnlyList<DeckItem> BlanklessDeck;
 
         static State()
         {
@@ -72,12 +73,23 @@ namespace FF2.Core
                 }
             }
             MainDeck = temp;
+
+            temp = new List<DeckItem>();
+            foreach (var color in Lists.Colors.RYB)
+            {
+                foreach (var color2 in Lists.Colors.RYB)
+                {
+                    temp.Add(ValueTuple.Create(color, color2));
+                }
+            }
+            BlanklessDeck = temp;
         }
 
-        public static State Create(PRNG prng)
+        public static State Create(ISinglePlayerSettings settings)
         {
-            var deck = new InfiniteDeck<DeckItem>(MainDeck, prng.Clone());
-            var grid = Core.Grid.Create(prng);
+            var spawns = settings.SpawnBlanks ? MainDeck : BlanklessDeck;
+            var deck = new InfiniteDeck<DeckItem>(spawns, new PRNG(settings.PrngSeed));
+            var grid = Core.Grid.Create(settings);
             return new State(grid, deck);
         }
 

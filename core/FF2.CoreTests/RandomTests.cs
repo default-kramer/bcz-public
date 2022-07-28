@@ -7,13 +7,20 @@ namespace FF2.CoreTests
     [TestClass]
     public class RandomTests
     {
+        private static State MakeState(PRNG prng)
+        {
+            var settings = new SinglePlayerSettings();
+            settings.PrngSeed = PRNG.State.Deserialize(prng.Serialize());
+            return State.Create(settings);
+        }
+
         [TestMethod]
         public void queue_is_deterministic()
         {
             var prng1 = PRNG.Create();
             var prng2 = prng1.Clone();
-            var state1 = State.Create(prng1);
-            var state2 = State.Create(prng2);
+            var state1 = MakeState(prng1);
+            var state2 = MakeState(prng2);
             var queue1 = state1.MakeQueueModel();
             var queue2 = state2.MakeQueueModel();
 

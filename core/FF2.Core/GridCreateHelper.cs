@@ -28,11 +28,31 @@ namespace FF2.Core
 
         public static void SetupSimpleGrid(Grid grid, PRNG rand)
         {
-            var colorCycle = Lists.Colors.RYB[rand.NextInt32(3)];
-            const int enemyCount = 5;
-            PlaceEnemiesInRows(grid, rand, 0, 2, enemyCount, ref colorCycle);
-            PlaceEnemiesInRows(grid, rand, 2, 4, enemyCount, ref colorCycle);
-            PlaceEnemiesInRows(grid, rand, 4, 6, enemyCount, ref colorCycle);
+            SetupGrid(grid, rand, 15, 5, 2);
+        }
+
+        public static void SetupGrid(Grid grid, PRNG prng, int totalEnemies, int enemiesPerStripe, int rowsPerStripe)
+        {
+            if (totalEnemies < 1 || enemiesPerStripe < 1 || rowsPerStripe < 1)
+            {
+                throw new ArgumentException($"bad args: {totalEnemies}, {enemiesPerStripe}, {rowsPerStripe}");
+            }
+
+            var colorCycle = Lists.Colors.RYB[prng.NextInt32(3)];
+            int yLo = 0;
+            int remainingEnemies = totalEnemies;
+            while (remainingEnemies > 0)
+            {
+                int enemiesThisStripe = Math.Min(enemiesPerStripe, remainingEnemies);
+                int yHi = yLo + rowsPerStripe;
+                if (yHi >= grid.Height)
+                {
+                    throw new ArgumentException($"Invalid enemy batching vs. grid height: {grid.Height}, {totalEnemies}, {enemiesPerStripe}, {rowsPerStripe}");
+                }
+                PlaceEnemiesInRows(grid, prng, yLo, yHi, enemiesThisStripe, ref colorCycle);
+                remainingEnemies -= enemiesThisStripe;
+                yLo = yHi;
+            }
         }
 
         private static void PlaceEnemiesInRows(Grid grid, PRNG rand, int yLo, int yHi, int enemyCount, ref Color colorCycle)
@@ -43,7 +63,7 @@ namespace FF2.Core
 
             if (enemyCount > size)
             {
-                throw new ArgumentException("Too many enemies requested");
+                throw new ArgumentException($"Too many enemies requested: {enemyCount}, {grid.Width}, {yLo}, {yHi}");
             }
 
             int placedCount = 0;

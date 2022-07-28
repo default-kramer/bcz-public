@@ -50,11 +50,11 @@ public class NewRoot : Control
         return FindRoot(child.GetParent());
     }
 
-    public void StartGame()
+    public void StartGame(ISinglePlayerSettings settings)
     {
         members.MainMenu.Visible = false;
         members.GameViewer.Visible = true;
-        members.GameViewer.StartGame();
+        members.GameViewer.StartGame(settings);
     }
 
     public void BackToMainMenu()

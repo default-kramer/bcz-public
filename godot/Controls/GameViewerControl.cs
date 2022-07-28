@@ -37,25 +37,22 @@ public class GameViewerControl : Control
         get { return __state ?? throw new Exception("TODO missing state"); }
     }
 
-    private void NewGame(PRNG prng)
+    private void NewGame(ISinglePlayerSettings settings)
     {
-        // Must clone PRNG *before* creating state
-        var prng2 = prng.Clone();
-
         __state?.Dispose();
-        __state = State.Create(prng);
+        __state = State.Create(settings);
         var replayCollector = new ReplayCollector();
         ticker = new DotnetTicker(__state, tickCalculations, replayCollector);
         members.GridViewer.Model = new GridViewerModel(__state, ticker, tickCalculations);
         members.PenaltyViewer.Model = __state.MakePenaltyModel();
         members.QueueViewer.Model = __state.MakeQueueModel();
 
-        (this.replayDriver, members.ReplayViewer.Model) = BuildReplay(prng2, replayCollector.Commands);
+        (this.replayDriver, members.ReplayViewer.Model) = BuildReplay(settings, replayCollector.Commands);
     }
 
-    private static (ReplayDriver, GridViewerModel) BuildReplay(PRNG prng, IReadOnlyList<Stamped<Command>> commands)
+    private static (ReplayDriver, GridViewerModel) BuildReplay(ISinglePlayerSettings settings, IReadOnlyList<Stamped<Command>> commands)
     {
-        var state = State.Create(prng);
+        var state = State.Create(settings);
         var calc = new TickCalculations();
         var ticker = new Ticker(state, calc, NullCollector.Instance);
         var replay = new ReplayDriver(ticker, commands);
@@ -102,7 +99,7 @@ public class GameViewerControl : Control
         this.members = new Members(this);
 
         // TODO needed to avoid null refs, should fix this so we can exist without a state
-        StartGame();
+        StartGame(SinglePlayerSettings.Default);
 
         GetTree().Root.Connect("size_changed", this, nameof(OnSizeChanged));
         OnSizeChanged();
@@ -227,10 +224,10 @@ public class GameViewerControl : Control
         members.QueueViewer.Update();
     }
 
-    public void StartGame()
+    public void StartGame(ISinglePlayerSettings settings)
     {
         // TODO should we use SetProcess(false/true) when a game is or is not active?
-        NewGame(PRNG.Create());
+        NewGame(settings);
         members.GameOverMenu.Visible = false;
     }
 }

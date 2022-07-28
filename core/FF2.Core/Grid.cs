@@ -34,6 +34,11 @@ namespace FF2.Core
 
         private Grid(int width, int height)
         {
+            if (width < 1 || height < 1)
+            {
+                throw new ArgumentException($"Invalid width/height: {width}, {height}");
+            }
+
             this.Width = width;
             this.Height = height;
             int size = width * height;
@@ -57,6 +62,14 @@ namespace FF2.Core
             GridCreateHelper.SetupSimpleGrid(grid, rand);
             GridCreateHelper.SetupHardcodedGrid(grid);
 
+            return grid;
+        }
+
+        public static Grid Create(ISinglePlayerSettings settings)
+        {
+            var prng = new PRNG(settings.PrngSeed);
+            var grid = Grid.Create(settings.GridWidth, settings.GridHeight);
+            GridCreateHelper.SetupGrid(grid, prng, settings.EnemyCount, settings.EnemiesPerStripe, settings.RowsPerStripe);
             return grid;
         }
 

@@ -73,7 +73,7 @@ namespace FF2.Godot
 
             public TrackedSprite Rent(Control owner)
             {
-                if (++RentCount > 100)
+                if (++RentCount > 200)
                 {
                     throw new Exception("Got a leak here");
                 }

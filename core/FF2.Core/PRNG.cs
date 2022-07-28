@@ -26,45 +26,14 @@ namespace FF2.Core
 
         private long s10, s11, s12, s20, s21, s22;
 
-        public State GetState()
-        {
-            return new State(s10, s11, s12, s20, s21, s22);
-        }
-
         private void SetState(State state)
         {
-            if (state.s10 == 0 && state.s11 == 0 && state.s12 == 0)
-            {
-                throw new ArgumentException("s10, s11 and s12 cannot be all zero");
-            }
-            if (state.s20 == 0 && state.s21 == 0 && state.s22 == 0)
-            {
-                throw new ArgumentException("s20, s21 and s22 cannot be all zero");
-            }
-            EnsureNonnegative(state.s20, nameof(state.s20));
-            EnsureNonnegative(state.s21, nameof(state.s21));
-            EnsureNonnegative(state.s22, nameof(state.s22));
-            EnsureLessThan(state.s10, m1, nameof(state.s10));
-            EnsureLessThan(state.s11, m1, nameof(state.s11));
-            EnsureLessThan(state.s12, m1, nameof(state.s12));
-            EnsureLessThan(state.s20, m2, nameof(state.s20));
-            EnsureLessThan(state.s21, m2, nameof(state.s21));
-            EnsureLessThan(state.s22, m2, nameof(state.s22));
-
             s10 = state.s10;
             s11 = state.s11;
             s12 = state.s12;
             s20 = state.s20;
             s21 = state.s21;
             s22 = state.s22;
-        }
-
-        private static void EnsureNonnegative(long n, string name)
-        {
-            if (n < 0)
-            {
-                throw new ArgumentException(string.Format("{0} must be >= 0 (given: {1})", name, n));
-            }
         }
 
         private static void EnsureLessThan(long n, long limit, string name)
@@ -81,9 +50,19 @@ namespace FF2.Core
             SetState(state);
         }
 
+        private PRNG(PRNG other)
+        {
+            this.s10 = other.s10;
+            this.s11 = other.s11;
+            this.s12 = other.s12;
+            this.s20 = other.s20;
+            this.s21 = other.s21;
+            this.s22 = other.s22;
+        }
+
         public PRNG Clone()
         {
-            return new PRNG(GetState());
+            return new PRNG(this);
         }
 
         private static readonly Random seeder = new Random();
@@ -93,16 +72,20 @@ namespace FF2.Core
         }
         public static PRNG Create()
         {
-            var state = new State(GetSeed(m1), GetSeed(m1), GetSeed(m1), GetSeed(m2), GetSeed(m2), GetSeed(m2));
+            return new PRNG(RandomSeed());
+        }
+
+        public static PRNG.State RandomSeed()
+        {
             try
             {
-                return new PRNG(state);
+                return new State(GetSeed(m1), GetSeed(m1), GetSeed(m1), GetSeed(m2), GetSeed(m2), GetSeed(m2));
             }
             catch (ArgumentException)
             {
                 // This exception should be ****Extremely**** unlikely (getting s10,s11,s12 all zero),
                 // but it is still technically possible
-                return Create();
+                return RandomSeed();
             }
         }
 
@@ -143,6 +126,16 @@ namespace FF2.Core
             return (int)(NextDouble() * maxValue);
         }
 
+        public string Serialize()
+        {
+            return DoSerialize(s10, s11, s12, s20, s21, s22);
+        }
+
+        private static string DoSerialize(long s10, long s11, long s12, long s20, long s21, long s22)
+        {
+            return string.Format("{0}-{1}-{2}-{3}-{4}-{5}", s10, s11, s12, s20, s21, s22);
+        }
+
         public readonly struct State
         {
             public readonly long s10;
@@ -160,11 +153,29 @@ namespace FF2.Core
                 this.s20 = s20;
                 this.s21 = s21;
                 this.s22 = s22;
+
+                if (s10 == 0 && s11 == 0 && s12 == 0)
+                {
+                    throw new ArgumentException("s10, s11 and s12 cannot be all zero");
+                }
+                if (s20 == 0 && s21 == 0 && s22 == 0)
+                {
+                    throw new ArgumentException("s20, s21 and s22 cannot be all zero");
+                }
+                EnsureNonnegative(s20, nameof(s20));
+                EnsureNonnegative(s21, nameof(s21));
+                EnsureNonnegative(s22, nameof(s22));
+                EnsureLessThan(s10, m1, nameof(s10));
+                EnsureLessThan(s11, m1, nameof(s11));
+                EnsureLessThan(s12, m1, nameof(s12));
+                EnsureLessThan(s20, m2, nameof(s20));
+                EnsureLessThan(s21, m2, nameof(s21));
+                EnsureLessThan(s22, m2, nameof(s22));
             }
 
             public string Serialize()
             {
-                return string.Format("{0}-{1}-{2}-{3}-{4}-{5}", s10, s11, s12, s20, s21, s22);
+                return DoSerialize(s10, s11, s12, s20, s21, s22);
             }
 
             public static State Deserialize(string item)
@@ -181,6 +192,14 @@ namespace FF2.Core
                 long s21 = long.Parse(parts[4]);
                 long s22 = long.Parse(parts[5]);
                 return new State(s10, s11, s12, s20, s21, s22);
+            }
+
+            private static void EnsureNonnegative(long n, string name)
+            {
+                if (n < 0)
+                {
+                    throw new ArgumentException(string.Format("{0} must be >= 0 (given: {1})", name, n));
+                }
             }
         }
     }
