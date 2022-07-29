@@ -10,4 +10,11 @@ namespace FF2.Core
     {
         void Collect(Stamped<Command> command);
     }
+
+    public interface ISettingsCollection
+    {
+        int MaxLevel { get; }
+
+        ISinglePlayerSettings GetSettings(int level);
+    }
 }

@@ -49,51 +49,130 @@ namespace FF2.Core
 
         public static readonly SinglePlayerSettings Default = new SinglePlayerSettings();
 
-        public const int MaxLevel = 40;
-        public static readonly ISinglePlayerSettings[] NormalModeSettingsPerLevel;
-
-        static SinglePlayerSettings()
-        {
-            NormalModeSettingsPerLevel = new SinglePlayerSettings[MaxLevel];
-            int level = 0;
-
-            // Levels 1-9 : no blanks
-            while (level < 9)
-            {
-                int index = level;
-                level++;
-
-                var settings = new SinglePlayerSettings()
-                {
-                    EnemyCount = level * 2 + 4,
-                    SpawnBlanks = false,
-                };
-                NormalModeSettingsPerLevel[index] = settings;
-            }
-
-            // Levels 10-40 : blanks
-            const int offset = 10;
-            while (level < MaxLevel)
-            {
-                int index = level;
-                level++;
-
-                int density = (level - offset) / 4 + 5;
-
-                var settings = new SinglePlayerSettings()
-                {
-                    EnemyCount = (level - offset) * 2 + 10,
-                    SpawnBlanks = true,
-                    EnemiesPerStripe = density,
-                    RowsPerStripe = 2,
-                };
-                NormalModeSettingsPerLevel[index] = settings;
-            }
-        }
-
         public SeededSettings AddRandomSeed()
         {
             return new SeededSettings(PRNG.RandomSeed(), this);
+        }
+
+        public int CalculateEnemyHeight()
+        {
+            int stripeCount = Math.DivRem(EnemyCount, EnemiesPerStripe, out int remainder);
+            if (remainder > 0)
+            {
+                stripeCount++;
+            }
+            return stripeCount * RowsPerStripe;
+        }
+
+        public static readonly ISettingsCollection BeginnerSettings = new BeginnerSettingsCollection();
+        public static readonly ISettingsCollection NormalSettings = new NormalSettingsCollection();
+
+        abstract class SettingsCollection : ISettingsCollection
+        {
+            protected readonly ISinglePlayerSettings[] array;
+
+            public SettingsCollection(int maxLevel)
+            {
+                this.array = new ISinglePlayerSettings[maxLevel];
+            }
+
+            public int MaxLevel => array.Length;
+
+            public ISinglePlayerSettings GetSettings(int level)
+            {
+                if (level < 1 || level > MaxLevel)
+                {
+                    throw new ArgumentOutOfRangeException(nameof(level));
+                }
+                return array[level - 1];
+            }
+
+            protected abstract bool SpawnBlanks(int level);
+
+            protected void Add(int perStripe, int expectedHeight, int Level)
+            {
+                var settings = new SinglePlayerSettings()
+                {
+                    EnemyCount = Level * 4,
+                    EnemiesPerStripe = perStripe,
+                    RowsPerStripe = 2,
+                    SpawnBlanks = SpawnBlanks(Level),
+                };
+
+                if (settings.CalculateEnemyHeight() != expectedHeight)
+                {
+                    throw new Exception($"Assert failed: {Level}, {expectedHeight}, {settings.CalculateEnemyHeight()}");
+                }
+
+                array[Level - 1] = settings;
+            }
+
+            private int LevelCounter;
+
+            private void Add(int a, int b)
+            {
+                if (LevelCounter <= array.Length)
+                {
+                    Add(a, b, LevelCounter);
+                }
+                LevelCounter++;
+            }
+
+            protected void AddAll()
+            {
+                LevelCounter = 1;
+                Add(2, 4);
+                Add(3, 6);
+                Add(4, 6);
+                Add(5, 8);
+                Add(5, 8);
+                Add(5, 10);
+                Add(6, 10);
+                Add(6, 12);
+                Add(7, 12);
+                Add(7, 12);
+                Add(7, 14);
+                Add(7, 14);
+                Add(8, 14);
+                Add(8, 14);
+                Add(8, 16);
+                Add(8, 16);
+                Add(9, 16);
+                Add(9, 16);
+                Add(10, 16);
+                Add(10, 16);
+
+                if (array[array.Length - 1] == null)
+                {
+                    throw new Exception("Not enough levels are specified here");
+                }
+            }
+        }
+
+        class BeginnerSettingsCollection : SettingsCollection
+        {
+            public BeginnerSettingsCollection() : base(20)
+            {
+                AddAll();
+            }
+
+            protected override bool SpawnBlanks(int level)
+            {
+                return false;
+            }
+        }
+
+        class NormalSettingsCollection : SettingsCollection
+        {
+            public NormalSettingsCollection() : base(20)
+            {
+                AddAll();
+            }
+
+            protected override bool SpawnBlanks(int level)
+            {
+                return true;
+            }
         }
     }
 }

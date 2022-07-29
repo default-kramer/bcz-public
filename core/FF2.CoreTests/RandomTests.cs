@@ -14,6 +14,40 @@ namespace FF2.CoreTests
             return State.Create(new SeededSettings(seed, settings));
         }
 
+        private void AssertStuff(ISettingsCollection settingsCollection, bool spawnBlanks)
+        {
+            int prevEnemyCount = 0;
+            int prevEnemyHeight = 0;
+            int prevEnemiesPerStripe = 0;
+
+            for (int level = 1; level <= settingsCollection.MaxLevel; level++)
+            {
+                var settings = settingsCollection.GetSettings(level);
+                var x = (SinglePlayerSettings)settings;
+
+                Assert.AreEqual(spawnBlanks, settings.SpawnBlanks);
+
+                // Enemy count must always increase
+                Assert.IsTrue(settings.EnemyCount > prevEnemyCount);
+                prevEnemyCount = settings.EnemyCount;
+
+                // Enemy height may never decrease
+                Assert.IsTrue(x.CalculateEnemyHeight() >= prevEnemyHeight);
+                prevEnemyHeight = x.CalculateEnemyHeight();
+
+                // Enemy density may never decrease
+                Assert.IsTrue(settings.EnemiesPerStripe >= prevEnemiesPerStripe);
+                prevEnemiesPerStripe = settings.EnemiesPerStripe;
+            }
+        }
+
+        [TestMethod]
+        public void TODO_MOVE_THIS_TEST()
+        {
+            AssertStuff(SinglePlayerSettings.BeginnerSettings, false);
+            AssertStuff(SinglePlayerSettings.NormalSettings, true);
+        }
+
         [TestMethod]
         public void queue_is_deterministic()
         {

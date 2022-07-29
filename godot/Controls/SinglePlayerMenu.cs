@@ -12,8 +12,10 @@ public class SinglePlayerMenu : Control
     const string ModeScoreAttack = "Score Attack";
     const string ModeTraining = "Training";
 
+    private static readonly FF2.Core.ISettingsCollection levelDefs = FF2.Core.SinglePlayerSettings.NormalSettings;
+
     private readonly ChoiceModel<int> LevelChoices = new ChoiceModel<int>()
-        .AddChoices(Enumerable.Range(1, FF2.Core.SinglePlayerSettings.MaxLevel));
+        .AddChoices(Enumerable.Range(1, levelDefs.MaxLevel));
 
     private readonly ChoiceModel<string> TutorialChoices = new ChoiceModel<string>()
         .AddChoices(TutorialsOn, TutorialsOff);
@@ -143,7 +145,7 @@ public class SinglePlayerMenu : Control
     private void StartGame()
     {
         int level = LevelChoices.SelectedItem;
-        var settings = FF2.Core.SinglePlayerSettings.NormalModeSettingsPerLevel[level - 1];
+        var settings = levelDefs.GetSettings(level);
         NewRoot.FindRoot(this).StartGame(settings.AddRandomSeed());
     }
 
