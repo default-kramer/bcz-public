@@ -144,8 +144,7 @@ public class SinglePlayerMenu : Control
     {
         int level = LevelChoices.SelectedItem;
         var settings = FF2.Core.SinglePlayerSettings.NormalModeSettingsPerLevel[level - 1];
-        settings.SetRandomSeed();
-        NewRoot.FindRoot(this).StartGame(settings);
+        NewRoot.FindRoot(this).StartGame(settings.AddRandomSeed());
     }
 
     private void BackToMainMenu()

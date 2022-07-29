@@ -37,22 +37,22 @@ public class GameViewerControl : Control
         get { return __state ?? throw new Exception("TODO missing state"); }
     }
 
-    private void NewGame(ISinglePlayerSettings settings)
+    private void NewGame(SeededSettings ss)
     {
         __state?.Dispose();
-        __state = State.Create(settings);
+        __state = State.Create(ss);
         var replayCollector = new ReplayCollector();
         ticker = new DotnetTicker(__state, tickCalculations, replayCollector);
         members.GridViewer.Model = new GridViewerModel(__state, ticker, tickCalculations);
         members.PenaltyViewer.Model = __state.MakePenaltyModel();
         members.QueueViewer.Model = __state.MakeQueueModel();
 
-        (this.replayDriver, members.ReplayViewer.Model) = BuildReplay(settings, replayCollector.Commands);
+        (this.replayDriver, members.ReplayViewer.Model) = BuildReplay(ss, replayCollector.Commands);
     }
 
-    private static (ReplayDriver, GridViewerModel) BuildReplay(ISinglePlayerSettings settings, IReadOnlyList<Stamped<Command>> commands)
+    private static (ReplayDriver, GridViewerModel) BuildReplay(SeededSettings ss, IReadOnlyList<Stamped<Command>> commands)
     {
-        var state = State.Create(settings);
+        var state = State.Create(ss);
         var calc = new TickCalculations();
         var ticker = new Ticker(state, calc, NullCollector.Instance);
         var replay = new ReplayDriver(ticker, commands);
@@ -99,7 +99,7 @@ public class GameViewerControl : Control
         this.members = new Members(this);
 
         // TODO needed to avoid null refs, should fix this so we can exist without a state
-        StartGame(SinglePlayerSettings.Default);
+        StartGame(SinglePlayerSettings.Default.AddRandomSeed());
 
         GetTree().Root.Connect("size_changed", this, nameof(OnSizeChanged));
         OnSizeChanged();
@@ -224,10 +224,10 @@ public class GameViewerControl : Control
         members.QueueViewer.Update();
     }
 
-    public void StartGame(ISinglePlayerSettings settings)
+    public void StartGame(SeededSettings ss)
     {
         // TODO should we use SetProcess(false/true) when a game is or is not active?
-        NewGame(settings);
+        NewGame(ss);
         members.GameOverMenu.Visible = false;
     }
 }

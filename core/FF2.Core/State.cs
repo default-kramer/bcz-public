@@ -85,11 +85,11 @@ namespace FF2.Core
             BlanklessDeck = temp;
         }
 
-        public static State Create(ISinglePlayerSettings settings)
+        public static State Create(SeededSettings ss)
         {
-            var spawns = settings.SpawnBlanks ? MainDeck : BlanklessDeck;
-            var deck = new InfiniteDeck<DeckItem>(spawns, new PRNG(settings.PrngSeed));
-            var grid = Core.Grid.Create(settings);
+            var spawns = ss.Settings.SpawnBlanks ? MainDeck : BlanklessDeck;
+            var deck = new InfiniteDeck<DeckItem>(spawns, new PRNG(ss.Seed));
+            var grid = Core.Grid.Create(ss.Settings, new PRNG(ss.Seed));
             return new State(grid, deck);
         }
 

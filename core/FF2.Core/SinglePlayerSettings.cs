@@ -6,16 +6,27 @@ using System.Threading.Tasks;
 
 namespace FF2.Core
 {
+    public readonly struct SeededSettings
+    {
+        public readonly PRNG.State Seed;
+        public readonly ISinglePlayerSettings Settings;
+
+        public SeededSettings(PRNG.State seed, ISinglePlayerSettings settings)
+        {
+            this.Seed = seed;
+            this.Settings = settings;
+        }
+    }
+
     public interface ISinglePlayerSettings
     {
-        PRNG.State PrngSeed { get; }
         int EnemyCount { get; }
         bool SpawnBlanks { get; }
         int GridWidth { get; }
         int GridHeight { get; }
 
         /// <summary>
-        /// During enemy placement: Number of enemies per <see cref="RowsPerStripe"/> rows.
+        /// During enemy placement: Number of enemies per N rows, where N is <see cref="RowsPerStripe"/>.
         /// </summary>
         int EnemiesPerStripe { get; }
 
@@ -23,11 +34,12 @@ namespace FF2.Core
         /// See <see cref="EnemiesPerStripe"/>
         /// </summary>
         int RowsPerStripe { get; }
+
+        SeededSettings AddRandomSeed();
     }
 
     public sealed class SinglePlayerSettings : ISinglePlayerSettings
     {
-        public PRNG.State PrngSeed { get; set; }
         public int EnemyCount { get; set; } = 15;
         public bool SpawnBlanks { get; set; } = true;
         public int GridWidth { get; set; } = Grid.DefaultWidth;
@@ -35,20 +47,10 @@ namespace FF2.Core
         public int EnemiesPerStripe { get; set; } = 5;
         public int RowsPerStripe { get; set; } = 2;
 
-        public static readonly SinglePlayerSettings Default = new SinglePlayerSettings().SetRandomSeed();
-
-        /// <summary>
-        /// TODO store seed on a different object to improve reusability?
-        /// (Because each time you play level N, it is the only member that will change.)
-        /// </summary>
-        public SinglePlayerSettings SetRandomSeed()
-        {
-            PrngSeed = PRNG.RandomSeed();
-            return this;
-        }
+        public static readonly SinglePlayerSettings Default = new SinglePlayerSettings();
 
         public const int MaxLevel = 40;
-        public static readonly SinglePlayerSettings[] NormalModeSettingsPerLevel;
+        public static readonly ISinglePlayerSettings[] NormalModeSettingsPerLevel;
 
         static SinglePlayerSettings()
         {
@@ -66,7 +68,6 @@ namespace FF2.Core
                     EnemyCount = level * 2 + 4,
                     SpawnBlanks = false,
                 };
-                settings.SetRandomSeed();
                 NormalModeSettingsPerLevel[index] = settings;
             }
 
@@ -86,9 +87,13 @@ namespace FF2.Core
                     EnemiesPerStripe = density,
                     RowsPerStripe = 2,
                 };
-                settings.SetRandomSeed();
                 NormalModeSettingsPerLevel[index] = settings;
             }
+        }
+
+        public SeededSettings AddRandomSeed()
+        {
+            return new SeededSettings(PRNG.RandomSeed(), this);
         }
     }
 }

@@ -10,8 +10,8 @@ namespace FF2.CoreTests
         private static State MakeState(PRNG prng)
         {
             var settings = new SinglePlayerSettings();
-            settings.PrngSeed = PRNG.State.Deserialize(prng.Serialize());
-            return State.Create(settings);
+            var seed = PRNG.State.Deserialize(prng.Serialize());
+            return State.Create(new SeededSettings(seed, settings));
         }
 
         [TestMethod]

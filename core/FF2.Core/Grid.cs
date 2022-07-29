@@ -65,9 +65,8 @@ namespace FF2.Core
             return grid;
         }
 
-        public static Grid Create(ISinglePlayerSettings settings)
+        public static Grid Create(ISinglePlayerSettings settings, PRNG prng)
         {
-            var prng = new PRNG(settings.PrngSeed);
             var grid = Grid.Create(settings.GridWidth, settings.GridHeight);
             GridCreateHelper.SetupGrid(grid, prng, settings.EnemyCount, settings.EnemiesPerStripe, settings.RowsPerStripe);
             return grid;
