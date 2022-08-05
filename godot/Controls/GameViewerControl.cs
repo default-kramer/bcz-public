@@ -46,6 +46,7 @@ public class GameViewerControl : Control
         members.GridViewer.Model = new GridViewerModel(__state, ticker, tickCalculations);
         members.PenaltyViewer.Model = __state.MakePenaltyModel();
         members.QueueViewer.Model = __state.MakeQueueModel();
+        members.GameOverMenu.Visible = false;
 
         (this.replayDriver, members.ReplayViewer.Model) = BuildReplay(ss, replayCollector.Commands);
     }
@@ -60,7 +61,7 @@ public class GameViewerControl : Control
         return (replay, model);
     }
 
-    struct Members
+    readonly struct Members
     {
         public readonly PenaltyViewerControl PenaltyViewer;
         public readonly GridViewerControl GridViewer;
@@ -222,6 +223,11 @@ public class GameViewerControl : Control
         members.ReplayViewer.Update();
         members.PenaltyViewer.Update();
         members.QueueViewer.Update();
+
+        if (State.Kind == StateKind.GameOver && !members.GameOverMenu.Visible)
+        {
+            members.GameOverMenu.OnGameOver(State);
+        }
     }
 
     public void StartGame(SeededSettings ss)

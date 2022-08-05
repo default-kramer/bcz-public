@@ -50,7 +50,46 @@ public class NewRoot : Control
         return FindRoot(child.GetParent());
     }
 
-    public void StartGame(SeededSettings ss)
+    private SinglePlayerMenu.LevelToken? levelToken;
+
+    public void StartGame(SinglePlayerMenu.LevelToken levelToken)
+    {
+        this.levelToken = levelToken;
+        StartGame(levelToken.CreateSeededSettings());
+    }
+
+    public bool CanAdvanceToNextLevel()
+    {
+        return levelToken.HasValue && levelToken.Value.CanAdvance;
+    }
+
+    public void AdvanceToNextLevel()
+    {
+        if (!CanAdvanceToNextLevel() || levelToken == null)
+        {
+            throw new InvalidOperationException("cannot advance");
+        }
+
+        if (levelToken.Value.NextLevel(out var nextToken))
+        {
+            StartGame(nextToken);
+        }
+        else
+        {
+            throw new Exception("TODO");
+        }
+    }
+
+    public void ReplayCurrentLevel()
+    {
+        if (levelToken == null)
+        {
+            throw new InvalidOperationException("cannot replay");
+        }
+        StartGame(levelToken.Value);
+    }
+
+    private void StartGame(SeededSettings ss)
     {
         members.MainMenu.Visible = false;
         members.GameViewer.Visible = true;

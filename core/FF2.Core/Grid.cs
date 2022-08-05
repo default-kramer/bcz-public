@@ -20,6 +20,28 @@ namespace FF2.Core
         bool IsVacant(Loc loc);
     }
 
+    public readonly struct GridStats
+    {
+        public readonly int EnemyCount;
+
+        public GridStats(Grid grid)
+        {
+            EnemyCount = 0;
+
+            for (int x = 0; x < grid.Width; x++)
+            {
+                for (int y = 0; y < grid.Height; y++)
+                {
+                    var occ = grid.Get(new Loc(x, y));
+                    if (occ.Kind == OccupantKind.Enemy)
+                    {
+                        EnemyCount++;
+                    }
+                }
+            }
+        }
+    }
+
     public sealed partial class Grid : IReadOnlyGrid, IDisposable
     {
         public readonly int Width;
@@ -28,6 +50,16 @@ namespace FF2.Core
         private readonly GridFallHelper.BlockedFlag[] blockedFlagBuffer;
         private readonly bool[] assumeUnblockedBuffer;
         private readonly GridDestroyHelper.Group[] groupsBuffer;
+        private GridStats? stats = null; // null when recalculation is needed
+
+        public GridStats Stats
+        {
+            get
+            {
+                stats = stats ?? new GridStats(this);
+                return stats.Value;
+            }
+        }
 
         int IReadOnlyGrid.Width => this.Width;
         int IReadOnlyGrid.Height => this.Height;
@@ -96,6 +128,7 @@ namespace FF2.Core
 
         public void Set(Loc loc, Occupant occ)
         {
+            stats = null;
             cells[Index(loc)] = occ;
         }
 

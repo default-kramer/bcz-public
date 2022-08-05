@@ -1,3 +1,4 @@
+using FF2.Core;
 using Godot;
 using System;
 using System.Linq;
@@ -144,13 +145,44 @@ public class SinglePlayerMenu : Control
 
     private void StartGame()
     {
+        var collection = FF2.Core.SinglePlayerSettings.BeginnerSettings;
         int level = LevelChoices.SelectedItem;
-        var settings = levelDefs.GetSettings(level);
-        NewRoot.FindRoot(this).StartGame(settings.AddRandomSeed());
+        var token = new LevelToken(level, collection);
+        NewRoot.FindRoot(this).StartGame(token);
     }
 
     private void BackToMainMenu()
     {
         NewRoot.FindRoot(this).BackToMainMenu();
+    }
+
+    public readonly struct LevelToken
+    {
+        private readonly int Level;
+        private readonly ISettingsCollection Collection;
+
+        public LevelToken(int level, ISettingsCollection collection)
+        {
+            this.Level = level;
+            this.Collection = collection;
+        }
+
+        public bool CanAdvance { get { return Level < Collection.MaxLevel; } }
+
+        public bool NextLevel(out LevelToken result)
+        {
+            if (CanAdvance)
+            {
+                result = new LevelToken(Level + 1, Collection);
+                return true;
+            }
+            result = this;
+            return false;
+        }
+
+        public SeededSettings CreateSeededSettings()
+        {
+            return Collection.GetSettings(Level).AddRandomSeed();
+        }
     }
 }

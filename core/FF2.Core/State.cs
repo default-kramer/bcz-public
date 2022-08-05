@@ -17,6 +17,7 @@ namespace FF2.Core
         Waiting = 2,
         Falling = 3,
         Destroying = 4,
+        GameOver = 5,
 
         // Values larger than 100 are not used by the State class.
         // It's just convenient to add them to this enum.
@@ -44,6 +45,8 @@ namespace FF2.Core
         /// Holds the action that will be attempted on the next <see cref="Tick"/>.
         /// </summary>
         public StateKind Kind { get; private set; }
+
+        public bool ClearedAllEnemies { get; private set; }
 
         private State(Grid grid, InfiniteDeck<DeckItem> spawnDeck)
         {
@@ -191,8 +194,31 @@ namespace FF2.Core
         /// </summary>
         public bool Tick(Moment now, TickCalculations calculations)
         {
+            var retval = DoTick(now, calculations);
+            if (retval && grid.Stats.EnemyCount == 0)
+            {
+                // Don't change to GameOver immediately. Let the combo resolve.
+                ClearedAllEnemies = true;
+            }
+            return retval;
+        }
+
+        private bool DoTick(Moment now, TickCalculations calculations)
+        {
+            if (Kind == StateKind.GameOver)
+            {
+                return false;
+            }
+
             Elapse(now);
 
+            if (ClearedAllEnemies && Kind == StateKind.Spawning)
+            {
+                // Now that the combo is resolved, we can transition to the GameOver state.
+                return ChangeKind(true, StateKind.GameOver, StateKind.GameOver);
+            }
+
+            // Normal flow:
             switch (Kind)
             {
                 case StateKind.Spawning:
