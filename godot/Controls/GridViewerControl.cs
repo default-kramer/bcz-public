@@ -14,37 +14,9 @@ public class GridViewerControl : Control
     private TrackedSprite[] activeSprites = new TrackedSprite[400]; // should be way more than we need
 
     private SpritePool spritePool = null!;
-    private TextureRect background;
-    private Vector2 backgroundDefaultSize;
-    private ShaderMaterial bgShader;
 
     public override void _Ready()
     {
-        background = GetNode<TextureRect>("Background");
-        backgroundDefaultSize = background.RectSize;
-        bgShader = (ShaderMaterial)background.Material;
-    }
-
-    private void AdjustBackground(float screenCellSize, float extraX)
-    {
-        var bgScale = grid.Width * screenCellSize / backgroundDefaultSize.x;
-        background.RectScale = new Vector2(bgScale, bgScale);
-        background.RectPosition = new Vector2(extraX / 2.0f, 0); // center it ourselves, anchor isn't doing exactly what I expected
-
-        float usedBgHeight = backgroundDefaultSize.x / grid.Width * grid.Height;
-        bgShader.SetShaderParam("maxY", usedBgHeight / backgroundDefaultSize.y);
-
-        float corruptionProgress = Convert.ToSingle(Model.CorruptionProgress);
-        bgShader.SetShaderParam("corruptionProgress", corruptionProgress);
-    }
-
-    private void SendBackgroundDestructionInfo()
-    {
-        bgShader.SetShaderParam("numColumns", grid.Width);
-        bgShader.SetShaderParam("numRows", grid.Height);
-        bgShader.SetShaderParam("columnActivation", Model.ColumnDestructionBitmap);
-        bgShader.SetShaderParam("rowActivation", Model.RowDestructionBitmap);
-        bgShader.SetShaderParam("destructionIntensity", Model.DestructionIntensity());
     }
 
     private float GetCellSize(Vector2 maxSize)
@@ -61,28 +33,32 @@ public class GridViewerControl : Control
     internal Vector2 CurrentSpriteScale { get; set; }
     internal float CurrentCellSize { get; set; }
 
+    private static readonly Godot.Color borderLight = Godot.Color.Color8(24, 130, 110);
+    private static readonly Godot.Color borderDark = borderLight.Darkened(0.3f);
+    private static readonly Godot.Color bgColor = Godot.Color.Color8(0, 0, 0);
+
     public override void _Draw()
     {
         spritePool = spritePool ?? NewRoot.GetSpritePool(this);
 
-        var fullSize = this.RectSize;
+        const int padding = 2;
 
-        // For debugging, show the excess width/height as brown:
-        //DrawRect(new Rect2(0, 0, fullSize), Colors.Brown);
-        //DrawRect(new Rect2(extraX / 2, extraY / 2, fullSize.x - extraX, fullSize.y - extraY), Colors.Black);
+        DrawRect(new Rect2(default(Vector2), this.RectSize), bgColor);
+        var fullSize = this.RectSize - new Vector2(padding, padding);
 
         float screenCellSize = GetCellSize(fullSize);
         float extraX = Math.Max(0, fullSize.x - screenCellSize * grid.Width);
         float extraY = Math.Max(0, fullSize.y - screenCellSize * grid.Height);
+
+        // For debugging, show the excess width/height as brown:
+        //DrawRect(new Rect2(0, 0, fullSize), Colors.Brown);
+        //DrawRect(new Rect2(extraX / 2, extraY / 2, fullSize.x - extraX, fullSize.y - extraY), Colors.Black);
 
         // Occupant sprites are always 360x360 pixels
         float spriteScale = screenCellSize / 360.0f;
         var spriteScale2 = new Vector2(spriteScale, spriteScale);
         CurrentSpriteScale = spriteScale2;
         CurrentCellSize = screenCellSize;
-
-        AdjustBackground(screenCellSize, extraX);
-        SendBackgroundDestructionInfo();
 
         var temp = Model.PreviewPlummet();
 
@@ -92,6 +68,10 @@ public class GridViewerControl : Control
         {
             for (int y = 0; y < grid.Height; y++)
             {
+                DrawRect(new Rect2(x * screenCellSize, y * screenCellSize, screenCellSize + 2, screenCellSize + 2), borderDark);
+                DrawRect(new Rect2(x * screenCellSize + 1, y * screenCellSize + 1, screenCellSize, screenCellSize), borderLight);
+                DrawRect(new Rect2(x * screenCellSize + 2, y * screenCellSize + 2, screenCellSize - 2, screenCellSize - 2), bgColor);
+
                 var loc = new Loc(x, y);
                 var previewOcc = temp?.GetOcc(loc);
                 var occ = previewOcc ?? grid.Get(loc);
@@ -104,7 +84,7 @@ public class GridViewerControl : Control
 
                 var canvasY = grid.Height - (y + 1);
                 var screenY = canvasY * screenCellSize + extraY / 2;
-                var screenX = x * screenCellSize + extraX / 2;
+                var screenX = x * screenCellSize + extraX / 2 + 1f;
 
                 SpriteKind kind = GetSpriteKind(occ);
 
