@@ -3,21 +3,56 @@ using FF2.Core.Viewmodels;
 using Godot;
 using System;
 
+/// <summary>
+/// Assumes that the TankBackground and Liquid sprites are the same size and should have the same
+/// transforms when the tank is 100% full.
+/// </summary>
 public class PenaltyViewerControl : Control
 {
-    public PenaltyModel Model { get; set; }
+    private PenaltyModel _model;
+    public PenaltyModel Model
+    {
+        get { return _model; }
+        set
+        {
+            corruptionSample = null;
+            _model = value;
+        }
+    }
+
     private Font font;
+    private Members members;
+
+    readonly struct Members
+    {
+        public readonly Sprite TankBackground;
+        public readonly Sprite Liquid;
+        public readonly ShaderMaterial LiquidShader;
+
+        public Members(Control me)
+        {
+            me.FindNode(out TankBackground, nameof(TankBackground));
+            me.FindNode(out Liquid, nameof(Liquid));
+            LiquidShader = (ShaderMaterial)Liquid.Material;
+        }
+    }
 
     public override void _Ready()
     {
         var label = new Label();
         font = label.GetFont("");
         label.Free();
+        members = new Members(this);
     }
+
+    private PenaltyModel.CorruptionSample? corruptionSample = null;
 
     public override void _Draw()
     {
-        base._Draw();
+        var sample = Model.SampleCorruption(corruptionSample);
+        corruptionSample = sample;
+        members.Liquid.Transform = members.TankBackground.Transform.Translated(new Vector2(0, sample.CorruptionProgress * 500));
+        members.LiquidShader.SetShaderParam("crop", 1f - sample.CorruptionProgress - 0.02f);
 
         DrawRect(new Rect2(0, 0, RectSize), Colors.DarkGray);
 

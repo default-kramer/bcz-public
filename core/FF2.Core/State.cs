@@ -46,6 +46,11 @@ namespace FF2.Core
         /// </summary>
         public StateKind Kind { get; private set; }
 
+        /// <summary>
+        /// TODO try not to use this? Or think about it more ...
+        /// </summary>
+        internal Moment Moment { get { return lastMoment; } }
+
         public bool ClearedAllEnemies { get; private set; }
 
         private State(Grid grid, InfiniteDeck<DeckItem> spawnDeck)
@@ -103,7 +108,7 @@ namespace FF2.Core
 
         public Viewmodels.PenaltyModel MakePenaltyModel()
         {
-            return new Viewmodels.PenaltyModel(penalties);
+            return new Viewmodels.PenaltyModel(penalties, this);
         }
 
         public void Elapse(Moment now)

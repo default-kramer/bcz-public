@@ -108,7 +108,7 @@ public class GameViewerControl : Control
 
     public void OnSizeChanged()
     {
-        const float pvWidth = 50;
+        const float pvWidth = 100;
         const float queueWidth = 140;
 
         float availWidth = RectSize.x;
