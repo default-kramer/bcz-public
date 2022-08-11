@@ -44,6 +44,7 @@ public class GridViewerControl : Control
     private static readonly Godot.Color borderLight = Godot.Color.Color8(24, 130, 110);
     private static readonly Godot.Color borderDark = borderLight.Darkened(0.3f);
     private static readonly Godot.Color bgColor = Godot.Color.Color8(0, 0, 0);
+    private static readonly Godot.Color shroudColor = Godot.Color.Color8(0, 0, 0, 120);
 
     public override void _Draw()
     {
@@ -163,6 +164,12 @@ public class GridViewerControl : Control
                     }
                 }
             }
+        }
+
+        if (Model.ShouldFlicker)
+        {
+            var height = Model.LastChanceProgress * RectSize.y;
+            DrawRect(new Rect2(0, 0, RectSize.x, height), shroudColor, filled: true);
         }
     }
 

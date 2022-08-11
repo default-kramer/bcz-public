@@ -24,7 +24,11 @@ namespace FF2.Godot.Controls
 
         public decimal CorruptionProgress { get { return state.CorruptionProgress; } }
 
-        public bool ShouldFlicker { get { return state.RemainingMillis < 5000; } }
+        const int LastChanceMillis = 5000;
+
+        public bool ShouldFlicker { get { return state.RemainingMillis < LastChanceMillis; } }
+
+        public float LastChanceProgress { get { return Convert.ToSingle(LastChanceMillis - state.RemainingMillis) / LastChanceMillis; } }
 
         public Mover? PreviewPlummet() { return state.PreviewPlummet(); }
 
