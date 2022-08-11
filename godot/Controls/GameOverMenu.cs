@@ -30,6 +30,8 @@ public class GameOverMenu : Control
     {
         members = new Members(this);
         members.ButtonNext.Connect("pressed", this, nameof(NextLevel));
+        members.ButtonReplay.Connect("pressed", this, nameof(ReplayLevel));
+        members.ButtonQuit.Connect("pressed", this, nameof(Quit));
     }
 
     public void OnGameOver(State state)
@@ -67,5 +69,10 @@ public class GameOverMenu : Control
     private void ReplayLevel()
     {
         NewRoot.FindRoot(this).ReplayCurrentLevel();
+    }
+
+    private void Quit()
+    {
+        NewRoot.FindRoot(this).BackToMainMenu();
     }
 }

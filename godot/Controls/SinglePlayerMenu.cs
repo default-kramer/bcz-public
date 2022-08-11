@@ -145,7 +145,7 @@ public class SinglePlayerMenu : Control
 
     private void StartGame()
     {
-        var collection = FF2.Core.SinglePlayerSettings.BeginnerSettings;
+        var collection = FF2.Core.SinglePlayerSettings.NormalSettings;
         int level = LevelChoices.SelectedItem;
         var token = new LevelToken(level, collection);
         NewRoot.FindRoot(this).StartGame(token);
