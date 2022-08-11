@@ -51,6 +51,11 @@ namespace FF2.Core
 
         public decimal Progress { get { return Convert.ToDecimal(corruption) / maxCorruption; } }
 
+        /// <summary>
+        /// Returns milliseconds until corruption reaches max (assuming penalties don't change).
+        /// </summary>
+        public int RemainingMillis { get { return (maxCorruption - corruption) / corruptionRate; } }
+
         public CorruptionManager OnPenaltiesChanged(PenaltyManager penalties)
         {
             int numerator = penalties.CorruptionAccelerationPayoutTable.GetPayout(penalties.Count);

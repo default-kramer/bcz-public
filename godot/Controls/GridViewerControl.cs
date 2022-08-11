@@ -15,8 +15,16 @@ public class GridViewerControl : Control
 
     private SpritePool spritePool = null!;
 
+    private FlickerState flicker = FlickerState.Initial();
+
     public override void _Ready()
     {
+    }
+
+    float elapsedSeconds = 0;
+    public override void _Process(float delta)
+    {
+        elapsedSeconds += delta;
     }
 
     private float GetCellSize(Vector2 maxSize)
@@ -40,6 +48,12 @@ public class GridViewerControl : Control
     public override void _Draw()
     {
         spritePool = spritePool ?? NewRoot.GetSpritePool(this);
+
+        if (Model.ShouldFlicker)
+        {
+            flicker = flicker.Elapse(elapsedSeconds);
+            elapsedSeconds = 0;
+        }
 
         const int padding = 2;
 
@@ -68,9 +82,12 @@ public class GridViewerControl : Control
         {
             for (int y = 0; y < grid.Height; y++)
             {
-                DrawRect(new Rect2(x * screenCellSize, y * screenCellSize, screenCellSize + 2, screenCellSize + 2), borderDark);
-                DrawRect(new Rect2(x * screenCellSize + 1, y * screenCellSize + 1, screenCellSize, screenCellSize), borderLight);
-                DrawRect(new Rect2(x * screenCellSize + 2, y * screenCellSize + 2, screenCellSize - 2, screenCellSize - 2), bgColor);
+                if (flicker.ShowGrid)
+                {
+                    DrawRect(new Rect2(x * screenCellSize, y * screenCellSize, screenCellSize + 2, screenCellSize + 2), borderDark);
+                    DrawRect(new Rect2(x * screenCellSize + 1, y * screenCellSize + 1, screenCellSize, screenCellSize), borderLight);
+                    DrawRect(new Rect2(x * screenCellSize + 2, y * screenCellSize + 2, screenCellSize - 2, screenCellSize - 2), bgColor);
+                }
 
                 var loc = new Loc(x, y);
                 var previewOcc = temp?.GetOcc(loc);
@@ -182,5 +199,38 @@ public class GridViewerControl : Control
         }
 
         return SpriteKind.None;
+    }
+
+    readonly struct FlickerState
+    {
+        public readonly int Index;
+        public readonly bool ShowGrid;
+        public readonly float RemainingSeconds;
+
+        private FlickerState(int index, bool showGrid, float remainingSeconds)
+        {
+            this.Index = index;
+            this.ShowGrid = showGrid;
+            this.RemainingSeconds = remainingSeconds;
+        }
+
+        public static FlickerState Initial()
+        {
+            return new FlickerState(-1, true, 0);
+        }
+
+        public FlickerState Elapse(float elapsedSeconds)
+        {
+            float remain = this.RemainingSeconds - elapsedSeconds;
+            if (remain > 0)
+            {
+                return new FlickerState(Index, ShowGrid, remain);
+            }
+            int index = (this.Index + 1) % Flickers.Length;
+            return new FlickerState(index, !ShowGrid, Flickers[index]);
+        }
+
+        private const float quick = 0.033f;
+        private static readonly float[] Flickers = new float[] { quick, quick, quick, 1.4f, quick, quick * 2, quick, quick, quick, 0.8f, quick, 0.4f, quick, quick, quick, 0.5f, quick * 2, 0.4f };
     }
 }

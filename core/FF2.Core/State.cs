@@ -130,6 +130,12 @@ namespace FF2.Core
 
                 corruption = corruption.Elapse(millis);
 
+                if (corruption.Progress >= 1m)
+                {
+                    ChangeKind(true, StateKind.GameOver, StateKind.GameOver);
+                    return;
+                }
+
                 if (penaltySchedule.TryAdvance(waitingMillis, out var nextPS))
                 {
                     penalties.Add(penaltySchedule.Penalty);
@@ -156,6 +162,8 @@ namespace FF2.Core
         }
 
         public decimal CorruptionProgress { get { return corruption.Progress; } }
+
+        public int RemainingMillis { get { return corruption.RemainingMillis; } }
 
         private bool Spawn()
         {
