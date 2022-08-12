@@ -43,12 +43,14 @@ public class GameViewerControl : Control
         __state = State.Create(ss);
         var replayCollector = new ReplayCollector();
         ticker = new DotnetTicker(__state, tickCalculations, replayCollector);
-        members.GridViewer.Model = new GridViewerModel(__state, ticker, tickCalculations);
+        members.GridViewer.SetModel(new GridViewerModel(__state, ticker, tickCalculations));
         members.PenaltyViewer.Model = __state.MakePenaltyModel();
         members.QueueViewer.Model = __state.MakeQueueModel();
         members.GameOverMenu.Visible = false;
 
-        (this.replayDriver, members.ReplayViewer.Model) = BuildReplay(ss, replayCollector.Commands);
+        var replayItems = BuildReplay(ss, replayCollector.Commands);
+        this.replayDriver = replayItems.Item1;
+        members.ReplayViewer.SetModel(replayItems.Item2);
     }
 
     private static (ReplayDriver, GridViewerModel) BuildReplay(SeededSettings ss, IReadOnlyList<Stamped<Command>> commands)

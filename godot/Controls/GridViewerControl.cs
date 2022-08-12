@@ -9,7 +9,15 @@ using Color = FF2.Core.Color;
 
 public class GridViewerControl : Control
 {
-    public GridViewerModel Model { get; set; }
+    private GridViewerModel Model;
+
+    public void SetModel(GridViewerModel model)
+    {
+        this.Model = model;
+        flicker = FlickerState.Initial();
+        elapsedSeconds = 0;
+    }
+
     private IReadOnlyGrid grid { get { return Model.Grid; } }
     private TrackedSprite[] activeSprites = new TrackedSprite[400]; // should be way more than we need
 
