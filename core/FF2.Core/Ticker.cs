@@ -191,7 +191,7 @@ namespace FF2.Core
 
                     if (endTime <= target)
                     {
-                        Console.WriteLine($"Completed {kind} after {duration} ms");
+                        //Console.WriteLine($"Completed {kind} after {duration} ms");
                         currentAnimation = null;
                         cursor = endTime;
 
@@ -211,7 +211,7 @@ namespace FF2.Core
                 else if (state.Kind != StateKind.Waiting)
                 {
                     // TODO figure out why this is necessary beyond the first tick...
-                    Console.WriteLine($"BOOTSTRAP TICK: {state.Kind}");
+                    //Console.WriteLine($"BOOTSTRAP TICK: {state.Kind}");
                     DoTick(cursor);
                     cursor = target;
                 }

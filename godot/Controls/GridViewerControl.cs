@@ -91,13 +91,6 @@ public class GridViewerControl : Control
         {
             for (int y = 0; y < grid.Height; y++)
             {
-                if (flicker.ShowGrid)
-                {
-                    DrawRect(new Rect2(x * screenCellSize, y * screenCellSize, screenCellSize + 2, screenCellSize + 2), borderDark);
-                    DrawRect(new Rect2(x * screenCellSize + 1, y * screenCellSize + 1, screenCellSize, screenCellSize), borderLight);
-                    DrawRect(new Rect2(x * screenCellSize + 2, y * screenCellSize + 2, screenCellSize - 2, screenCellSize - 2), bgColor);
-                }
-
                 var loc = new Loc(x, y);
                 var previewOcc = temp?.GetOcc(loc);
                 var occ = previewOcc ?? grid.Get(loc);
@@ -111,6 +104,14 @@ public class GridViewerControl : Control
                 var canvasY = grid.Height - (y + 1);
                 var screenY = canvasY * screenCellSize + extraY / 2;
                 var screenX = x * screenCellSize + extraX / 2 + 1f;
+
+                if (flicker.ShowGrid && !previewOcc.HasValue)
+                {
+                    var YY = canvasY;
+                    DrawRect(new Rect2(x * screenCellSize, YY * screenCellSize, screenCellSize + 2, screenCellSize + 2), borderDark);
+                    DrawRect(new Rect2(x * screenCellSize + 1, YY * screenCellSize + 1, screenCellSize, screenCellSize), borderLight);
+                    DrawRect(new Rect2(x * screenCellSize + 2, YY * screenCellSize + 2, screenCellSize - 2, screenCellSize - 2), bgColor);
+                }
 
                 SpriteKind kind = GetSpriteKind(occ);
 
@@ -141,8 +142,13 @@ public class GridViewerControl : Control
                     activeSprites[index] = currentSprite;
 
                     var sprite = currentSprite.Sprite;
-                    sprite.Position = new Vector2(screenX + screenCellSize / 2, screenY + screenCellSize / 2);
+                    var offset = screenCellSize / 2;
+                    sprite.Position = new Vector2(screenX + offset, screenY + offset);
                     sprite.Scale = spriteScale2;
+                    if (previewOcc.HasValue)
+                    {
+                        sprite.Scale *= new Vector2(0.8f, 0.8f);
+                    }
 
                     if (kind == SpriteKind.Joined || kind == SpriteKind.BlankJoined)
                     {
@@ -158,7 +164,7 @@ public class GridViewerControl : Control
 
                     var shader = (ShaderMaterial)sprite.Material;
                     shader.SetShaderParam("my_color", GameColors.ToVector(occ.Color));
-                    shader.SetShaderParam("my_alpha", previewOcc.HasValue ? 0.5f : 1.0f);
+                    shader.SetShaderParam("my_alpha", previewOcc.HasValue ? 0.75f : 1.0f);
                     shader.SetShaderParam("destructionProgress", Model.DestructionProgress(loc));
 
                     if (currentSprite.Kind == SpriteKind.Enemy)
