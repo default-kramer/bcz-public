@@ -14,8 +14,6 @@ public class GridViewerControl : Control
     public void SetModel(GridViewerModel model)
     {
         this.Model = model;
-        flicker = FlickerState.Initial();
-        elapsedSeconds = 0;
     }
 
     private IReadOnlyGrid grid { get { return Model.Grid; } }
@@ -23,7 +21,7 @@ public class GridViewerControl : Control
 
     private SpritePool spritePool = null!;
 
-    private FlickerState flicker = FlickerState.Initial();
+    private FlickerState flicker = FlickerState.Initial;
 
     public override void _Ready()
     {
@@ -62,6 +60,10 @@ public class GridViewerControl : Control
         {
             flicker = flicker.Elapse(elapsedSeconds);
             elapsedSeconds = 0;
+        }
+        else
+        {
+            flicker = FlickerState.Initial;
         }
 
         const int padding = 2;
@@ -235,10 +237,7 @@ public class GridViewerControl : Control
             this.RemainingSeconds = remainingSeconds;
         }
 
-        public static FlickerState Initial()
-        {
-            return new FlickerState(-1, true, 0);
-        }
+        public static readonly FlickerState Initial = new FlickerState(-1, true, 0);
 
         public FlickerState Elapse(float elapsedSeconds)
         {
