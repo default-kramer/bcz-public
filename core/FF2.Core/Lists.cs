@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace FF2.Core
 {
-    static class Lists
+    public static class Lists
     {
         public static class Colors
         {
@@ -37,6 +37,32 @@ namespace FF2.Core
                 Direction.Up,
                 Direction.None,
             };
+        }
+
+        public static readonly IReadOnlyList<DeckItem> MainDeck;
+        public static readonly IReadOnlyList<DeckItem> BlanklessDeck;
+
+        static Lists()
+        {
+            var temp = new List<DeckItem>();
+            foreach (var color in Lists.Colors.RYBBlank)
+            {
+                foreach (var color2 in Lists.Colors.RYB)
+                {
+                    temp.Add(new DeckItem(color, color2));
+                }
+            }
+            MainDeck = temp;
+
+            temp = new List<DeckItem>();
+            foreach (var color in Lists.Colors.RYB)
+            {
+                foreach (var color2 in Lists.Colors.RYB)
+                {
+                    temp.Add(new DeckItem(color, color2));
+                }
+            }
+            BlanklessDeck = temp;
         }
     }
 }

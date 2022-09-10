@@ -5,8 +5,6 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-using DeckItem = System.ValueTuple<FF2.Core.Color, FF2.Core.Color>;
-
 namespace FF2.Core
 {
     // State.Kind contains the action we are about to attempt.
@@ -32,6 +30,7 @@ namespace FF2.Core
     public sealed class State : IDisposable
     {
         private readonly Grid grid;
+        private readonly FallAnimationSampler fallSampler;
         private readonly InfiniteDeck<DeckItem> spawnDeck;
         private Mover? mover;
         private CorruptionManager corruption;
@@ -51,11 +50,14 @@ namespace FF2.Core
         /// </summary>
         internal Moment Moment { get { return lastMoment; } }
 
+        internal FallAnimationSampler FallSampler => fallSampler;
+
         public bool ClearedAllEnemies { get; private set; }
 
-        private State(Grid grid, InfiniteDeck<DeckItem> spawnDeck)
+        public State(Grid grid, InfiniteDeck<DeckItem> spawnDeck)
         {
             this.grid = grid;
+            this.fallSampler = new FallAnimationSampler(grid);
             this.spawnDeck = spawnDeck;
             mover = null;
             Kind = StateKind.Spawning;
@@ -67,35 +69,9 @@ namespace FF2.Core
 
         public IReadOnlyGrid Grid { get { return grid; } }
 
-        private static readonly IReadOnlyList<DeckItem> MainDeck;
-        private static readonly IReadOnlyList<DeckItem> BlanklessDeck;
-
-        static State()
-        {
-            var temp = new List<DeckItem>();
-            foreach (var color in Lists.Colors.RYBBlank)
-            {
-                foreach (var color2 in Lists.Colors.RYB)
-                {
-                    temp.Add(ValueTuple.Create(color, color2));
-                }
-            }
-            MainDeck = temp;
-
-            temp = new List<DeckItem>();
-            foreach (var color in Lists.Colors.RYB)
-            {
-                foreach (var color2 in Lists.Colors.RYB)
-                {
-                    temp.Add(ValueTuple.Create(color, color2));
-                }
-            }
-            BlanklessDeck = temp;
-        }
-
         public static State Create(SeededSettings ss)
         {
-            var spawns = ss.Settings.SpawnBlanks ? MainDeck : BlanklessDeck;
+            var spawns = ss.Settings.SpawnBlanks ? Lists.MainDeck : Lists.BlanklessDeck;
             var deck = new InfiniteDeck<DeckItem>(spawns, new PRNG(ss.Seed));
             var grid = Core.Grid.Create(ss.Settings, new PRNG(ss.Seed));
             return new State(grid, deck);
@@ -177,8 +153,8 @@ namespace FF2.Core
             }
 
             var colors = spawnDeck.Pop();
-            var occA = Occupant.MakeCatalyst(colors.Item1, Direction.Right);
-            var occB = Occupant.MakeCatalyst(colors.Item2, Direction.Left);
+            var occA = Occupant.MakeCatalyst(colors.LeftColor, Direction.Right);
+            var occB = Occupant.MakeCatalyst(colors.RightColor, Direction.Left);
             var locA = new Loc(grid.Width / 2 - 1, 0);
             var locB = locA.Neighbor(Direction.Right);
             mover = new Mover(locA, occA, locB, occB);
@@ -239,12 +215,26 @@ namespace FF2.Core
                 case StateKind.Waiting:
                     return false;
                 case StateKind.Falling:
-                    return ChangeKind(grid.Fall(), StateKind.Falling, StateKind.Destroying);
+                    return ChangeKind(Fall(true), StateKind.Falling, StateKind.Destroying);
                 case StateKind.Destroying:
                     return ChangeKind(Destroy(calculations), StateKind.Falling, StateKind.Spawning);
                 default:
                     throw new Exception("Unexpected kind: " + Kind);
             }
+        }
+
+        private bool Fall(bool completely)
+        {
+            var fallCountBuffer = fallSampler.ResetFallCountBuffer();
+
+            bool result = grid.Fall(fallCountBuffer);
+            bool keepGoing = completely && result;
+            while (keepGoing)
+            {
+                keepGoing = grid.Fall(fallCountBuffer);
+            }
+
+            return result;
         }
 
         public Mover? PreviewPlummet()

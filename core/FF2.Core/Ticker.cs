@@ -14,17 +14,31 @@ namespace FF2.Core
         private readonly State state;
         private readonly IReplayCollector replayCollector;
         private readonly TickCalculations tickCalculations;
-        private Moment lastMoment = new Moment(0);
+        private Moment lastMoment;
 
-        // When `state.Tick(...)` returns true, we store the Kind from *before* the tick,
-        // because this is the Kind of thing that succeeded.
-        private (StateKind, Moment)? currentAnimation; // Item2 is the start time of the animation
+        /// <summary>
+        /// When `state.Tick(...)` returns true, we store the Kind from *before* the tick,
+        /// because this is the Kind of thing that succeeded.
+        /// </summary>
+        readonly struct Animation
+        {
+            public readonly StateKind Kind;
+            public readonly Moment BeginTime;
+
+            public Animation(StateKind kind, Moment beginTime)
+            {
+                this.Kind = kind;
+                this.BeginTime = beginTime;
+            }
+        }
+
+        private Animation? currentAnimation;
 
         private int timeSinceDestruction(Moment now)
         {
-            if (currentAnimation.HasValue && currentAnimation.Value.Item1 == StateKind.Destroying)
+            if (currentAnimation.HasValue && currentAnimation.Value.Kind == StateKind.Destroying)
             {
-                return now.Millis - currentAnimation.Value.Item2.Millis;
+                return now.Millis - currentAnimation.Value.BeginTime.Millis;
             }
             return DestructionEndInt + 1;
         }
@@ -34,6 +48,15 @@ namespace FF2.Core
             this.state = state;
             this.replayCollector = replayCollector;
             this.tickCalculations = tickCalculations;
+
+            // TODO it's unclear whose responsibility this should be:
+            lastMoment = new Moment(0);
+            state.Tick(lastMoment, tickCalculations);
+            if (state.Kind != StateKind.Waiting)
+            {
+                throw new Exception("WTF?");
+            }
+            currentAnimation = new Animation(StateKind.Spawning, lastMoment);
         }
 
         // When does destruction intensity enter the max value?
@@ -43,6 +66,39 @@ namespace FF2.Core
         // When does destruction intensity finish completely?
         const float DestructionEnd = DestructionEndInt;
         const int DestructionEndInt = 550;
+
+        private float AnimationProgress(Moment now, Animation animation)
+        {
+            if (currentAnimation.HasValue)
+            {
+                var elapsed = now.Millis - animation.BeginTime.Millis;
+                return elapsed * 1f / GetDuration(animation.Kind, state);
+            }
+            return 0;
+        }
+
+        public float AnimationProgress(Moment? now = null)
+        {
+            if (currentAnimation.HasValue)
+            {
+                return AnimationProgress(now ?? lastMoment, currentAnimation.Value);
+            }
+            return 0;
+        }
+
+        public FallSample? GetFallSample(Moment? now = null)
+        {
+            if (currentAnimation == null) { return null; }
+
+            var kind = currentAnimation.Value.Kind;
+            if (kind == StateKind.Falling)
+            {
+                float progress = AnimationProgress(now ?? lastMoment, currentAnimation.Value);
+                return new FallSample(state.FallSampler, progress);
+            }
+
+            return null;
+        }
 
         public float DestructionIntensity(Moment? now = null)
         {
@@ -73,13 +129,13 @@ namespace FF2.Core
 
         public float BurstProgress(Moment? now = null)
         {
-            if (currentAnimation.HasValue && currentAnimation.Value.Item1 == StateKind.Bursting)
+            if (currentAnimation.HasValue && currentAnimation.Value.Kind == StateKind.Bursting)
             {
                 const int delay = 70;
                 const float duration2 = BurstDuration - delay;
 
                 now = now ?? lastMoment;
-                int completed = now.Value.Millis - currentAnimation.Value.Item2.Millis - delay;
+                int completed = now.Value.Millis - currentAnimation.Value.BeginTime.Millis - delay;
                 return Math.Max(0f, Math.Min(1f, completed / duration2));
             }
 
@@ -111,19 +167,23 @@ namespace FF2.Core
             {
                 if (state.HandleCommand(Command.Plummet, now))
                 {
-                    currentAnimation = (StateKind.Bursting, now);
+                    currentAnimation = new Animation(StateKind.Bursting, now);
                     return true;
                 }
                 return false;
             }
             else if (command == Command.BurstCancel)
             {
-                if (currentAnimation.HasValue && currentAnimation.Value.Item1 == StateKind.Bursting)
+                if (currentAnimation.HasValue && currentAnimation.Value.Kind == StateKind.Bursting)
                 {
                     currentAnimation = null;
                     return true;
                 }
                 return false;
+            }
+            else if (currentAnimation.HasValue)
+            {
+                return false; // need to wait for animation to complete
             }
             else
             {
@@ -134,7 +194,7 @@ namespace FF2.Core
         /// <summary>
         /// TODO can we make this private?
         /// </summary>
-        internal void Advance(Moment target)
+        public void Advance(Moment target)
         {
             Advance(lastMoment, target);
             this.lastMoment = target;
@@ -161,13 +221,36 @@ namespace FF2.Core
 
         private bool DoTick(Moment cursor)
         {
+            if (currentAnimation.HasValue)
+            {
+                throw new Exception($"Assert fail. Previous animation incomplete: {currentAnimation.Value.Kind}");
+            }
+
             var result = Tick(cursor);
             if (result.Item1)
             {
-                currentAnimation = (result.Item2, cursor);
+                currentAnimation = new Animation(result.Item2, cursor);
+                //Console.WriteLine($"Beginning: {currentAnimation.Value.Kind} / {currentAnimation.Value.BeginTime}");
                 return true;
             }
             return false;
+        }
+
+        /// <summary>
+        /// Returns how many milliseconds the animation should last
+        /// </summary>
+        private static int GetDuration(StateKind kind, State state)
+        {
+            const int fallSpeed = 150; // TODO This should be configurable
+
+            return kind switch
+            {
+                StateKind.Falling => state.FallSampler.MaxFall() * fallSpeed,
+                StateKind.Spawning => 100,
+                StateKind.Destroying => DestructionEndInt,
+                StateKind.Bursting => BurstDuration,
+                _ => throw new Exception($"TODO: {kind}"),
+            };
         }
 
         private void Advance(Moment cursor, Moment target)
@@ -178,20 +261,14 @@ namespace FF2.Core
 
                 if (currentAnimation.HasValue)
                 {
-                    (StateKind kind, Moment startTime) = currentAnimation.Value;
-                    int duration = kind switch
-                    {
-                        StateKind.Falling => 250,
-                        StateKind.Spawning => 100,
-                        StateKind.Destroying => DestructionEndInt,
-                        StateKind.Bursting => BurstDuration,
-                        _ => throw new Exception($"TODO: {kind}"),
-                    };
+                    var kind = currentAnimation.Value.Kind;
+                    var startTime = currentAnimation.Value.BeginTime;
+                    int duration = GetDuration(kind, state);
                     var endTime = startTime.AddMillis(duration);
 
                     if (endTime <= target)
                     {
-                        //Console.WriteLine($"Completed {kind} after {duration} ms");
+                        //Console.WriteLine($"Completed {kind} after {duration} ms ({target} >= {endTime})");
                         currentAnimation = null;
                         cursor = endTime;
 
@@ -222,6 +299,29 @@ namespace FF2.Core
             }
 
             state.Elapse(cursor);
+        }
+
+        /// <summary>
+        /// Just for testing
+        /// </summary>
+        public string AnimationString
+        {
+            get
+            {
+                if (currentAnimation.HasValue)
+                {
+                    var kind = currentAnimation.Value.Kind;
+                    var start = currentAnimation.Value.BeginTime;
+                    int duration = GetDuration(kind, state);
+                    var end = start.AddMillis(duration);
+                    var remainingMillis = end.Millis - lastMoment.Millis;
+                    return $"{kind} {remainingMillis}";
+                }
+                else
+                {
+                    return $"Pre-{state.Kind}";
+                }
+            }
         }
     }
 

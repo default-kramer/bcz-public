@@ -39,5 +39,10 @@ namespace FF2.Core
         {
             return a.Millis >= b.Millis;
         }
+
+        public override string ToString()
+        {
+            return $"{Millis}ms";
+        }
     }
 }

@@ -16,14 +16,24 @@ namespace FF2.Core
             Unblocked = 2,
         }
 
-        public static bool Fall(Grid grid, Span<BlockedFlag> results, Span<bool> assumeUnblocked)
+        /// <summary>
+        /// Tries to move each occupant down by one cell. Returns true if anything moved.
+        /// </summary>
+        /// <param name="fallCounter">
+        /// Keeps track of how far each occupant fell.
+        /// For example, if something falls from (2,9) to (2,4) then the (2,4) location will have a drop value
+        /// of 5 recorded (because it fell 5 cells).
+        /// Because this method only moves by 1 cell at a time, the caller should initialize this buffer to all
+        /// zeroes before the first call, but leave it untouched for any subsequent calls that are part of the same fall cycle.
+        /// </param>
+        public static bool Fall(Grid grid, Span<BlockedFlag> results, Span<bool> assumeUnblocked, Span<int> fallCounter)
         {
             results.Fill(BlockedFlag.Unsure);
             assumeUnblocked.Fill(false);
 
             CalcBlocked(grid, results, assumeUnblocked);
 
-            return ApplyResults(grid, results);
+            return ApplyResults(grid, results, fallCounter);
         }
 
         private static void CalcBlocked(Grid grid, Span<BlockedFlag> results, Span<bool> assumeUnblocked)
@@ -105,23 +115,29 @@ namespace FF2.Core
             throw new InvalidOperationException("unexpected OccupantKind: " + kind);
         }
 
-        static bool ApplyResults(Grid grid, ReadOnlySpan<BlockedFlag> results)
+        static bool ApplyResults(Grid grid, ReadOnlySpan<BlockedFlag> results, Span<int> fallCounter)
         {
             bool any = false;
 
+            // Bottom-to-top is important here so that we can always copy a value from (x, y) to (x, y-1)
             for (int y = 1; y < grid.Height; y++)
             {
                 for (int x = 0; x < grid.Width; x++)
                 {
-                    var loc = new Loc(x, y);
-                    var occ = grid.Get(loc);
+                    var fromLoc = new Loc(x, y);
+                    var fromIndex = grid.Index(fromLoc);
+                    var occ = grid.Get(fromLoc);
 
                     if (occ.Kind != OccupantKind.None
-                        && results[grid.Index(loc)] == BlockedFlag.Unblocked)
+                        && results[fromIndex] == BlockedFlag.Unblocked)
                     {
-                        grid.Set(loc.Neighbor(Direction.Down), occ);
-                        grid.Set(loc, Occupant.None);
+                        var toLoc = fromLoc.Neighbor(Direction.Down);
+                        grid.Set(toLoc, occ);
+                        grid.Set(fromLoc, Occupant.None);
                         any = true;
+
+                        var toIndex = grid.Index(toLoc);
+                        fallCounter[toIndex] = fallCounter[fromIndex] + 1;
                     }
                 }
             }

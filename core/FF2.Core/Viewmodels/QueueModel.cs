@@ -8,9 +8,9 @@ namespace FF2.Core.Viewmodels
 {
     public sealed class QueueModel
     {
-        private readonly InfiniteDeck<(Color, Color)> deck;
+        private readonly InfiniteDeck<DeckItem> deck;
 
-        internal QueueModel(InfiniteDeck<(Color, Color)> deck)
+        internal QueueModel(InfiniteDeck<DeckItem> deck)
         {
             this.deck = deck;
         }
@@ -20,7 +20,7 @@ namespace FF2.Core.Viewmodels
             get
             {
                 var colors = deck.Peek(index);
-                return (left.SetColor(colors.Item1), right.SetColor(colors.Item2));
+                return (left.SetColor(colors.LeftColor), right.SetColor(colors.RightColor));
             }
         }
 

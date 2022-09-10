@@ -22,13 +22,6 @@ public class GameViewerControl : Control
         }
     }
 
-    class NullCollector : IReplayCollector
-    {
-        public void Collect(Stamped<Command> command) { }
-
-        public static readonly NullCollector Instance = new NullCollector();
-    }
-
     private DotnetTicker ticker = null!;
     private ReplayDriver replayDriver = null!;
     private State? __state;
@@ -57,7 +50,7 @@ public class GameViewerControl : Control
     {
         var state = State.Create(ss);
         var calc = new TickCalculations();
-        var ticker = new Ticker(state, calc, NullCollector.Instance);
+        var ticker = new Ticker(state, calc, NullReplayCollector.Instance);
         var replay = new ReplayDriver(ticker, commands);
         var model = new GridViewerModel(state, ticker, calc);
         return (replay, model);

@@ -42,6 +42,11 @@ namespace FF2.Godot.Controls
             return timing.DestructionIntensity();
         }
 
+        public FallSample? GetFallSample()
+        {
+            return timing.GetFallSample();
+        }
+
         public Occupant GetDestroyedOccupant(Loc loc)
         {
             return tickCalculations.GetDestroyedOccupant(loc, state.Grid);

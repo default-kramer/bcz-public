@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace FF2.Core
 {
-    sealed class InfiniteDeck<T> : IDisposable
+    public sealed class InfiniteDeck<T> : IDisposable
     {
         private readonly PRNG prng;
 

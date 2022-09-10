@@ -89,6 +89,8 @@ public class GridViewerControl : Control
 
         float burstProgress = Model.BurstProgress();
 
+        var fallSampler = Model.GetFallSample();
+
         for (int x = 0; x < grid.Width; x++)
         {
             for (int y = 0; y < grid.Height; y++)
@@ -106,6 +108,10 @@ public class GridViewerControl : Control
                 var canvasY = grid.Height - (y + 1);
                 var screenY = canvasY * screenCellSize + extraY / 2;
                 var screenX = x * screenCellSize + extraX / 2 + 1f;
+                if (fallSampler.HasValue)
+                {
+                    screenY -= fallSampler.Value.GetAdder(loc) * screenCellSize;
+                }
 
                 if (flicker.ShowGrid && !previewOcc.HasValue)
                 {

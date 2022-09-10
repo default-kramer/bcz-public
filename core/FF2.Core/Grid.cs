@@ -139,9 +139,9 @@ namespace FF2.Core
 
         public void Dispose() { }
 
-        public bool Fall()
+        public bool Fall(Span<int> fallCountBuffer)
         {
-            return GridFallHelper.Fall(this, blockedFlagBuffer, assumeUnblockedBuffer);
+            return GridFallHelper.Fall(this, blockedFlagBuffer, assumeUnblockedBuffer, fallCountBuffer);
         }
 
         public bool Destroy(TickCalculations calculations)
@@ -165,5 +165,54 @@ namespace FF2.Core
             }
             GridDestroyHelper.PostDestroy(this);
         }
+
+#if DEBUG
+        public string PrintGrid
+        {
+            get
+            {
+                var sb = new StringBuilder();
+                for (int y = Height - 1; y >= 0; y--)
+                {
+                    sb.AppendLine();
+                    for (int x = 0; x < Width; x++)
+                    {
+                        var occ = Get(new Loc(x, y));
+                        sb.Append(PrintOcc(occ)).Append(" ");
+                    }
+                }
+                return sb.ToString();
+            }
+        }
+
+        private static string PrintOcc(Occupant occ)
+        {
+            if (occ.Kind == OccupantKind.None)
+            {
+                return "  ";
+            }
+
+            string x = occ.Color switch
+            {
+                Color.Red => "r",
+                Color.Yellow => "y",
+                Color.Blue => "b",
+                Color.Blank => "o",
+                _ => throw new Exception("TODO: " + occ.Color),
+            };
+
+            if (occ.Kind == OccupantKind.Enemy)
+            {
+                x = x.ToUpperInvariant();
+            }
+
+            return occ.Direction switch
+            {
+                Direction.Left => $"{x}>",
+                Direction.Right => $"<{x}",
+                _ => $"{x}{x}",
+            };
+        }
+#endif
     }
 }

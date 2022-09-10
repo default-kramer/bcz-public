@@ -20,6 +20,8 @@ namespace FF2.Core
         Right,
         RotateCW,
         RotateCCW,
+        // Plummet is equivalent to BurstBegin followed immediately by BurstCancel.
+        // Human players currently have no way to input a Plummet command.
         Plummet,
         BurstBegin,
         BurstCancel

@@ -31,7 +31,6 @@ namespace FF2.Core
         Red = 0x10,
         Yellow = 0x20,
         Blue = Red | Yellow,
-        All = Red | Yellow | Blue,
     }
 
     public enum Direction : Bits
@@ -46,7 +45,7 @@ namespace FF2.Core
 
     static class EnumHelpers
     {
-        const Bits Color1 = (Bits)Color.All;
+        const Bits Color1 = (Bits)(Color.Blank | Color.Red | Color.Blue | Color.Yellow);
         const Bits Color0 = Bits.MaxValue ^ Color1;
         const Bits Kind1 = (Bits)OccupantKind.All;
         const Bits Kind0 = Bits.MaxValue ^ Kind1;
