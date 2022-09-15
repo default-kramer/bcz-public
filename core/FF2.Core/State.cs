@@ -82,9 +82,9 @@ namespace FF2.Core
             return new Viewmodels.QueueModel(this.spawnDeck);
         }
 
-        public Viewmodels.PenaltyModel MakePenaltyModel()
+        public Viewmodels.PenaltyModel MakePenaltyModel(Ticker ticker)
         {
-            return new Viewmodels.PenaltyModel(penalties, this);
+            return new Viewmodels.PenaltyModel(penalties, this, ticker);
         }
 
         public void Elapse(Moment now)
@@ -152,6 +152,7 @@ namespace FF2.Core
                 throw new Exception("State got hosed: mover already exists");
             }
 
+            Slowmo = false;
             var colors = spawnDeck.Pop();
             var occA = Occupant.MakeCatalyst(colors.LeftColor, Direction.Right);
             var occB = Occupant.MakeCatalyst(colors.RightColor, Direction.Left);
@@ -174,6 +175,7 @@ namespace FF2.Core
                 penalties.OnComboCompleted(currentCombo);
                 currentCombo = Combo.Empty;
             }
+            Slowmo = Slowmo || result;
             return result;
         }
 
@@ -233,9 +235,14 @@ namespace FF2.Core
             {
                 keepGoing = grid.Fall(fallCountBuffer);
             }
-
+            Slowmo = Slowmo || result;
             return result;
         }
+
+        /// <summary>
+        /// For cosmetic use only! Supports slow motion on the UI.
+        /// </summary>
+        public bool Slowmo { get; private set; }
 
         public Mover? PreviewPlummet()
         {

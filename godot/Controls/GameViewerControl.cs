@@ -37,7 +37,7 @@ public class GameViewerControl : Control
         var replayCollector = new ReplayCollector();
         ticker = new DotnetTicker(__state, tickCalculations, replayCollector);
         members.GridViewer.SetModel(new GridViewerModel(__state, ticker, tickCalculations));
-        members.PenaltyViewer.Model = __state.MakePenaltyModel();
+        members.PenaltyViewer.Model = __state.MakePenaltyModel(ticker);
         members.QueueViewer.Model = __state.MakeQueueModel();
         members.GameOverMenu.Visible = false;
 

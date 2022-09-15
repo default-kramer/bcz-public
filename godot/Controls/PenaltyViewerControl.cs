@@ -98,7 +98,10 @@ public class PenaltyViewerControl : Control
     private float AdjustedTime = 0;
     public override void _Process(float delta)
     {
-        // TODO here is where we could slow down time while the user has no control
+        if (Model.Slowmo)
+        {
+            delta /= 10f;
+        }
         AdjustedTime += delta;
     }
 

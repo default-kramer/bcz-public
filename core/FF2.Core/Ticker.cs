@@ -30,6 +30,15 @@ namespace FF2.Core
                 this.Kind = kind;
                 this.BeginTime = beginTime;
             }
+
+            /// <summary>
+            /// Returns true if the user has been holding the burst action long enough
+            /// to enable the slowmo effect.
+            /// </summary>
+            public bool Slowmo(Moment now)
+            {
+                return Kind == StateKind.Bursting && now >= BeginTime.AddMillis(BurstSlowmoDebounce);
+            }
         }
 
         private Animation? currentAnimation;
@@ -58,6 +67,8 @@ namespace FF2.Core
             }
             currentAnimation = new Animation(StateKind.Spawning, lastMoment);
         }
+
+        public bool Slowmo => state.Slowmo || currentAnimation.GetValueOrDefault().Slowmo(lastMoment);
 
         // When does destruction intensity enter the max value?
         const float DestructionPeakStart = 100;
@@ -143,6 +154,7 @@ namespace FF2.Core
         }
 
         private const int BurstDuration = 500;
+        private const int BurstSlowmoDebounce = 100;
 
         public bool HandleCommand(Stamped<Command> command)
         {

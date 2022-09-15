@@ -10,12 +10,16 @@ namespace FF2.Core.Viewmodels
     {
         private readonly PenaltyManager penalties;
         private readonly State state;
+        private readonly Ticker ticker;
 
-        internal PenaltyModel(PenaltyManager penalties, State state)
+        internal PenaltyModel(PenaltyManager penalties, State state, Ticker ticker)
         {
             this.penalties = penalties;
             this.state = state;
+            this.ticker = ticker;
         }
+
+        public bool Slowmo => ticker.Slowmo;
 
         public int Count { get { return penalties.Count; } }
 
