@@ -20,7 +20,9 @@ public class PenaltyViewerControl : Control
         }
     }
 
-    private Font font;
+    const int cylinderCount = 8;
+
+    private static Font font;
     private Members members;
 
     readonly struct Members
@@ -30,7 +32,7 @@ public class PenaltyViewerControl : Control
         public readonly Sprite TankBorder;
         public readonly Sprite Engine;
         public readonly ColorRect[] Cylinders;
-
+        public readonly PenaltyRect[] Penalties;
         public readonly ShaderMaterial LiquidShader;
 
         public Members(Control me)
@@ -42,8 +44,18 @@ public class PenaltyViewerControl : Control
 
             ColorRect cylinderTemplate;
             me.FindNode(out cylinderTemplate, "Cylinder");
-            Cylinders = new ColorRect[8];
+            Cylinders = new ColorRect[cylinderCount];
             CloneCylinders(cylinderTemplate, Cylinders);
+
+            Penalties = new PenaltyRect[cylinderCount];
+            for (int i = 0; i < cylinderCount; i++)
+            {
+                var pr = new PenaltyRect();
+                me.AddChild(pr);
+                pr.Visible = false;
+                Penalties[i] = pr;
+                VisualServer.CanvasItemSetZIndex(pr.GetCanvasItem(), zIndex: 100);
+            }
 
             LiquidShader = (ShaderMaterial)Liquid.Material;
         }
@@ -67,9 +79,12 @@ public class PenaltyViewerControl : Control
 
     public override void _Ready()
     {
-        var label = new Label();
-        font = label.GetFont("");
-        label.Free();
+        if (font == null)
+        {
+            var label = new Label();
+            font = label.GetFont("");
+            label.Free();
+        }
         members = new Members(this);
     }
 
@@ -126,23 +141,6 @@ public class PenaltyViewerControl : Control
         members.LiquidShader.SetShaderParam("crop", 1f - sample.CorruptionProgress - 0.02f);
 
         PlaceCylinders(engineArea);
-        /*
-
-        float penaltyMargin = this.RectSize.x * 0.1f;
-        float penaltyW = this.RectSize.x - penaltyMargin - penaltyMargin;
-        float penaltyH = penaltyW;
-        float x = penaltyMargin;
-        var penaltySize = new Vector2(penaltyW, penaltyH);
-        float yBase = this.RectSize.y - penaltyH;
-
-        for (int i = 0; i < Model.Count; i++)
-        {
-            float y = penaltyMargin * (i + 1) + penaltyH * i;
-            y = yBase - y;
-            DrawRect(new Rect2(x, y, penaltySize), GameColors.Corrupt);
-            DrawString(font, new Vector2(x + 4f, y + 20f), Model[i].Level.ToString());
-        }
-        */
     }
 
     const float cylinderPeriod = 0.8f; // seconds for all 8 cylinders to fire
@@ -161,21 +159,38 @@ public class PenaltyViewerControl : Control
 
         for (int i = 0; i < members.Cylinders.Length; i++)
         {
-            var cylinder = members.Cylinders[i];
-            cylinder.RectSize = new Vector2(cylinderWidth, cylinderWidth);
-
+            int order = firingOrder[i];
             int row = i / 2;
             int column = i % 2;
             float xOffset = borderWidth + (cylinderWidth + borderWidth) * column;
             float yOffset = borderWidth + (cylinderWidth + borderWidth) * row;
             //xOffset += cylinderWidth / 2;
             //yOffset += cylinderWidth / 2;
-            cylinder.RectPosition = engineArea.Position + new Vector2(xOffset, yOffset);
+            var position = engineArea.Position + new Vector2(xOffset, yOffset);
+            var size = new Vector2(cylinderWidth, cylinderWidth);
 
-            var shader = (ShaderMaterial)cylinder.Material;
-            float offset = firingOrder[i] / Convert.ToSingle(members.Cylinders.Length);
-            shader.SetShaderParam("sp_adjustedTime", AdjustedTime + offset * cylinderPeriod);
-            shader.SetShaderParam("sp_period", cylinderPeriod);
+            var cylinder = members.Cylinders[i];
+            var penaltyRect = members.Penalties[i];
+            cylinder.RectSize = size;
+            cylinder.RectPosition = position;
+            penaltyRect.RectSize = size;
+            penaltyRect.RectPosition = position;
+
+            if (order < Model.Count)
+            {
+                cylinder.Visible = false;
+                penaltyRect.Visible = true;
+                penaltyRect.Message = Model[order].Level.ToString();
+            }
+            else
+            {
+                cylinder.Visible = true;
+                penaltyRect.Visible = false;
+                var shader = (ShaderMaterial)cylinder.Material;
+                float offset = order / Convert.ToSingle(members.Cylinders.Length);
+                shader.SetShaderParam("sp_adjustedTime", AdjustedTime + offset * cylinderPeriod);
+                shader.SetShaderParam("sp_period", cylinderPeriod);
+            }
         }
     }
 
@@ -188,5 +203,23 @@ public class PenaltyViewerControl : Control
             order[cylinders[i]] = i;
         }
         return order;
+    }
+
+    /// <summary>
+    /// When a penalty is active, show this instead of a firing cylinder.
+    /// </summary>
+    class PenaltyRect : ColorRect
+    {
+        public string Message = null;
+
+        public override void _Draw()
+        {
+            var message = this.Message;
+            if (message != null)
+            {
+                DrawRect(new Rect2(0, 0, RectSize), Colors.Red);
+                DrawString(font, new Vector2(4f, 20f), message);
+            }
+        }
     }
 }
