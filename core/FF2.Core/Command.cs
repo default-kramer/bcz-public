@@ -16,14 +16,15 @@ namespace FF2.Core
     /// </summary>
     public enum Command
     {
-        Left,
-        Right,
-        RotateCW,
-        RotateCCW,
+        None = 0,
+        Left = 1,
+        Right = 2,
+        RotateCW = 3,
+        RotateCCW = 4,
         // Plummet is equivalent to BurstBegin followed immediately by BurstCancel.
         // Human players currently have no way to input a Plummet command.
-        Plummet,
-        BurstBegin,
-        BurstCancel
+        Plummet = 5,
+        BurstBegin = 6,
+        BurstCancel = 7,
     }
 }

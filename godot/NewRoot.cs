@@ -102,4 +102,11 @@ public class NewRoot : Control
         members.MainMenu.Visible = true;
         members.MainMenu.ShowMainMenu();
     }
+
+    public void WatchReplay(string replayFile)
+    {
+        members.MainMenu.Visible = false;
+        members.GameViewer.Visible = true;
+        members.GameViewer.WatchReplay(replayFile);
+    }
 }

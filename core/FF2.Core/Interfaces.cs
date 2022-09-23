@@ -9,6 +9,8 @@ namespace FF2.Core
     public interface IReplayCollector
     {
         void Collect(Stamped<Command> command);
+
+        void AfterCommand(Moment moment, State state);
     }
 
     public interface ISettingsCollection

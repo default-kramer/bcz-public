@@ -88,15 +88,6 @@ namespace FF2.Core
         public const int DefaultWidth = 8;
         public const int DefaultHeight = 20;
 
-        public static Grid Create(PRNG rand)
-        {
-            var grid = Grid.Create(DefaultWidth, DefaultHeight);
-            GridCreateHelper.SetupSimpleGrid(grid, rand);
-            GridCreateHelper.SetupHardcodedGrid(grid);
-
-            return grid;
-        }
-
         public static Grid Create(ISinglePlayerSettings settings, PRNG prng)
         {
             var grid = Grid.Create(settings.GridWidth, settings.GridHeight);
@@ -164,6 +155,19 @@ namespace FF2.Core
                 }
             }
             GridDestroyHelper.PostDestroy(this);
+        }
+
+        /// <summary>
+        /// These hashes are inserted into replays for error detection.
+        /// </summary>
+        public int HashGrid()
+        {
+            int hash = 17;
+            for (int i = 0; i < cells.Length; i++)
+            {
+                hash = hash * 23 + cells[i].GetHashCode();
+            }
+            return hash;
         }
 
 #if DEBUG

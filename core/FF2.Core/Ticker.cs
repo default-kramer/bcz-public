@@ -11,7 +11,7 @@ namespace FF2.Core
     /// </summary>
     public class Ticker
     {
-        private readonly State state;
+        public readonly State state;
         private readonly IReplayCollector replayCollector;
         private readonly TickCalculations tickCalculations;
         private Moment lastMoment;
@@ -166,6 +166,7 @@ namespace FF2.Core
             if (DoHandleCommand(command, now))
             {
                 replayCollector.Collect(new Stamped<Command>(now, command));
+                replayCollector.AfterCommand(now, state);
                 return true;
             }
             return false;
@@ -297,12 +298,15 @@ namespace FF2.Core
                         cursor = target;
                     }
                 }
+                else if (state.Kind == StateKind.GameOver)
+                {
+                    cursor = target;
+                }
                 else if (state.Kind != StateKind.Waiting)
                 {
                     // TODO figure out why this is necessary beyond the first tick...
                     //Console.WriteLine($"BOOTSTRAP TICK: {state.Kind}");
                     DoTick(cursor);
-                    cursor = target;
                 }
                 else
                 {

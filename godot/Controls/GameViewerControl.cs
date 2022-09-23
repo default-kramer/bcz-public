@@ -1,4 +1,5 @@
 using FF2.Core;
+using FF2.Core.ReplayModel;
 using FF2.Godot;
 using FF2.Godot.Controls;
 using Godot;
@@ -10,40 +11,56 @@ using System.Collections.Generic;
 public class GameViewerControl : Control
 {
     private readonly TickCalculations tickCalculations = new TickCalculations();
+    private ILogic logic = NullLogic.Instance;
 
-    // Temp code testing the replay functionality; should get pulled out eventually.
-    class ReplayCollector : IReplayCollector
+    public void WatchReplay(string filepath)
     {
-        public readonly List<Stamped<Command>> Commands = new List<Stamped<Command>>();
-
-        public void Collect(Stamped<Command> command)
-        {
-            Commands.Add(command);
-        }
-    }
-
-    private DotnetTicker ticker = null!;
-    private ReplayDriver replayDriver = null!;
-    private State? __state;
-    private State State
-    {
-        get { return __state ?? throw new Exception("TODO missing state"); }
+        logic.Cleanup();
+        var driver = ReplayReader.BuildReplayDriver(filepath, tickCalculations);
+        SetupChildren(driver.Ticker.state, driver.Ticker);
+        logic = new WatchReplayLogic(driver);
     }
 
     private void NewGame(SeededSettings ss)
     {
-        __state?.Dispose();
-        __state = State.Create(ss);
-        var replayCollector = new ReplayCollector();
-        ticker = new DotnetTicker(__state, tickCalculations, replayCollector);
-        members.GridViewer.SetModel(new GridViewerModel(__state, ticker, tickCalculations));
-        members.PenaltyViewer.Model = __state.MakePenaltyModel(ticker);
-        members.QueueViewer.Model = __state.MakeQueueModel();
-        members.GameOverMenu.Visible = false;
+        logic.Cleanup();
 
-        var replayItems = BuildReplay(ss, replayCollector.Commands);
-        this.replayDriver = replayItems.Item1;
+        var state = State.Create(ss);
+        ReplayWriter? replayWriter = null;
+        var listReplayCollector = new ListReplayCollector();
+        IReplayCollector replayCollector = listReplayCollector;
+
+        string replayDir = System.Environment.GetEnvironmentVariable("ffreplaydir");
+        if (replayDir != null)
+        {
+            replayDir = System.IO.Path.Combine(replayDir, "raw");
+            var di = new System.IO.DirectoryInfo(replayDir);
+            if (!di.Exists)
+            {
+                di.Create();
+            }
+            var filename = System.IO.Path.Combine(replayDir, $"{DateTime.Now.ToString("yyyyMMdd_HHmmss")}_{ss.Seed.Serialize()}.ffr");
+            var writer = new System.IO.StreamWriter(filename);
+            replayWriter = ReplayWriter.Begin(writer, ss);
+            replayCollector = replayCollector.Combine(replayWriter);
+        }
+
+        var ticker = new DotnetTicker(state, tickCalculations, replayCollector);
+        SetupChildren(state, ticker);
+
+        var replayItems = BuildReplay(ss, listReplayCollector.Commands);
         members.ReplayViewer.SetModel(replayItems.Item2);
+        members.ReplayViewer.Visible = true;
+
+        this.logic = new LiveGameLogic(replayWriter, ticker, replayItems.Item1, state);
+    }
+
+    private void SetupChildren(State state, Ticker ticker)
+    {
+        members.GridViewer.SetModel(new GridViewerModel(state, ticker, tickCalculations));
+        members.PenaltyViewer.Model = state.MakePenaltyModel(ticker);
+        members.QueueViewer.Model = state.MakeQueueModel();
+        members.GameOverMenu.Visible = false;
     }
 
     private static (ReplayDriver, GridViewerModel) BuildReplay(SeededSettings ss, IReadOnlyList<Stamped<Command>> commands)
@@ -93,10 +110,6 @@ public class GameViewerControl : Control
     public override void _Ready()
     {
         this.members = new Members(this);
-
-        // TODO needed to avoid null refs, should fix this so we can exist without a state
-        StartGame(SinglePlayerSettings.Default.AddRandomSeed());
-
         GetTree().Root.Connect("size_changed", this, nameof(OnSizeChanged));
         OnSizeChanged();
     }
@@ -168,67 +181,160 @@ public class GameViewerControl : Control
         base._Draw();
     }
 
-    bool holdingDrop = false;
-
     public override void _Process(float delta)
     {
-        ticker._Process(delta);
-
-        var laggingNow = ticker.Now.AddMillis(-3000);
-        if (laggingNow.Millis > 0)
-        {
-            replayDriver.Advance(laggingNow);
-        }
-
-        if (Input.IsActionJustPressed("game_left"))
-        {
-            ticker.HandleCommand(Command.Left);
-        }
-        if (Input.IsActionJustPressed("game_right"))
-        {
-            ticker.HandleCommand(Command.Right);
-        }
-        if (Input.IsActionJustPressed("game_rotate_cw"))
-        {
-            ticker.HandleCommand(Command.RotateCW);
-        }
-        if (Input.IsActionJustPressed("game_rotate_ccw"))
-        {
-            ticker.HandleCommand(Command.RotateCCW);
-        }
-
-        if (Input.IsActionPressed("game_drop"))
-        {
-            if (!holdingDrop)
-            {
-                ticker.HandleCommand(Command.BurstBegin);
-                holdingDrop = true;
-            }
-        }
-        else
-        {
-            if (holdingDrop)
-            {
-                ticker.HandleCommand(Command.BurstCancel);
-                holdingDrop = false;
-            }
-        }
+        this.logic.Process(delta);
+        this.logic.HandleInput();
 
         members.GridViewer.Update();
         members.ReplayViewer.Update();
         members.PenaltyViewer.Update();
         members.QueueViewer.Update();
 
-        if (State.Kind == StateKind.GameOver && !members.GameOverMenu.Visible)
-        {
-            members.GameOverMenu.OnGameOver(State);
-        }
+        this.logic.CheckGameOver(members);
     }
 
     public void StartGame(SeededSettings ss)
     {
-        // TODO should we use SetProcess(false/true) when a game is or is not active?
         NewGame(ss);
         members.GameOverMenu.Visible = false;
+    }
+
+    interface ILogic
+    {
+        void Cleanup();
+        void Process(float delta);
+        void HandleInput();
+        void CheckGameOver(Members members);
+    }
+
+    sealed class NullLogic : ILogic
+    {
+        public void Cleanup() { }
+        public void Process(float delta) { }
+        public void HandleInput() { }
+        public void CheckGameOver(Members members) { }
+
+        private NullLogic() { }
+
+        public static readonly NullLogic Instance = new NullLogic();
+    }
+
+    sealed class LiveGameLogic : ILogic
+    {
+        private readonly ReplayWriter? replayWriter;
+        private readonly DotnetTicker ticker;
+        private readonly ReplayDriver replayDriver;
+        private readonly State state;
+        private bool holdingDrop = false;
+
+        public LiveGameLogic(ReplayWriter? replayWriter, DotnetTicker ticker, ReplayDriver replayDriver, State state)
+        {
+            this.replayWriter = replayWriter;
+            this.ticker = ticker;
+            this.replayDriver = replayDriver;
+            this.state = state;
+        }
+
+        public void Cleanup()
+        {
+            if (replayWriter != null)
+            {
+                replayWriter.Flush();
+                replayWriter.Close();
+                replayWriter.Dispose();
+            }
+            if (state != null)
+            {
+                state?.Dispose();
+            }
+        }
+
+        public void Process(float delta)
+        {
+            ticker._Process(delta);
+
+            var laggingNow = ticker.Now.AddMillis(-3000);
+            if (laggingNow.Millis > 0)
+            {
+                replayDriver.Advance(laggingNow);
+            }
+        }
+
+        public void HandleInput()
+        {
+            if (Input.IsActionJustPressed("game_left"))
+            {
+                ticker.HandleCommand(Command.Left);
+            }
+            if (Input.IsActionJustPressed("game_right"))
+            {
+                ticker.HandleCommand(Command.Right);
+            }
+            if (Input.IsActionJustPressed("game_rotate_cw"))
+            {
+                ticker.HandleCommand(Command.RotateCW);
+            }
+            if (Input.IsActionJustPressed("game_rotate_ccw"))
+            {
+                ticker.HandleCommand(Command.RotateCCW);
+            }
+
+            if (Input.IsActionPressed("game_drop"))
+            {
+                if (!holdingDrop)
+                {
+                    ticker.HandleCommand(Command.BurstBegin);
+                    holdingDrop = true;
+                }
+            }
+            else
+            {
+                if (holdingDrop)
+                {
+                    ticker.HandleCommand(Command.BurstCancel);
+                    holdingDrop = false;
+                }
+            }
+        }
+
+        public void CheckGameOver(Members members)
+        {
+            if (state.Kind == StateKind.GameOver && !members.GameOverMenu.Visible)
+            {
+                members.GameOverMenu.OnGameOver(state);
+            }
+        }
+    }
+
+    class WatchReplayLogic : ILogic
+    {
+        private readonly ReplayDriver replayDriver;
+
+        public WatchReplayLogic(ReplayDriver replayDriver)
+        {
+            this.replayDriver = replayDriver;
+        }
+
+        public void CheckGameOver(Members members) { }
+
+        public void Cleanup() { }
+
+        public void HandleInput() { }
+
+        private Moment now = new Moment(-1);
+        public void Process(float delta)
+        {
+            if (now.Millis < 0)
+            {
+                now = new Moment(0);
+            }
+            else
+            {
+                int millis = Convert.ToInt32(delta * 1000);
+                now = now.AddMillis(millis);
+            }
+            replayDriver.Advance(now);
+        }
     }
 }

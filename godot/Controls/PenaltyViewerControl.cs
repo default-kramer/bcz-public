@@ -113,7 +113,7 @@ public class PenaltyViewerControl : Control
     private float AdjustedTime = 0;
     public override void _Process(float delta)
     {
-        if (Model.Slowmo)
+        if (Model?.Slowmo ?? false)
         {
             delta /= 10f;
         }

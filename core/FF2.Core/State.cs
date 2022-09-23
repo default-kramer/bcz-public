@@ -256,21 +256,19 @@ namespace FF2.Core
                 return false;
             }
 
-            var m = mover.Value;
-            if (true)//"plummet".ToString() == "nope")
+            var m = mover.Value.PreviewPlummet(Grid);
+            if (grid.InBounds(m.LocA) && grid.InBounds(m.LocB))
             {
-                m = m.PreviewPlummet(grid);
+                grid.Set(m.LocA, m.OccA);
+                grid.Set(m.LocB, m.OccB);
+                mover = null;
+                Kind = StateKind.Falling;
+                return true;
             }
             else
             {
-                m = m.ToTop(grid.Height);
+                return false;
             }
-            grid.Set(m.LocA, m.OccA);
-            grid.Set(m.LocB, m.OccB);
-
-            mover = null;
-            Kind = StateKind.Falling;
-            return true;
         }
 
         public void Burst(Moment now)
@@ -323,6 +321,11 @@ namespace FF2.Core
             }
             mover = mover.Value.Rotate(clockwise, grid.Width);
             return true;
+        }
+
+        public int HashGrid()
+        {
+            return grid.HashGrid();
         }
     }
 }

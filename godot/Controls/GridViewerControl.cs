@@ -9,6 +9,8 @@ using Color = FF2.Core.Color;
 
 public class GridViewerControl : Control
 {
+    private static readonly IReadOnlyGrid defaultGrid = Grid.Create(Grid.DefaultWidth, Grid.DefaultHeight);
+
     private GridViewerModel Model;
 
     public void SetModel(GridViewerModel model)
@@ -16,7 +18,7 @@ public class GridViewerControl : Control
         this.Model = model;
     }
 
-    private IReadOnlyGrid grid { get { return Model.Grid; } }
+    private IReadOnlyGrid grid { get { return Model?.Grid ?? defaultGrid; } }
     private TrackedSprite[] activeSprites = new TrackedSprite[400]; // should be way more than we need
 
     private SpritePool spritePool = null!;
@@ -54,6 +56,11 @@ public class GridViewerControl : Control
 
     public override void _Draw()
     {
+        if (Model?.Grid == null)
+        {
+            return;
+        }
+
         spritePool = spritePool ?? NewRoot.GetSpritePool(this);
 
         if (Model.ShouldFlicker)

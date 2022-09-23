@@ -8,7 +8,7 @@ namespace FF2.Core
 {
     public class ReplayDriver
     {
-        private readonly Ticker ticker;
+        public readonly Ticker Ticker;
 
         /// <summary>
         /// It's fine if this list is appended to while the replay is in progress.
@@ -18,28 +18,28 @@ namespace FF2.Core
         /// <remarks>
         /// Perhaps a queue would be better?
         /// </remarks>
-        private readonly IReadOnlyList<Stamped<Command>> commands;
+        public readonly IReadOnlyList<Stamped<Command>> Commands;
 
         /// <summary>
-        /// The index into <see cref="commands"/>.
+        /// The index into <see cref="Commands"/>.
         /// </summary>
         private int i = 0;
 
         public ReplayDriver(Ticker ticker, IReadOnlyList<Stamped<Command>> commands)
         {
-            this.ticker = ticker;
-            this.commands = commands;
+            this.Ticker = ticker;
+            this.Commands = commands;
         }
 
         public void Advance(Moment now)
         {
-            while (i < commands.Count)
+            while (i < Commands.Count)
             {
-                var command = commands[i];
+                var command = Commands[i];
                 if (command.Moment <= now)
                 {
                     i++;
-                    if (!ticker.HandleCommand(command))
+                    if (!Ticker.HandleCommand(command))
                     {
                         throw new Exception($"Replay failed: {command.Value} at {command.Moment}");
                     }
@@ -50,7 +50,7 @@ namespace FF2.Core
                 }
             }
 
-            ticker.Advance(now);
+            Ticker.Advance(now);
         }
     }
 }
