@@ -25,18 +25,9 @@ namespace FF2.Core
         Unreachable = int.MaxValue,
     }
 
-    public interface ISpawnDeck
-    {
-        SpawnItem Pop();
-
-        SpawnItem Peek(int index);
-
-        int PeekLimit { get; }
-    }
-
     // Does timing-related stuff belong in the state class? Or at a higher level?
     // Meh, I don't know, so just start hacking and we can always refactor later
-    public sealed class State : IDisposable
+    public sealed class State
     {
         private readonly Grid grid;
         private readonly FallAnimationSampler fallSampler;
@@ -307,11 +298,6 @@ namespace FF2.Core
         {
             Kind = significantChange ? a : b;
             return significantChange;
-        }
-
-        public void Dispose()
-        {
-            grid.Dispose();
         }
 
         private bool Move(Direction dir)

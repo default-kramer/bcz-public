@@ -173,7 +173,7 @@ namespace FF2.Core
 #endif
     }
 
-    public sealed partial class Grid : GridBase, IDisposable
+    public sealed partial class Grid : GridBase
     {
         private readonly GridFallHelper.BlockedFlag[] blockedFlagBuffer;
         private readonly bool[] assumeUnblockedBuffer;
@@ -229,8 +229,6 @@ namespace FF2.Core
             stats = null;
             cells[Index(loc)] = occ;
         }
-
-        public void Dispose() { }
 
         public bool Fall(Span<int> fallCountBuffer)
         {

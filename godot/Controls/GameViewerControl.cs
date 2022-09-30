@@ -245,10 +245,6 @@ public class GameViewerControl : Control
                 replayWriter.Close();
                 replayWriter.Dispose();
             }
-            if (state != null)
-            {
-                state?.Dispose();
-            }
         }
 
         public void Process(float delta)
