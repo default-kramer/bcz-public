@@ -25,13 +25,22 @@ namespace FF2.Core
         Unreachable = int.MaxValue,
     }
 
+    public interface ISpawnDeck
+    {
+        SpawnItem Pop();
+
+        SpawnItem Peek(int index);
+
+        int PeekLimit { get; }
+    }
+
     // Does timing-related stuff belong in the state class? Or at a higher level?
     // Meh, I don't know, so just start hacking and we can always refactor later
     public sealed class State : IDisposable
     {
         private readonly Grid grid;
         private readonly FallAnimationSampler fallSampler;
-        private readonly InfiniteDeck<DeckItem> spawnDeck;
+        private readonly ISpawnDeck spawnDeck;
         private Mover? mover;
         private CorruptionManager corruption;
         private Combo currentCombo;
@@ -54,7 +63,7 @@ namespace FF2.Core
 
         public bool ClearedAllEnemies { get; private set; }
 
-        public State(Grid grid, InfiniteDeck<DeckItem> spawnDeck)
+        public State(Grid grid, ISpawnDeck spawnDeck)
         {
             this.grid = grid;
             this.fallSampler = new FallAnimationSampler(grid);
@@ -72,7 +81,7 @@ namespace FF2.Core
         public static State Create(SeededSettings ss)
         {
             var spawns = ss.Settings.SpawnBlanks ? Lists.MainDeck : Lists.BlanklessDeck;
-            var deck = new InfiniteDeck<DeckItem>(spawns, new PRNG(ss.Seed));
+            var deck = new InfiniteSpawnDeck(spawns, new PRNG(ss.Seed));
             var grid = Core.Grid.Create(ss.Settings, new PRNG(ss.Seed));
             return new State(grid, deck);
         }
@@ -152,6 +161,12 @@ namespace FF2.Core
                 throw new Exception("State got hosed: mover already exists");
             }
 
+            if (spawnDeck.PeekLimit < 1)
+            {
+                // Puzzle mode can exhaust the spawn deck.
+                return false;
+            }
+
             Slowmo = false;
             var colors = spawnDeck.Pop();
             var occA = Occupant.MakeCatalyst(colors.LeftColor, Direction.Right);
@@ -159,6 +174,7 @@ namespace FF2.Core
             var locA = new Loc(grid.Width / 2 - 1, 0);
             var locB = locA.Neighbor(Direction.Right);
             mover = new Mover(locA, occA, locB, occB);
+            OnCatalystSpawned?.Invoke(this, colors);
             return true;
         }
 
@@ -171,13 +187,20 @@ namespace FF2.Core
             }
             else
             {
-                corruption = corruption.OnComboCompleted(currentCombo);
-                penalties.OnComboCompleted(currentCombo);
+                if (currentCombo.AdjustedGroupCount > 0)
+                {
+                    corruption = corruption.OnComboCompleted(currentCombo);
+                    penalties.OnComboCompleted(currentCombo);
+                    OnComboCompleted?.Invoke(this, currentCombo);
+                }
                 currentCombo = Combo.Empty;
             }
             Slowmo = Slowmo || result;
             return result;
         }
+
+        public event EventHandler<Combo>? OnComboCompleted;
+        public event EventHandler<SpawnItem>? OnCatalystSpawned;
 
         /// <summary>
         /// Return false if nothing changes, or if <see cref="Kind"/> is the only thing that changes.
@@ -213,7 +236,10 @@ namespace FF2.Core
             switch (Kind)
             {
                 case StateKind.Spawning:
-                    return ChangeKind(Spawn(), StateKind.Waiting, StateKind.Unreachable);
+                    // During a normal game, Spawn() should never fail.
+                    // In puzzle mode, Spawn() will fail when the deck runs out
+                    // and when that happens we transition to GameOver.
+                    return ChangeKind(Spawn(), StateKind.Waiting, StateKind.GameOver);
                 case StateKind.Waiting:
                     return false;
                 case StateKind.Falling:
@@ -286,7 +312,6 @@ namespace FF2.Core
         public void Dispose()
         {
             grid.Dispose();
-            spawnDeck.Dispose();
         }
 
         private bool Move(Direction dir)

@@ -7,7 +7,12 @@ using System.Threading.Tasks;
 
 namespace FF2.Core
 {
-    public sealed class InfiniteDeck<T> : IDisposable
+    public sealed class InfiniteSpawnDeck : InfiniteDeck<SpawnItem>, ISpawnDeck
+    {
+        public InfiniteSpawnDeck(IReadOnlyList<SpawnItem> deck, PRNG prng) : base(deck, prng) { }
+    }
+
+    public class InfiniteDeck<T>
     {
         private readonly PRNG prng;
 
@@ -51,6 +56,8 @@ namespace FF2.Core
             return shuffle[i];
         }
 
+        public int PeekLimit => shuffle.Length / 2;
+
         public T Pop()
         {
             T retval = shuffle[index];
@@ -82,7 +89,5 @@ namespace FF2.Core
                 shuffle[j] = temp;
             }
         }
-
-        public void Dispose() { }
     }
 }

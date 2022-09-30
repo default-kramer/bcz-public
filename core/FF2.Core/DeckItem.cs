@@ -6,12 +6,12 @@ using System.Threading.Tasks;
 
 namespace FF2.Core
 {
-    public readonly struct DeckItem
+    public readonly struct SpawnItem
     {
         public readonly Color LeftColor;
         public readonly Color RightColor;
 
-        public DeckItem(Color left, Color right)
+        public SpawnItem(Color left, Color right)
         {
             this.LeftColor = left;
             this.RightColor = right;

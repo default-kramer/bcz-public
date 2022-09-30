@@ -19,11 +19,25 @@ namespace FF2.CoreTests
             return ReplayReader.BuildReplayDriver(path, new TickCalculations());
         }
 
+        private static IReadOnlyList<ComboDistillery.Puzzle> GetPuzzles(string path)
+        {
+            path = Path.Combine(ReplayDirectory.FullName, path);
+            return ReplayReader.GetPuzzles(path);
+        }
+
         [TestMethod]
         public void Replay001()
         {
             var result = ParseReplay("001.ffr");
             Assert.AreEqual(201, result.Commands.Count);
+        }
+
+        [TestMethod]
+        public void TODO()
+        {
+            var puzzles = GetPuzzles("001.ffr");
+            Assert.AreEqual(10, puzzles.Count);
+            Assert.Fail("TODO: need more meaningful assertions here");
         }
 
         private static readonly DirectoryInfo ReplayDirectory = FindReplayDirectory();

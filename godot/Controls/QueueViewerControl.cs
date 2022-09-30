@@ -14,6 +14,8 @@ public class QueueViewerControl : Control
 
     const int count = 5;
     private readonly TrackedSprite[] sprites = new TrackedSprite[count * 2];
+    private static int Index1(int i) { return i; }
+    private static int Index2(int i) { return i + count; }
 
     public override void _Draw()
     {
@@ -25,12 +27,18 @@ public class QueueViewerControl : Control
         float marginLeft = (RectSize.x - cellSize - cellSize) / 2f;
         marginLeft = Math.Max(marginLeft, 0);
 
-        for (int i = 0; i < count; i++)
+        for (int i = 0; i < Math.Min(count, Model.LookaheadLimit); i++)
         {
             var (left, right) = Model[i];
             float y = 40f * i + 100f;
-            Draw(left, marginLeft, y, i);
-            Draw(right, marginLeft + cellSize, y, i + count);
+            Draw(left, marginLeft, y, Index1(i));
+            Draw(right, marginLeft + cellSize, y, Index2(i));
+        }
+
+        for (int i = Model.LookaheadLimit; i < count; i++)
+        {
+            sprites[Index1(i)].Sprite.Visible = false;
+            sprites[Index2(i)].Sprite.Visible = false;
         }
     }
 
@@ -51,7 +59,7 @@ public class QueueViewerControl : Control
         }
 
         var sprite = ts.Sprite;
-
+        sprite.Visible = true;
         sprite.Position = new Vector2(x, y);
         sprite.Scale = GridViewer.CurrentSpriteScale;
 

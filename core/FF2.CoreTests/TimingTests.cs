@@ -12,7 +12,7 @@ namespace FF2.CoreTests
     public class TimingTests
     {
         private Grid grid = null!;
-        private InfiniteDeck<DeckItem> deck = null!;
+        private InfiniteSpawnDeck deck = null!;
         private TickCalculations tickCalculations = null!;
         private State state = null!;
         private Ticker ticker = null!;
@@ -23,7 +23,7 @@ namespace FF2.CoreTests
         {
             grid = Grid.Create(8, 20);
             // This deck returns <y b>, <b r>, <b y>, <o y>, <y y>, <o r>
-            deck = new InfiniteDeck<DeckItem>(Lists.MainDeck, new PRNG(new PRNG.State(1, 1, 1, 2, 2, 2)));
+            deck = new InfiniteSpawnDeck(Lists.MainDeck, new PRNG(new PRNG.State(1, 1, 1, 2, 2, 2)));
             now = new Moment(0);
             grid.Set(new Loc(0, 0), Occupant.MakeEnemy(Color.Red));
             state = new State(grid, deck);
