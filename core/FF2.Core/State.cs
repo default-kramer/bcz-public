@@ -160,13 +160,23 @@ namespace FF2.Core
 
             Slowmo = false;
             var colors = spawnDeck.Pop();
-            var occA = Occupant.MakeCatalyst(colors.LeftColor, Direction.Right);
-            var occB = Occupant.MakeCatalyst(colors.RightColor, Direction.Left);
-            var locA = new Loc(grid.Width / 2 - 1, 0);
-            var locB = locA.Neighbor(Direction.Right);
-            mover = new Mover(locA, occA, locB, occB);
+            mover = NewMover(colors, grid);
             OnCatalystSpawned?.Invoke(this, colors);
             return true;
+        }
+
+        private static Mover NewMover(SpawnItem item, IReadOnlyGrid grid)
+        {
+            var occA = Occupant.MakeCatalyst(item.LeftColor, Direction.Right);
+            var occB = Occupant.MakeCatalyst(item.RightColor, Direction.Left);
+            var locA = new Loc(grid.Width / 2 - 1, 0);
+            var locB = locA.Neighbor(Direction.Right);
+            return new Mover(locA, occA, locB, occB);
+        }
+
+        public Command? Approach(Orientation o)
+        {
+            return mover?.Approach(o);
         }
 
         private bool Destroy(TickCalculations calculations)
@@ -266,6 +276,8 @@ namespace FF2.Core
             return mover?.PreviewPlummet(grid);
         }
 
+        public Move PreviousMove { get; private set; }
+
         private bool Plummet()
         {
             if (Kind != StateKind.Waiting || mover == null)
@@ -276,6 +288,7 @@ namespace FF2.Core
             var m = mover.Value.PreviewPlummet(Grid);
             if (grid.InBounds(m.LocA) && grid.InBounds(m.LocB))
             {
+                PreviousMove = m.GetMove(didBurst: false);
                 grid.Set(m.LocA, m.OccA);
                 grid.Set(m.LocB, m.OccB);
                 mover = null;
@@ -292,6 +305,7 @@ namespace FF2.Core
         {
             Elapse(now);
             grid.Burst();
+            PreviousMove = new Move(PreviousMove.Orientation, PreviousMove.SpawnItem, didBurst: true);
         }
 
         private bool ChangeKind(bool significantChange, StateKind a, StateKind b)

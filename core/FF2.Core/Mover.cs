@@ -24,6 +24,13 @@ namespace FF2.Core
             this.OccB = occB;
         }
 
+        public Orientation Orientation => new Orientation(OccA.Direction, LocA.X);
+
+        public Move GetMove(bool didBurst)
+        {
+            return new Move(Orientation, new SpawnItem(OccA.Color, OccB.Color), didBurst);
+        }
+
         /// <summary>
         /// Relocates the Y coordinates to the maximum allowed by the given <paramref name="gridHeight"/>.
         /// </summary>
@@ -187,6 +194,34 @@ namespace FF2.Core
             }
 
             return new Mover(new Loc(ax, ay), OccA.SetDirection(aDir), new Loc(bx, by), OccB.SetDirection(bDir));
+        }
+
+        /// <summary>
+        /// Returns a command that will cause this item's <see cref="Orientation"/>
+        /// to approach the <paramref name="target"/> orientation.
+        /// Returns null when they are equal and no further commands are needed.
+        /// </summary>
+        public Command? Approach(Orientation target)
+        {
+            var me = this.Orientation;
+            if (me.Direction != target.Direction)
+            {
+                var ccw = this.Rotate(clockwise: false, gridWidth: int.MaxValue);
+                if (ccw.Orientation.Direction == target.Direction)
+                {
+                    return Command.RotateCCW;
+                }
+                return Command.RotateCW;
+            }
+            if (me.X < target.X)
+            {
+                return Command.Right;
+            }
+            if (me.X > target.X)
+            {
+                return Command.Left;
+            }
+            return null;
         }
     }
 }

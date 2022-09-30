@@ -39,19 +39,13 @@ namespace FF2.Core.ReplayModel
             }
         }
 
-        public static ReplayDriver FindBestCombo(string filename, TickCalculations tickCalculations)
+        public static IReplayDriver FindBestCombo(string filename, TickCalculations tickCalculations)
         {
             var puzzle = GetPuzzles(filename).OrderByDescending(x => x.Combo.AdjustedGroupCount).First();
             var grid = Grid.Clone(puzzle.InitialGrid);
             var state = new State(grid, puzzle.MakeDeck());
             var ticker = new Ticker(state, tickCalculations, NullReplayCollector.Instance);
-
-            // Time-shift all commands such that the first one happens at 2s
-            var commands = puzzle.Commands;
-            var adder = 2000 - commands.First().Moment.Millis;
-            commands = commands.Select(c => c.AdjustStamp(adder)).ToList();
-
-            var replay = new ReplayDriver(ticker, commands);
+            var replay = new PuzzleReplayDriver(ticker, puzzle.Moves);
             return replay;
         }
 

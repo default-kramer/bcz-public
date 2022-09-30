@@ -6,36 +6,55 @@ using System.Threading.Tasks;
 
 namespace FF2.Core
 {
+    /// <summary>
+    /// Defines the rotation and x-translation that can be applied to a <see cref="Mover"/>
+    /// before dropping it. The values of this struct are somewhat arbitrary; they are
+    /// defined by <see cref="Mover.Orientation"/>.
+    /// </summary>
+    public readonly struct Orientation
+    {
+        public readonly Direction Direction;
+        public readonly int X;
+
+        public Orientation(Direction direction, int x)
+        {
+            this.Direction = direction;
+            this.X = x;
+        }
+    }
+
+    public readonly struct Move
+    {
+        public readonly Orientation Orientation;
+        public readonly SpawnItem SpawnItem;
+        public readonly bool DidBurst;
+
+        public Move(Orientation orientation, SpawnItem spawnItem, bool didBurst)
+        {
+            this.Orientation = orientation;
+            this.SpawnItem = spawnItem;
+            this.DidBurst = didBurst;
+        }
+    }
+
     public class ComboDistillery
     {
-        // Input - a replay
-        // Output - a sequence of distilled combos
-        // * Starting Grid
-        // * Catalyst Queue
-        // * Commands
-        // * Ending Grid
-        // * The Combo object
         public readonly struct Puzzle
         {
             public readonly IImmutableGrid InitialGrid;
-            public readonly IReadOnlyList<SpawnItem> Queue;
-            // TODO - Instead of commands, it would be better to capture something
-            // like (SpawnItem, Orientation, DidBurst?) where Orientation is
-            // something like (Rotation, Translation)
-            public readonly IReadOnlyList<Stamped<Command>> Commands;
+            public readonly IReadOnlyList<Move> Moves;
             public readonly Combo Combo;
 
-            public Puzzle(IImmutableGrid initialGrid, IReadOnlyList<SpawnItem> queue, IReadOnlyList<Stamped<Command>> commands, Combo combo)
+            public Puzzle(IImmutableGrid initialGrid, IReadOnlyList<Move> moves, Combo combo)
             {
                 this.InitialGrid = initialGrid;
-                this.Queue = queue;
-                this.Commands = commands;
+                this.Moves = moves;
                 this.Combo = combo;
             }
 
             public ISpawnDeck MakeDeck()
             {
-                return new FixedSpawnDeck(Queue);
+                return new FixedSpawnDeck(Moves.Select(x => x.SpawnItem).ToList());
             }
 
             class FixedSpawnDeck : ISpawnDeck
@@ -93,8 +112,7 @@ namespace FF2.Core
             }
 
             private IImmutableGrid? comboStartGrid = null;
-            private List<SpawnItem> comboQueue = new();
-            private List<Stamped<Command>> comboCommands = new();
+            private List<Move> comboMoves = new();
 
             public readonly List<Puzzle> Puzzles = new();
 
@@ -106,7 +124,6 @@ namespace FF2.Core
                 comboStartGrid = Ticker.state.Grid.MakeImmutable();
                 foreach (var c in Commands)
                 {
-                    comboCommands.Add(c);
                     if (!Ticker.HandleCommand(c))
                     {
                         throw new Exception("TODO");
@@ -116,25 +133,26 @@ namespace FF2.Core
 
             private void State_OnCatalystSpawned(object? sender, SpawnItem e)
             {
-                comboStartGrid = comboStartGrid ?? Ticker.state.Grid.MakeImmutable();
-                comboQueue.Add(e);
+                if (comboStartGrid == null)
+                {
+                    comboStartGrid = Ticker.state.Grid.MakeImmutable();
+                }
+                else
+                {
+                    comboMoves.Add(Ticker.state.PreviousMove);
+                }
             }
 
             private void State_OnComboCompleted(object? sender, Combo combo)
             {
                 if (comboStartGrid != null)
                 {
-                    // The last command actually belongs to the next puzzle.
-                    // I'm not sure why right now... A bug in the state/ticker maybe?
-                    var commands = comboCommands.Take(comboCommands.Count - 1).ToList();
-                    var lastCommand = comboCommands.Last();
+                    comboMoves.Add(Ticker.state.PreviousMove);
 
-                    var puzzle = new Puzzle(comboStartGrid, comboQueue.ToList(), commands, combo);
+                    var puzzle = new Puzzle(comboStartGrid, comboMoves.ToList(), combo);
                     Puzzles.Add(puzzle);
 
-                    comboQueue.Clear();
-                    comboCommands.Clear();
-                    comboCommands.Add(lastCommand);
+                    comboMoves.Clear();
                     comboStartGrid = null;
                 }
             }

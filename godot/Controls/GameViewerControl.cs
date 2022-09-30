@@ -306,9 +306,9 @@ public class GameViewerControl : Control
 
     class WatchReplayLogic : ILogic
     {
-        private readonly ReplayDriver replayDriver;
+        private readonly IReplayDriver replayDriver;
 
-        public WatchReplayLogic(ReplayDriver replayDriver)
+        public WatchReplayLogic(IReplayDriver replayDriver)
         {
             this.replayDriver = replayDriver;
         }

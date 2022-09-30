@@ -35,4 +35,11 @@ namespace FF2.Core
 
         int PeekLimit { get; }
     }
+
+    public interface IReplayDriver
+    {
+        void Advance(Moment now);
+
+        Ticker Ticker { get; }
+    }
 }
