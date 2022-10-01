@@ -37,58 +37,55 @@ namespace FF2.Core
         }
     }
 
-    public class ComboDistillery
+    public readonly struct Puzzle
     {
-        public readonly struct Puzzle
+        public readonly IImmutableGrid InitialGrid;
+        public readonly IReadOnlyList<Move> Moves;
+        public readonly Combo Combo;
+
+        public Puzzle(IImmutableGrid initialGrid, IReadOnlyList<Move> moves, Combo combo)
         {
-            public readonly IImmutableGrid InitialGrid;
-            public readonly IReadOnlyList<Move> Moves;
-            public readonly Combo Combo;
+            this.InitialGrid = initialGrid;
+            this.Moves = moves;
+            this.Combo = combo;
+        }
 
-            public Puzzle(IImmutableGrid initialGrid, IReadOnlyList<Move> moves, Combo combo)
+        public ISpawnDeck MakeDeck()
+        {
+            return new FixedSpawnDeck(Moves.Select(x => x.SpawnItem).ToList());
+        }
+
+        class FixedSpawnDeck : ISpawnDeck
+        {
+            private readonly IReadOnlyList<SpawnItem> queue;
+            private int i = 0;
+
+            public FixedSpawnDeck(IReadOnlyList<SpawnItem> queue)
             {
-                this.InitialGrid = initialGrid;
-                this.Moves = moves;
-                this.Combo = combo;
+                this.queue = queue;
             }
 
-            public ISpawnDeck MakeDeck()
+            public int PeekLimit => queue.Count - i;
+
+            public SpawnItem Peek(int index)
             {
-                return new FixedSpawnDeck(Moves.Select(x => x.SpawnItem).ToList());
+                return queue[i + index];
             }
 
-            class FixedSpawnDeck : ISpawnDeck
+            public SpawnItem Pop()
             {
-                private readonly IReadOnlyList<SpawnItem> queue;
-                private int i = 0;
-
-                public FixedSpawnDeck(IReadOnlyList<SpawnItem> queue)
-                {
-                    this.queue = queue;
-                }
-
-                public int PeekLimit => queue.Count - i;
-
-                public SpawnItem Peek(int index)
-                {
-                    return queue[i + index];
-                }
-
-                public SpawnItem Pop()
-                {
-                    return queue[i++];
-                }
+                return queue[i++];
             }
         }
 
         public static IReadOnlyList<Puzzle> FindPuzzles(Ticker ticker, IReadOnlyList<Stamped<Command>> commands)
         {
-            var b = new BLAH(ticker, commands);
+            var b = new PuzzleFinder(ticker, commands);
             b.GO();
             return b.Puzzles;
         }
 
-        class BLAH
+        class PuzzleFinder
         {
             /// <summary>
             /// Do I need the ticker? Can I get away with State only here??
@@ -105,7 +102,7 @@ namespace FF2.Core
             /// </remarks>
             private readonly IReadOnlyList<Stamped<Command>> Commands;
 
-            public BLAH(Ticker ticker, IReadOnlyList<Stamped<Command>> commands)
+            public PuzzleFinder(Ticker ticker, IReadOnlyList<Stamped<Command>> commands)
             {
                 this.Ticker = ticker;
                 this.Commands = commands;

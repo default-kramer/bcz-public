@@ -152,10 +152,10 @@ namespace FF2.Core.ReplayModel
             return new ReplayDriver(ticker, Game.ReplayCollector.Commands);
         }
 
-        public IReadOnlyList<ComboDistillery.Puzzle> GetPuzzles()
+        public IReadOnlyList<Puzzle> GetPuzzles()
         {
-            var ticker = new Ticker(Game.InitialState, new TickCalculations(), NullReplayCollector.Instance);
-            return ComboDistillery.FindPuzzles(ticker, Game.ReplayCollector.Commands);
+            var ticker = new Ticker(BuildState(), new TickCalculations(), NullReplayCollector.Instance);
+            return Puzzle.FindPuzzles(ticker, Game.ReplayCollector.Commands);
         }
     }
 }

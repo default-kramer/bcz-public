@@ -22,7 +22,7 @@ namespace FF2.Core
             this.moves = moves;
         }
 
-        public static PuzzleReplayDriver BuildPuzzleReplay(ComboDistillery.Puzzle puzzle, TickCalculations tickCalculations)
+        public static PuzzleReplayDriver BuildPuzzleReplay(Puzzle puzzle, TickCalculations tickCalculations)
         {
             var grid = Grid.Clone(puzzle.InitialGrid);
             var state = new State(grid, puzzle.MakeDeck());

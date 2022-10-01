@@ -19,13 +19,13 @@ namespace FF2.CoreTests
             return ReplayReader.BuildReplayDriver(path, new TickCalculations());
         }
 
-        private static IReadOnlyList<ComboDistillery.Puzzle> GetPuzzles(string path)
+        private static IReadOnlyList<Puzzle> GetPuzzles(string path)
         {
             path = Path.Combine(ReplayDirectory.FullName, path);
             return ReplayReader.GetPuzzles(path);
         }
 
-        private static PuzzleReplayDriver RunToCompletion(ComboDistillery.Puzzle puzzle)
+        private static PuzzleReplayDriver RunToCompletion(Puzzle puzzle)
         {
             var driver = PuzzleReplayDriver.BuildPuzzleReplay(puzzle, new TickCalculations());
 

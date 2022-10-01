@@ -52,7 +52,7 @@ namespace FF2.Core.ReplayModel
             return parser.BuildReplayDriver(tickCalculations);
         }
 
-        public static IReadOnlyList<ComboDistillery.Puzzle> GetPuzzles(string filename)
+        public static IReadOnlyList<Puzzle> GetPuzzles(string filename)
         {
             var parser = new ReplayParser();
             Read(filename, parser);
