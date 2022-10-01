@@ -19,5 +19,10 @@ namespace FF2.Core
 
         public readonly Moment Moment;
         public readonly T Value;
+
+        public Stamped<T> AdjustStamp(int millis)
+        {
+            return new Stamped<T>(this.Moment.AddMillis(millis), this.Value);
+        }
     }
 }

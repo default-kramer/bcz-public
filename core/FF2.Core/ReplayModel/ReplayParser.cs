@@ -151,5 +151,11 @@ namespace FF2.Core.ReplayModel
             var ticker = new Ticker(Game.InitialState, tickCalculations, NullReplayCollector.Instance);
             return new ReplayDriver(ticker, Game.ReplayCollector.Commands);
         }
+
+        public IReadOnlyList<Puzzle> GetPuzzles()
+        {
+            var ticker = new Ticker(BuildState(), new TickCalculations(), NullReplayCollector.Instance);
+            return Puzzle.FindPuzzles(ticker, Game.ReplayCollector.Commands);
+        }
     }
 }

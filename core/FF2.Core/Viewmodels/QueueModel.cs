@@ -8,12 +8,14 @@ namespace FF2.Core.Viewmodels
 {
     public sealed class QueueModel
     {
-        private readonly InfiniteDeck<DeckItem> deck;
+        private readonly ISpawnDeck deck;
 
-        internal QueueModel(InfiniteDeck<DeckItem> deck)
+        internal QueueModel(ISpawnDeck deck)
         {
             this.deck = deck;
         }
+
+        public int LookaheadLimit => deck.PeekLimit;
 
         public (Occupant, Occupant) this[int index]
         {

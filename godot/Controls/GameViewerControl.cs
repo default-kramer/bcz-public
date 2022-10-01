@@ -17,6 +17,7 @@ public class GameViewerControl : Control
     {
         logic.Cleanup();
         var driver = ReplayReader.BuildReplayDriver(filepath, tickCalculations);
+        //var driver = ReplayReader.FindBestCombo(filepath, tickCalculations);
         SetupChildren(driver.Ticker.state, driver.Ticker);
         logic = new WatchReplayLogic(driver);
     }
@@ -244,10 +245,6 @@ public class GameViewerControl : Control
                 replayWriter.Close();
                 replayWriter.Dispose();
             }
-            if (state != null)
-            {
-                state?.Dispose();
-            }
         }
 
         public void Process(float delta)
@@ -309,9 +306,9 @@ public class GameViewerControl : Control
 
     class WatchReplayLogic : ILogic
     {
-        private readonly ReplayDriver replayDriver;
+        private readonly IReplayDriver replayDriver;
 
-        public WatchReplayLogic(ReplayDriver replayDriver)
+        public WatchReplayLogic(IReplayDriver replayDriver)
         {
             this.replayDriver = replayDriver;
         }

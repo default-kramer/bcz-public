@@ -39,27 +39,27 @@ namespace FF2.Core
             };
         }
 
-        public static readonly IReadOnlyList<DeckItem> MainDeck;
-        public static readonly IReadOnlyList<DeckItem> BlanklessDeck;
+        public static readonly IReadOnlyList<SpawnItem> MainDeck;
+        public static readonly IReadOnlyList<SpawnItem> BlanklessDeck;
 
         static Lists()
         {
-            var temp = new List<DeckItem>();
+            var temp = new List<SpawnItem>();
             foreach (var color in Lists.Colors.RYBBlank)
             {
                 foreach (var color2 in Lists.Colors.RYB)
                 {
-                    temp.Add(new DeckItem(color, color2));
+                    temp.Add(new SpawnItem(color, color2));
                 }
             }
             MainDeck = temp;
 
-            temp = new List<DeckItem>();
+            temp = new List<SpawnItem>();
             foreach (var color in Lists.Colors.RYB)
             {
                 foreach (var color2 in Lists.Colors.RYB)
                 {
-                    temp.Add(new DeckItem(color, color2));
+                    temp.Add(new SpawnItem(color, color2));
                 }
             }
             BlanklessDeck = temp;

@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace FF2.Core
 {
-    readonly struct Combo
+    public readonly struct Combo
     {
         public readonly int NumVerticalGroups;
         public readonly int NumHorizontalGroups;
