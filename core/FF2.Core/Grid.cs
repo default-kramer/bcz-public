@@ -25,6 +25,14 @@ namespace FF2.Core
         ReadOnlySpan<Occupant> ToSpan();
 
         IImmutableGrid MakeImmutable();
+
+        int HashGrid();
+
+#if DEBUG
+        string PrintGrid { get; }
+
+        bool CheckGridString(params string[] rows);
+#endif
     }
 
     /// <summary>
@@ -124,6 +132,8 @@ namespace FF2.Core
         }
 
 #if DEBUG
+        const string Newline = "\n";
+
         public string PrintGrid
         {
             get
@@ -131,7 +141,7 @@ namespace FF2.Core
                 var sb = new StringBuilder();
                 for (int y = Height - 1; y >= 0; y--)
                 {
-                    sb.AppendLine();
+                    sb.Append(Newline);
                     for (int x = 0; x < Width; x++)
                     {
                         var occ = Get(new Loc(x, y));
@@ -169,6 +179,22 @@ namespace FF2.Core
                 Direction.Right => $"<{x}",
                 _ => $"{x}{x}",
             };
+        }
+
+        public bool CheckGridString(params string[] rows)
+        {
+            string expected = rows[0];
+            if (rows.Length > 1)
+            {
+                expected = string.Join(Newline, rows);
+            }
+            expected = expected.Replace("\r\n", Newline);
+            if (expected.StartsWith(Newline))
+            {
+                expected = expected.Substring(Newline.Length);
+            }
+            var actual = PrintGrid;
+            return actual.EndsWith(expected);
         }
 #endif
     }

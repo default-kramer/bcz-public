@@ -25,6 +25,20 @@ namespace FF2.CoreTests
             return ReplayReader.GetPuzzles(path);
         }
 
+        private static PuzzleReplayDriver RunToCompletion(ComboDistillery.Puzzle puzzle)
+        {
+            var driver = PuzzleReplayDriver.BuildPuzzleReplay(puzzle, new TickCalculations());
+
+            var now = new Moment(500);
+            while (!driver.IsDone)
+            {
+                driver.Advance(now);
+                now = now.AddMillis(500);
+            }
+
+            return driver;
+        }
+
         [TestMethod]
         public void Replay001()
         {
@@ -33,11 +47,31 @@ namespace FF2.CoreTests
         }
 
         [TestMethod]
-        public void TODO()
+        public void Puzzle002()
         {
-            var puzzles = GetPuzzles("001.ffr");
-            Assert.AreEqual(10, puzzles.Count);
-            Assert.Fail("TODO: need more meaningful assertions here");
+            var puzzles = GetPuzzles("002.ffr");
+            Assert.AreEqual(14, puzzles.Count);
+
+            var biggest = puzzles.OrderByDescending(p => p.Combo.AdjustedGroupCount).First();
+            Assert.AreEqual(5, biggest.Combo.NumVerticalGroups);
+            Assert.AreEqual(1, biggest.Combo.NumHorizontalGroups);
+            Assert.AreEqual(59492762, biggest.InitialGrid.HashGrid());
+
+            var result = RunToCompletion(biggest);
+            Assert.AreEqual(-1847731085, result.Ticker.state.Grid.HashGrid());
+            Assert.IsTrue(result.Ticker.state.Grid.CheckGridString(@"
+   rr                   
+   rr                   
+   RR                   
+                     BB 
+   RR    YY       BB    
+   YY                RR 
+               RR       
+BB    RR RR BB YY    YY 
+RR RR BB       YY       
+   BB BB    YY          
+YY YY             BB    
+   RR RR       YY    BB "));
         }
 
         private static readonly DirectoryInfo ReplayDirectory = FindReplayDirectory();

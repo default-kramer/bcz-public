@@ -22,7 +22,18 @@ namespace FF2.Core
             this.moves = moves;
         }
 
+        public static PuzzleReplayDriver BuildPuzzleReplay(ComboDistillery.Puzzle puzzle, TickCalculations tickCalculations)
+        {
+            var grid = Grid.Clone(puzzle.InitialGrid);
+            var state = new State(grid, puzzle.MakeDeck());
+            var ticker = new Ticker(state, tickCalculations, NullReplayCollector.Instance);
+            return new PuzzleReplayDriver(ticker, puzzle.Moves);
+        }
+
         public Ticker Ticker => ticker;
+
+        // State should go to GameOver once when it can no longer spawn
+        public bool IsDone => i == moves.Count && ticker.state.Kind == StateKind.GameOver;
 
         public void Advance(Moment now)
         {

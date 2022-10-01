@@ -42,11 +42,7 @@ namespace FF2.Core.ReplayModel
         public static IReplayDriver FindBestCombo(string filename, TickCalculations tickCalculations)
         {
             var puzzle = GetPuzzles(filename).OrderByDescending(x => x.Combo.AdjustedGroupCount).First();
-            var grid = Grid.Clone(puzzle.InitialGrid);
-            var state = new State(grid, puzzle.MakeDeck());
-            var ticker = new Ticker(state, tickCalculations, NullReplayCollector.Instance);
-            var replay = new PuzzleReplayDriver(ticker, puzzle.Moves);
-            return replay;
+            return PuzzleReplayDriver.BuildPuzzleReplay(puzzle, tickCalculations);
         }
 
         public static ReplayDriver BuildReplayDriver(string filename, TickCalculations tickCalculations)
