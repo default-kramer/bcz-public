@@ -122,6 +122,11 @@ public class PenaltyViewerControl : Control
 
     public override void _Draw()
     {
+        if (Model == null)
+        {
+            return;
+        }
+
         DrawRect(new Rect2(0, 0, RectSize), Colors.BlanchedAlmond);
 
         var padding = RectSize.x * 0.1f;

@@ -12,9 +12,9 @@ anchor_bottom = 1.0
 
 [node name="VBoxContainer" type="VBoxContainer" parent="MainContainer"]
 margin_left = 454.0
-margin_top = 254.0
+margin_top = 242.0
 margin_right = 569.0
-margin_bottom = 346.0
+margin_bottom = 358.0
 
 [node name="ButtonSinglePlayer" type="Button" parent="MainContainer/VBoxContainer"]
 margin_right = 115.0
@@ -38,6 +38,12 @@ margin_top = 72.0
 margin_right = 115.0
 margin_bottom = 92.0
 text = "Watch Replay"
+
+[node name="ButtonSolvePuzzles" type="Button" parent="MainContainer/VBoxContainer"]
+margin_top = 96.0
+margin_right = 115.0
+margin_bottom = 116.0
+text = "Solve Puzzles"
 
 [node name="MenuSinglePlayer" parent="." instance=ExtResource( 1 )]
 

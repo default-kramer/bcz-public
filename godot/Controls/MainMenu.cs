@@ -14,6 +14,7 @@ public class MainMenu : Control
         public readonly Button ButtonMultiplayer;
         public readonly Button ButtonControllerSetup;
         public readonly Button ButtonWatchReplay;
+        public readonly Button ButtonSolvePuzzles;
         public readonly Control MainContainer;
         public readonly Control MenuSinglePlayer;
         public readonly Control FileDialog;
@@ -24,6 +25,7 @@ public class MainMenu : Control
             me.FindNode(out ButtonMultiplayer, nameof(ButtonMultiplayer));
             me.FindNode(out ButtonControllerSetup, nameof(ButtonControllerSetup));
             me.FindNode(out ButtonWatchReplay, nameof(ButtonWatchReplay));
+            me.FindNode(out ButtonSolvePuzzles, nameof(ButtonSolvePuzzles));
             me.FindNode(out MainContainer, nameof(MainContainer));
             me.FindNode(out MenuSinglePlayer, nameof(MenuSinglePlayer));
             me.FindNode(out FileDialog, nameof(FileDialog));
@@ -53,6 +55,7 @@ public class MainMenu : Control
         members.ButtonSinglePlayer.Connect("pressed", this, nameof(PressedSinglePlayer));
         members.ButtonMultiplayer.Connect("pressed", this, nameof(PressedMultiplayer));
         members.ButtonWatchReplay.Connect("pressed", this, nameof(PressedWatchReplay));
+        members.ButtonSolvePuzzles.Connect("pressed", this, nameof(PressedSolvePuzzles));
         members.FileDialog.Connect("file_selected", this, nameof(OnFileSelected));
 
         SwitchTo(members.MainContainer);
@@ -87,5 +90,10 @@ public class MainMenu : Control
             fd.Set("current_dir", replayDir);
         }
         fd.Call("popup_centered");
+    }
+
+    private void PressedSolvePuzzles()
+    {
+        NewRoot.FindRoot(this).SolvePuzzles();
     }
 }

@@ -11,6 +11,7 @@ public class NewRoot : Control
     {
         public readonly SpritePool SpritePool;
         public readonly GameViewerControl GameViewer;
+        public readonly PuzzleControl PuzzleControl;
         public readonly MainMenu MainMenu;
 
         public Members(Control me)
@@ -19,7 +20,15 @@ public class NewRoot : Control
                 SpriteKind.Enemy, SpriteKind.BlankJoined, SpriteKind.BlankSingle);
 
             me.FindNode(out GameViewer, nameof(GameViewer));
+            me.FindNode(out PuzzleControl, nameof(PuzzleControl));
             me.FindNode(out MainMenu, nameof(MainMenu));
+        }
+
+        public void HideAll()
+        {
+            GameViewer.Visible = false;
+            PuzzleControl.Visible = false;
+            MainMenu.Visible = false;
         }
     }
 
@@ -91,22 +100,29 @@ public class NewRoot : Control
 
     private void StartGame(SeededSettings ss)
     {
-        members.MainMenu.Visible = false;
+        members.HideAll();
         members.GameViewer.Visible = true;
         members.GameViewer.StartGame(ss);
     }
 
     public void BackToMainMenu()
     {
-        members.GameViewer.Visible = false;
+        members.HideAll();
         members.MainMenu.Visible = true;
         members.MainMenu.ShowMainMenu();
     }
 
     public void WatchReplay(string replayFile)
     {
-        members.MainMenu.Visible = false;
+        members.HideAll();
         members.GameViewer.Visible = true;
         members.GameViewer.WatchReplay(replayFile);
+    }
+
+    public void SolvePuzzles()
+    {
+        members.HideAll();
+        members.PuzzleControl.Visible = true;
+        members.PuzzleControl.TEST_SolvePuzzle();
     }
 }

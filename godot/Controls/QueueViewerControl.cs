@@ -19,6 +19,11 @@ public class QueueViewerControl : Control
 
     public override void _Draw()
     {
+        if (Model == null)
+        {
+            return;
+        }
+
         spritePool = spritePool ?? NewRoot.GetSpritePool(this);
 
         DrawRect(new Rect2(0, 0, this.RectSize), new Godot.Color(0.03f, 0.03f, 0.03f));
@@ -37,8 +42,17 @@ public class QueueViewerControl : Control
 
         for (int i = Model.LookaheadLimit; i < count; i++)
         {
-            sprites[Index1(i)].Sprite.Visible = false;
-            sprites[Index2(i)].Sprite.Visible = false;
+            HideSprite(Index1(i));
+            HideSprite(Index2(i));
+        }
+    }
+
+    private void HideSprite(int index)
+    {
+        var sprite = sprites[index].Sprite;
+        if (sprite != null)
+        {
+            sprite.Visible = false;
         }
     }
 
