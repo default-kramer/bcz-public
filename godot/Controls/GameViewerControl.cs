@@ -16,8 +16,8 @@ public class GameViewerControl : Control
     public void WatchReplay(string filepath)
     {
         logic.Cleanup();
-        //var driver = ReplayReader.BuildReplayDriver(filepath, tickCalculations);
-        var driver = ReplayReader.FindBestCombo(filepath, tickCalculations);
+        var driver = ReplayReader.BuildReplayDriver(filepath, tickCalculations);
+        //var driver = ReplayReader.FindBestCombo(filepath, tickCalculations);
         SetupChildren(driver.Ticker.state, driver.Ticker);
         logic = new WatchReplayLogic(driver);
     }
