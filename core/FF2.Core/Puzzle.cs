@@ -6,37 +6,6 @@ using System.Threading.Tasks;
 
 namespace FF2.Core
 {
-    /// <summary>
-    /// Defines the rotation and x-translation that can be applied to a <see cref="Mover"/>
-    /// before dropping it. The values of this struct are somewhat arbitrary; they are
-    /// defined by <see cref="Mover.Orientation"/>.
-    /// </summary>
-    public readonly struct Orientation
-    {
-        public readonly Direction Direction;
-        public readonly int X;
-
-        public Orientation(Direction direction, int x)
-        {
-            this.Direction = direction;
-            this.X = x;
-        }
-    }
-
-    public readonly struct Move
-    {
-        public readonly Orientation Orientation;
-        public readonly SpawnItem SpawnItem;
-        public readonly bool DidBurst;
-
-        public Move(Orientation orientation, SpawnItem spawnItem, bool didBurst)
-        {
-            this.Orientation = orientation;
-            this.SpawnItem = spawnItem;
-            this.DidBurst = didBurst;
-        }
-    }
-
     public readonly struct Puzzle
     {
         public readonly IImmutableGrid InitialGrid;
