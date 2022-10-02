@@ -30,7 +30,7 @@ namespace FF2.Core
             get { return NumVerticalGroups + NumHorizontalGroups * 2; }
         }
 
-        public Combo AfterDestruction(TickCalculations calculations)
+        internal Combo AfterDestruction(TickCalculations calculations)
         {
             int v = NumVerticalGroups + calculations.NumVerticalGroups;
             int h = NumHorizontalGroups + calculations.NumHorizontalGroups;

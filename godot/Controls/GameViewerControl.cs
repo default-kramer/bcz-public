@@ -10,7 +10,6 @@ using System.Collections.Generic;
 
 public class GameViewerControl : Control
 {
-    private readonly TickCalculations tickCalculations = new TickCalculations();
     private ILogic logic = NullLogic.Instance;
 
     public void SolvePuzzles(IReadOnlyList<Puzzle> puzzles)
@@ -23,7 +22,7 @@ public class GameViewerControl : Control
         logic.Cleanup();
         var puzzle = puzzleProvider.Puzzle;
         var state = new State(Grid.Clone(puzzle.InitialGrid), puzzle.MakeDeck());
-        var ticker = new DotnetTicker(state, tickCalculations, NullReplayCollector.Instance);
+        var ticker = new DotnetTicker(state, NullReplayCollector.Instance);
         SetupChildren(state, ticker);
         logic = new SolvePuzzleLogic(ticker, this, puzzleProvider);
     }
@@ -31,7 +30,7 @@ public class GameViewerControl : Control
     public void WatchReplay(string filepath)
     {
         logic.Cleanup();
-        var driver = ReplayReader.BuildReplayDriver(filepath, tickCalculations);
+        var driver = ReplayReader.BuildReplayDriver(filepath);
         SetupChildren(driver.Ticker.state, driver.Ticker);
         logic = new WatchReplayLogic(driver);
     }
@@ -60,7 +59,7 @@ public class GameViewerControl : Control
             replayCollector = replayCollector.Combine(replayWriter);
         }
 
-        var ticker = new DotnetTicker(state, tickCalculations, replayCollector);
+        var ticker = new DotnetTicker(state, replayCollector);
         SetupChildren(state, ticker);
 
         this.logic = new LiveGameLogic(replayWriter, ticker, state);
@@ -68,7 +67,7 @@ public class GameViewerControl : Control
 
     private void SetupChildren(State state, Ticker ticker)
     {
-        members.GridViewer.SetModel(new GridViewerModel(state, ticker, tickCalculations));
+        members.GridViewer.SetModel(new GridViewerModel(state, ticker));
         members.PenaltyViewer.Model = state.MakePenaltyModel(ticker);
         members.QueueViewer.Model = state.MakeQueueModel();
         members.GameOverMenu.Visible = false;

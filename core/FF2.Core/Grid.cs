@@ -261,7 +261,7 @@ namespace FF2.Core
             return GridFallHelper.Fall(this, blockedFlagBuffer, assumeUnblockedBuffer, fallCountBuffer);
         }
 
-        public bool Destroy(TickCalculations calculations)
+        internal bool Destroy(TickCalculations calculations)
         {
             return new GridDestroyHelper(this, groupsBuffer, calculations).Execute(this);
         }

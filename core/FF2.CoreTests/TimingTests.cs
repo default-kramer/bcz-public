@@ -13,7 +13,6 @@ namespace FF2.CoreTests
     {
         private Grid grid = null!;
         private InfiniteSpawnDeck deck = null!;
-        private TickCalculations tickCalculations = null!;
         private State state = null!;
         private Ticker ticker = null!;
         private Moment now;
@@ -27,8 +26,7 @@ namespace FF2.CoreTests
             now = new Moment(0);
             grid.Set(new Loc(0, 0), Occupant.MakeEnemy(Color.Red));
             state = new State(grid, deck);
-            tickCalculations = new TickCalculations();
-            ticker = new Ticker(state, tickCalculations, NullReplayCollector.Instance);
+            ticker = new Ticker(state, NullReplayCollector.Instance);
         }
 
         private void Advance(int millis)

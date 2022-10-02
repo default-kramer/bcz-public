@@ -10,14 +10,14 @@ namespace FF2.Godot.Controls
     public sealed class GridViewerModel
     {
         private readonly State state;
-        private readonly Ticker timing;
-        private readonly TickCalculations tickCalculations;
+        private readonly Ticker ticker;
+        private readonly ITickCalculations tickCalculations;
 
-        public GridViewerModel(State state, Ticker timing, TickCalculations tickCalculations)
+        public GridViewerModel(State state, Ticker timing)
         {
             this.state = state;
-            this.timing = timing;
-            this.tickCalculations = tickCalculations;
+            this.ticker = timing;
+            this.tickCalculations = state.TickCalculations;
         }
 
         public IReadOnlyGrid Grid { get { return state.Grid; } }
@@ -32,19 +32,19 @@ namespace FF2.Godot.Controls
 
         public Mover? PreviewPlummet() { return state.PreviewPlummet(); }
 
-        public int ColumnDestructionBitmap { get { return tickCalculations.ColumnDestructionBitmap; } }
-        public int RowDestructionBitmap { get { return tickCalculations.RowDestructionBitmap; } }
+        public int ColumnDestructionBitmap => tickCalculations.ColumnDestructionBitmap;
+        public int RowDestructionBitmap => tickCalculations.RowDestructionBitmap;
 
-        public float BurstProgress() { return timing.BurstProgress(); }
+        public float BurstProgress() { return ticker.BurstProgress(); }
 
         public float DestructionIntensity()
         {
-            return timing.DestructionIntensity();
+            return ticker.DestructionIntensity();
         }
 
         public FallSample? GetFallSample()
         {
-            return timing.GetFallSample();
+            return ticker.GetFallSample();
         }
 
         public Occupant GetDestroyedOccupant(Loc loc)
@@ -56,7 +56,7 @@ namespace FF2.Godot.Controls
         {
             if (GetDestroyedOccupant(loc) != Occupant.None)
             {
-                return timing.DestructionProgress();
+                return ticker.DestructionProgress();
             }
             else
             {

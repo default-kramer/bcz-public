@@ -6,10 +6,27 @@ using System.Threading.Tasks;
 
 namespace FF2.Core
 {
+    public interface ITickCalculations
+    {
+        /// <summary>
+        /// For the background shader.
+        /// Bit N indicates whether vertical destruction occurred in column N.
+        /// </summary>
+        int ColumnDestructionBitmap { get; }
+
+        /// <summary>
+        /// For the background shader.
+        /// Bit N indicates whether horiztonal destruction occurred in row N.
+        /// </summary>
+        int RowDestructionBitmap { get; }
+
+        Occupant GetDestroyedOccupant(Loc loc, IReadOnlyGrid grid);
+    }
+
     /// <summary>
     /// Used to capture information during a call to <see cref="State.Tick(TickCalculations)"/>.
     /// </summary>
-    public class TickCalculations
+    sealed class TickCalculations : ITickCalculations
     {
         /// <summary>
         /// For the background shader.
@@ -23,10 +40,18 @@ namespace FF2.Core
         /// </summary>
         public int RowDestructionBitmap;
 
-        private Occupant[] destroyedOccupants = new Occupant[Grid.DefaultWidth * Grid.DefaultHeight];
+        private Occupant[] destroyedOccupants;
 
         public int NumVerticalGroups;
         public int NumHorizontalGroups;
+
+        public TickCalculations(IReadOnlyGrid grid)
+        {
+            destroyedOccupants = new Occupant[grid.Width * grid.Height];
+        }
+
+        int ITickCalculations.ColumnDestructionBitmap => this.ColumnDestructionBitmap;
+        int ITickCalculations.RowDestructionBitmap => this.RowDestructionBitmap;
 
         public void Reset()
         {

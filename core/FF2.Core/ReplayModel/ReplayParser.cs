@@ -50,9 +50,8 @@ namespace FF2.Core.ReplayModel
                 if (__gameInfo.InitialState == null)
                 {
                     var state = BuildState();
-                    var calc = new TickCalculations();
                     var collector = new ListReplayCollector();
-                    var ticker = new Ticker(state, calc, collector);
+                    var ticker = new Ticker(state, collector);
                     __gameInfo = new GameInfo(BuildState(), ticker, collector);
                 }
                 return __gameInfo;
@@ -146,15 +145,15 @@ namespace FF2.Core.ReplayModel
             }
         }
 
-        public ReplayDriver BuildReplayDriver(TickCalculations tickCalculations)
+        public ReplayDriver BuildReplayDriver()
         {
-            var ticker = new Ticker(Game.InitialState, tickCalculations, NullReplayCollector.Instance);
+            var ticker = new Ticker(Game.InitialState, NullReplayCollector.Instance);
             return new ReplayDriver(ticker, Game.ReplayCollector.Commands);
         }
 
         public IReadOnlyList<Puzzle> GetPuzzles()
         {
-            var ticker = new Ticker(BuildState(), new TickCalculations(), NullReplayCollector.Instance);
+            var ticker = new Ticker(BuildState(), NullReplayCollector.Instance);
             return Puzzle.FindPuzzles(ticker, Game.ReplayCollector.Commands);
         }
     }

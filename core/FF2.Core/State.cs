@@ -30,6 +30,7 @@ namespace FF2.Core
     public sealed class State
     {
         private readonly Grid grid;
+        private readonly TickCalculations tickCalculations;
         private readonly FallAnimationSampler fallSampler;
         private readonly ISpawnDeck spawnDeck;
         private Mover? mover;
@@ -57,6 +58,7 @@ namespace FF2.Core
         public State(Grid grid, ISpawnDeck spawnDeck)
         {
             this.grid = grid;
+            this.tickCalculations = new TickCalculations(grid);
             this.fallSampler = new FallAnimationSampler(grid);
             this.spawnDeck = spawnDeck;
             mover = null;
@@ -68,6 +70,8 @@ namespace FF2.Core
         }
 
         public IReadOnlyGrid Grid { get { return grid; } }
+
+        public ITickCalculations TickCalculations => this.tickCalculations;
 
         public static State Create(SeededSettings ss)
         {
@@ -179,12 +183,12 @@ namespace FF2.Core
             return mover?.Approach(o);
         }
 
-        private bool Destroy(TickCalculations calculations)
+        private bool Destroy()
         {
-            var result = grid.Destroy(calculations);
+            var result = grid.Destroy(tickCalculations);
             if (result)
             {
-                currentCombo = currentCombo.AfterDestruction(calculations);
+                currentCombo = currentCombo.AfterDestruction(tickCalculations);
             }
             else
             {
@@ -207,9 +211,11 @@ namespace FF2.Core
         /// Return false if nothing changes, or if <see cref="Kind"/> is the only thing that changes.
         /// Otherwise return true after executing some "significant" change.
         /// </summary>
-        public bool Tick(Moment now, TickCalculations calculations)
+        public bool Tick(Moment now)
         {
-            var retval = DoTick(now, calculations);
+            tickCalculations.Reset();
+
+            var retval = DoTick(now);
             if (retval && grid.Stats.EnemyCount == 0)
             {
                 // Don't change to GameOver immediately. Let the combo resolve.
@@ -218,7 +224,7 @@ namespace FF2.Core
             return retval;
         }
 
-        private bool DoTick(Moment now, TickCalculations calculations)
+        private bool DoTick(Moment now)
         {
             if (Kind == StateKind.GameOver)
             {
@@ -246,7 +252,7 @@ namespace FF2.Core
                 case StateKind.Falling:
                     return ChangeKind(Fall(true), StateKind.Falling, StateKind.Destroying);
                 case StateKind.Destroying:
-                    return ChangeKind(Destroy(calculations), StateKind.Falling, StateKind.Spawning);
+                    return ChangeKind(Destroy(), StateKind.Falling, StateKind.Spawning);
                 default:
                     throw new Exception("Unexpected kind: " + Kind);
             }

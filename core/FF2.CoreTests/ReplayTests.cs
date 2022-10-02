@@ -16,7 +16,7 @@ namespace FF2.CoreTests
         private static ReplayDriver ParseReplay(string path)
         {
             path = Path.Combine(ReplayDirectory.FullName, path);
-            return ReplayReader.BuildReplayDriver(path, new TickCalculations());
+            return ReplayReader.BuildReplayDriver(path);
         }
 
         private static IReadOnlyList<Puzzle> GetPuzzles(string path)
@@ -27,7 +27,7 @@ namespace FF2.CoreTests
 
         private static PuzzleReplayDriver RunToCompletion(Puzzle puzzle)
         {
-            var driver = PuzzleReplayDriver.BuildPuzzleReplay(puzzle, new TickCalculations());
+            var driver = PuzzleReplayDriver.BuildPuzzleReplay(puzzle);
 
             var now = new Moment(500);
             while (!driver.IsDone)

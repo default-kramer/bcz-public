@@ -13,7 +13,6 @@ namespace FF2.Core
     {
         public readonly State state;
         private readonly IReplayCollector replayCollector;
-        private readonly TickCalculations tickCalculations;
         private Moment lastMoment;
 
         /// <summary>
@@ -52,15 +51,14 @@ namespace FF2.Core
             return DestructionEndInt + 1;
         }
 
-        public Ticker(State state, TickCalculations tickCalculations, IReplayCollector replayCollector)
+        public Ticker(State state, IReplayCollector replayCollector)
         {
             this.state = state;
             this.replayCollector = replayCollector;
-            this.tickCalculations = tickCalculations;
 
             // TODO it's unclear whose responsibility this should be:
             lastMoment = new Moment(0);
-            state.Tick(lastMoment, tickCalculations);
+            state.Tick(lastMoment);
             if (state.Kind != StateKind.Waiting)
             {
                 throw new Exception("WTF?");
@@ -217,8 +215,7 @@ namespace FF2.Core
         {
             var attempt = state.Kind;
 
-            tickCalculations.Reset();
-            if (state.Tick(cursor, tickCalculations))
+            if (state.Tick(cursor))
             {
                 return (true, attempt);
             }
@@ -346,8 +343,8 @@ namespace FF2.Core
         private DateTime startTime = default(DateTime);
         private Moment now;
 
-        public DotnetTicker(State state, TickCalculations tickCalculations, IReplayCollector replayCollector)
-            : base(state, tickCalculations, replayCollector)
+        public DotnetTicker(State state, IReplayCollector replayCollector)
+            : base(state, replayCollector)
         {
         }
 
