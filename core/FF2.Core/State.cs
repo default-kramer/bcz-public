@@ -55,6 +55,12 @@ namespace FF2.Core
 
         public bool ClearedAllEnemies { get; private set; }
 
+        public delegate void EventHandler<T>(State sender, T args);
+
+        public event EventHandler<Combo>? OnComboCompleted;
+        public event EventHandler<SpawnItem>? OnCatalystSpawned;
+        public event EventHandler<FallAnimationSampler>? OnFall;
+
         public State(Grid grid, ISpawnDeck spawnDeck)
         {
             this.grid = grid;
@@ -204,9 +210,6 @@ namespace FF2.Core
             return result;
         }
 
-        public event EventHandler<Combo>? OnComboCompleted;
-        public event EventHandler<SpawnItem>? OnCatalystSpawned;
-
         /// <summary>
         /// Return false if nothing changes, or if <see cref="Kind"/> is the only thing that changes.
         /// Otherwise return true after executing some "significant" change.
@@ -269,6 +272,10 @@ namespace FF2.Core
                 keepGoing = grid.Fall(fallCountBuffer);
             }
             Slowmo = Slowmo || result;
+            if (result)
+            {
+                OnFall?.Invoke(this, fallSampler);
+            }
             return result;
         }
 

@@ -7,6 +7,18 @@ using System.Threading.Tasks;
 
 namespace FF2.Core
 {
+    public readonly ref struct GridSize
+    {
+        public readonly int Width;
+        public readonly int Height;
+
+        public GridSize(IReadOnlyGrid grid)
+        {
+            this.Width = grid.Width;
+            this.Height = grid.Height;
+        }
+    }
+
     /// <summary>
     /// A read-only reference to a grid which might be mutated by someone else.
     /// </summary>
@@ -15,8 +27,6 @@ namespace FF2.Core
         int Width { get; }
         int Height { get; }
         Occupant Get(Loc loc);
-
-        int Index(Loc loc);
 
         bool InBounds(Loc loc);
 
@@ -44,19 +54,29 @@ namespace FF2.Core
     public readonly struct GridStats
     {
         public readonly int EnemyCount;
+        public readonly int OccupantCount;
 
         public GridStats(Grid grid)
         {
             EnemyCount = 0;
+            OccupantCount = 0;
 
             for (int x = 0; x < grid.Width; x++)
             {
                 for (int y = 0; y < grid.Height; y++)
                 {
                     var occ = grid.Get(new Loc(x, y));
-                    if (occ.Kind == OccupantKind.Enemy)
+                    switch (occ.Kind)
                     {
-                        EnemyCount++;
+                        case OccupantKind.Enemy:
+                            EnemyCount++;
+                            OccupantCount++;
+                            break;
+                        case OccupantKind.None:
+                            break;
+                        default:
+                            OccupantCount++;
+                            break;
                     }
                 }
             }
@@ -104,6 +124,11 @@ namespace FF2.Core
         public int Index(Loc loc)
         {
             return loc.Y * Width + loc.X;
+        }
+
+        public Loc Loc(int index)
+        {
+            return new Loc(index % Width, index / Width);
         }
 
         public bool IsVacant(Loc loc)
@@ -157,6 +182,10 @@ namespace FF2.Core
             if (occ.Kind == OccupantKind.None)
             {
                 return "  ";
+            }
+            if (occ.Kind == OccupantKind.Enemy && occ.Color == Color.Blank)
+            {
+                return "[]";
             }
 
             string x = occ.Color switch
@@ -274,13 +303,60 @@ namespace FF2.Core
                 {
                     var loc = new Loc(x, y);
                     var occ = Get(loc);
-                    if (occ.Kind != OccupantKind.None && occ.Color == Color.Blank)
+                    if (occ.Kind == OccupantKind.Catalyst && occ.Color == Color.Blank)
                     {
                         Set(loc, Occupant.None);
                     }
                 }
             }
             GridDestroyHelper.PostDestroy(this);
+        }
+
+        private int CountEmptyBottomRows()
+        {
+            int y = 0;
+            while (y < Height)
+            {
+                for (int x = 0; x < Width; x++)
+                {
+                    if (!IsVacant(new Loc(x, y)))
+                    {
+                        return y;
+                    }
+                }
+                y++;
+            }
+            return y;
+        }
+
+        public int ShiftToBottom()
+        {
+            int count = CountEmptyBottomRows();
+            if (count == 0)
+            {
+                return count;
+            }
+
+            for (int y = 0; y < Height; y++)
+            {
+                int y2 = y + count;
+                if (y2 < Height)
+                {
+                    for (int x = 0; x < Width; x++)
+                    {
+                        Set(new Loc(x, y), Get(new Loc(x, y2)));
+                    }
+                }
+                else
+                {
+                    for (int x = 0; x < Width; x++)
+                    {
+                        Set(new Loc(x, y), Occupant.None);
+                    }
+                }
+            }
+
+            return count;
         }
     }
 
@@ -291,6 +367,57 @@ namespace FF2.Core
         public override IImmutableGrid MakeImmutable()
         {
             return this;
+        }
+    }
+
+    static class GridStability
+    {
+        public static void Calculate(Span<bool> stability, IReadOnlyGrid grid)
+        {
+            int h = grid.Height;
+            int w = grid.Width;
+
+            for (int y = 0; y < h; y++)
+            {
+                // When calculating whether (x1, y1) is stable, we can only look at lower rows.
+                // This slice will cause an exception if we try to read any y2 >= y1.
+                var sliced = stability.Slice(0, y * w);
+
+                for (int x = 0; x < w; x++)
+                {
+                    var loc = new Loc(x, y);
+                    stability[loc.ToIndex(grid)] = Calculate(sliced, grid, loc);
+                }
+            }
+        }
+
+        private static bool Calculate(ReadOnlySpan<bool> stability, IReadOnlyGrid grid, Loc loc)
+        {
+            var occ = grid.Get(loc);
+            switch (occ.Kind)
+            {
+                case OccupantKind.Enemy:
+                    return true;
+                case OccupantKind.None:
+                    return false;
+                default:
+                    var check = loc.Neighbor(Direction.Down);
+                    bool stable = stability[check.ToIndex(grid)];
+                    if (stable)
+                    {
+                        return stable;
+                    }
+
+                    switch (occ.Direction)
+                    {
+                        case Direction.Left:
+                        case Direction.Right:
+                            check = check.Neighbor(occ.Direction);
+                            return stability[check.ToIndex(grid)];
+                        default:
+                            return stable;
+                    }
+            }
         }
     }
 }

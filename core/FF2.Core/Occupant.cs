@@ -21,7 +21,7 @@ namespace FF2.Core
         None = 0,
         Enemy = 1,
         Catalyst = 2,
-        // reserve 3-F for the future
+        // reserve up to F for the future
         All = Enemy | Catalyst,
     }
 
@@ -88,6 +88,13 @@ namespace FF2.Core
         private readonly Bits data;
 
         public static readonly Occupant None = new Occupant();
+
+        /// <summary>
+        /// Useful for distilling puzzles.
+        /// Making this an Enemy is current important so we don't accidentally trigger GameOver
+        /// earlier than we were expecting.
+        /// </summary>
+        public static readonly Occupant IndestructibleEnemy = new Occupant(OccupantKind.Enemy, Color.Blank, Direction.None);
 
         public Occupant(OccupantKind kind, Color color, Direction direction)
         {

@@ -59,7 +59,7 @@ namespace FF2.Core
             // TODO it's unclear whose responsibility this should be:
             lastMoment = new Moment(0);
             state.Tick(lastMoment);
-            if (state.Kind != StateKind.Waiting)
+            if (state.Kind != StateKind.Waiting && state.Kind != StateKind.GameOver) // TODO do not check in!
             {
                 throw new Exception("WTF?");
             }

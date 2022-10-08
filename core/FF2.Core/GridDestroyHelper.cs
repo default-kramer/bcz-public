@@ -84,7 +84,7 @@ namespace FF2.Core
                         if (dir != Direction.None)
                         {
                             var partnerLoc = loc.Neighbor(dir);
-                            if (grid.IsVacant(partnerLoc))
+                            if (grid.InBounds(partnerLoc) && grid.IsVacant(partnerLoc)) // TODO I'm not sure why the bounds check is needed. Do I have a different bug?
                             {
                                 occ = occ.SetDirection(Direction.None);
                                 grid.Set(loc, occ);
@@ -148,7 +148,7 @@ namespace FF2.Core
 
                 for (Loc iter = loc; iter != cursor; iter = iter.Neighbor(direction))
                 {
-                    var index = grid.Index(iter);
+                    var index = iter.ToIndex(grid);
                     groups[index] = groups[index].AdjustCount(direction, runCount);
                 }
 

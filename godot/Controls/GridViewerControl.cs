@@ -130,7 +130,7 @@ public class GridViewerControl : Control
 
                 SpriteKind kind = GetSpriteKind(occ);
 
-                var index = grid.Index(loc);
+                var index = loc.ToIndex(grid);
                 TrackedSprite previousSprite = activeSprites[index];
                 TrackedSprite currentSprite = default(TrackedSprite);
 

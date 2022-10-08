@@ -42,6 +42,8 @@ namespace FF2.Core
         public static readonly IReadOnlyList<SpawnItem> MainDeck;
         public static readonly IReadOnlyList<SpawnItem> BlanklessDeck;
 
+        public static readonly int[] DummyBuffer = new int[1024];
+
         static Lists()
         {
             var temp = new List<SpawnItem>();

@@ -83,12 +83,12 @@ namespace FF2.Core
                 destroyedOccupants = new Occupant[size];
             }
 
-            destroyedOccupants[grid.Index(loc)] = occupant;
+            destroyedOccupants[loc.ToIndex(grid)] = occupant;
         }
 
         public Occupant GetDestroyedOccupant(Loc loc, IReadOnlyGrid grid)
         {
-            return destroyedOccupants[grid.Index(loc)];
+            return destroyedOccupants[loc.ToIndex(grid)];
         }
     }
 }

@@ -22,6 +22,8 @@ namespace FF2.Core
             this.moves = moves;
         }
 
+        public State State => ticker.state;
+
         public static PuzzleReplayDriver BuildPuzzleReplay(Puzzle puzzle)
         {
             var grid = Grid.Clone(puzzle.InitialGrid);
@@ -74,6 +76,16 @@ namespace FF2.Core
                 throw new Exception($"TODO command failed: {command} at {now}");
             }
             nextCommandTime = now.AddMillis(normalDelay);
+        }
+
+        public void RunToCompletion()
+        {
+            var now = new Moment(500);
+            while (!IsDone)
+            {
+                Advance(now);
+                now = now.AddMillis(500);
+            }
         }
     }
 

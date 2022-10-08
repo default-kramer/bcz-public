@@ -19,24 +19,22 @@ namespace FF2.CoreTests
             return ReplayReader.BuildReplayDriver(path);
         }
 
-        private static IReadOnlyList<Puzzle> GetPuzzles(string path)
+        private static IReadOnlyList<Puzzle> GetPuzzlesRaw(string path)
         {
             path = Path.Combine(ReplayDirectory.FullName, path);
             return ReplayReader.GetPuzzles(path);
         }
 
-        private static PuzzleReplayDriver RunToCompletion(Puzzle puzzle)
+        private static Puzzle GetBiggestPuzzleRaw(string path)
+        {
+            return GetPuzzlesRaw(path).OrderByDescending(x => x.Combo.AdjustedGroupCount).First();
+        }
+
+        private static State RunToCompletion(Puzzle puzzle)
         {
             var driver = PuzzleReplayDriver.BuildPuzzleReplay(puzzle);
-
-            var now = new Moment(500);
-            while (!driver.IsDone)
-            {
-                driver.Advance(now);
-                now = now.AddMillis(500);
-            }
-
-            return driver;
+            driver.RunToCompletion();
+            return driver.State;
         }
 
         [TestMethod]
@@ -49,29 +47,59 @@ namespace FF2.CoreTests
         [TestMethod]
         public void Puzzle002()
         {
-            var puzzles = GetPuzzles("002.ffr");
-            Assert.AreEqual(14, puzzles.Count);
+            var rawPuzzles = GetPuzzlesRaw("002.ffr");
+            Assert.AreEqual(14, rawPuzzles.Count);
+            foreach (var raw in rawPuzzles)
+            {
+                var distilled = raw.Distill()!.Value;
+                // TODO should filter out puzzles with zero enemies?
+                // Or always change at least 1 catalyst to an enemy?
+                //Assert.IsTrue(distilled.InitialGrid.CountEnemies() > 0);
+                var result = RunToCompletion(distilled);
+                Assert.AreEqual(0, result.Grid.CountEnemies());
+                if (result.Grid.Count(OccupantKind.Enemy) > 10)
+                {
+                    var asdf = 99;
+                }
+            }
+        }
 
-            var biggest = puzzles.OrderByDescending(p => p.Combo.AdjustedGroupCount).First();
-            Assert.AreEqual(5, biggest.Combo.NumVerticalGroups);
-            Assert.AreEqual(1, biggest.Combo.NumHorizontalGroups);
-            Assert.AreEqual(59492762, biggest.InitialGrid.HashGrid());
+        [TestMethod]
+        public void Puzzle002_Distill()
+        {
+            var raw = GetBiggestPuzzleRaw("002.ffr");
+            Assert.AreEqual(5, raw.Combo.NumVerticalGroups);
+            Assert.AreEqual(1, raw.Combo.NumHorizontalGroups);
+            Assert.AreEqual(59492762, raw.InitialGrid.HashGrid());
 
-            var result = RunToCompletion(biggest);
-            Assert.AreEqual(-1847731085, result.Ticker.state.Grid.HashGrid());
-            Assert.IsTrue(result.Ticker.state.Grid.CheckGridString(@"
-   rr                   
-   rr                   
-   RR                   
-                     BB 
-   RR    YY       BB    
-   YY                RR 
+            Assert.IsTrue(raw.InitialGrid.CheckGridString(@"
+                  oo oo 
+                  rr yy 
+   rr             RR YY 
+   rr                YY 
+   RR       <y b>       
+   YY          BB    BB 
+   RR BB YY yy    BB    
+   YY       YY       RR 
                RR       
 BB    RR RR BB YY    YY 
 RR RR BB       YY       
    BB BB    YY          
 YY YY             BB    
    RR RR       YY    BB "));
+
+            var distilled = raw.Distill()!.Value;
+            var asdf = RunToCompletion(distilled);
+
+            Assert.IsTrue(distilled.InitialGrid.CheckGridString(@"
+                  oo oo 
+                  rr yy 
+                  RR YY 
+                     YY 
+            <y b>       
+   YY          BB       
+      BB    yy          
+            YY          "));
         }
 
         private static readonly DirectoryInfo ReplayDirectory = FindReplayDirectory();

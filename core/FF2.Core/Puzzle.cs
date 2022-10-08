@@ -123,5 +123,219 @@ namespace FF2.Core
                 }
             }
         }
+
+        public Puzzle? Distill()
+        {
+            Nullable<Puzzle> distilled;
+            //distilled = distilled?.RemoveExtraOccupants();
+            //distilled = distilled?.ReplaceCatalysts() ?? distilled;
+            distilled = this.Probe();
+            distilled = distilled?.ShiftDown() ?? distilled;
+            distilled = distilled?.RemoveUselessMoves(0);
+            return distilled;
+        }
+
+        private Puzzle? Try(Grid newGrid)
+        {
+            var candidate = new Puzzle(newGrid.MakeImmutable(), this.Moves, this.Combo);
+            try
+            {
+                return candidate.Validate() ? candidate : null;
+            }
+            catch (Exception ex) when (ex.Message.StartsWith("TODO command failed:")) // DO NOT CHECK IN
+            {
+                return null;
+            }
+        }
+
+        private Puzzle Probe()
+        {
+            var clone = Grid.Clone(InitialGrid);
+            Puzzle result = this;
+
+            for (int y = 0; y < clone.Height; y++)
+            {
+                for (int x = 0; x < clone.Width; x++)
+                {
+                    var loc = new Loc(x, y);
+                    var occ = clone.Get(loc);
+                    if (occ.Kind != OccupantKind.None && occ.Color != Color.Blank)
+                    {
+                        clone.Set(loc, Occupant.IndestructibleEnemy);
+                        var temp = Try(clone);
+                        if (temp == null)
+                        {
+                            clone.Set(loc, occ); // revert it
+                        }
+                        else
+                        {
+                            result = temp.Value;
+                        }
+                    }
+                }
+            }
+
+            for (int y = 0; y < clone.Height; y++)
+            {
+                for (int x = 0; x < clone.Width; x++)
+                {
+                    var loc = new Loc(x, y);
+                    var occ = clone.Get(loc);
+                    if (occ == Occupant.IndestructibleEnemy)
+                    {
+                        clone.Set(loc, Occupant.None);
+                        var temp = Try(clone);
+                        if (temp == null)
+                        {
+                            clone.Set(loc, occ); // revert it
+                        }
+                        else
+                        {
+                            result = temp.Value;
+                        }
+                    }
+                }
+            }
+
+            return result;
+        }
+
+        private static void ReplaceCatalysts(Grid grid)
+        {
+            for (int x = 0; x < grid.Width; x++)
+            {
+                for (int y = 0; y < grid.Height; y++)
+                {
+                    var loc = new Loc(x, y);
+                    var occ = grid.Get(loc);
+                    if (occ.Kind == OccupantKind.Catalyst && occ.Color != Color.Blank)
+                    {
+                        grid.Set(loc, Occupant.MakeEnemy(occ.Color));
+                    }
+                }
+            }
+        }
+
+        public Puzzle? ReplaceCatalysts() // TODO make private
+        {
+            var clone = Grid.Clone(this.InitialGrid);
+            ReplaceCatalysts(clone);
+            return Try(clone);
+        }
+
+        private Puzzle? RemoveExtraEnemies()
+        {
+            var resultGrid = RunToCompletion(null)!.State.Grid;
+
+            var clone = Grid.Clone(this.InitialGrid);
+
+            for (int x = 0; x < clone.Width; x++)
+            {
+                for (int y = 0; y < clone.Height; y++)
+                {
+                    var loc = new Loc(x, y);
+                    var occ = resultGrid.Get(loc);
+                    if (occ.Kind == OccupantKind.Enemy)
+                    {
+                        clone.Set(loc, Occupant.None);
+                    }
+                }
+            }
+
+            return Try(clone);
+        }
+
+        public Puzzle? RemoveExtraOccupants()
+        {
+            var fallTracker = new FallTracker(InitialGrid);
+            var resultGrid = RunToCompletion(fallTracker)!.State.Grid;
+
+            var clone = Grid.Clone(this.InitialGrid);
+            for (int x = 0; x < clone.Width; x++)
+            {
+                for (int y = 0; y < clone.Height; y++)
+                {
+                    var loc = new Loc(x, y);
+                    var occ = resultGrid.Get(loc);
+                    if (occ.Kind != OccupantKind.None)
+                    {
+                        var loc2 = fallTracker.GetOriginalLoc(loc);
+                        clone.Set(loc2, Occupant.None);
+                    }
+                }
+            }
+
+            // Sometimes we will leave important catalysts hanging in midair, like this:
+            // <r r> RR
+            //          BB
+            // But other times we will leave important catalysts
+            //ReplaceCatalysts(clone);
+
+            return Try(clone);
+        }
+
+        private Puzzle? ShiftDown()
+        {
+            var clone = Grid.Clone(this.InitialGrid);
+            int count = clone.ShiftToBottom();
+            if (count == 0)
+            {
+                return null;
+            }
+            return Try(clone);
+        }
+
+        private Puzzle RemoveUselessMoves(int index)
+        {
+            if (index >= Moves.Count)
+            {
+                return this;
+            }
+
+            var newMoves = this.Moves.ToList();
+            newMoves.RemoveAt(index);
+            var candidate = new Puzzle(this.InitialGrid, newMoves, this.Combo);
+
+            if (candidate.Validate())
+            {
+                return candidate.RemoveUselessMoves(index);
+            }
+            else
+            {
+                return RemoveUselessMoves(index + 1);
+            }
+        }
+
+        private bool Validate()
+        {
+            return RunToCompletion(null) != null;
+        }
+
+        private PuzzleReplayDriver? RunToCompletion(FallTracker? fallTracker)
+        {
+            bool ok = false;
+            int comboCount = 0;
+            var expectedCombo = this.Combo;
+
+            var driver = PuzzleReplayDriver.BuildPuzzleReplay(this);
+
+            driver.State.OnComboCompleted += (s, e) =>
+            {
+                comboCount++;
+                if (e.Equals(expectedCombo))
+                {
+                    ok = true;
+                }
+            };
+
+            if (fallTracker != null)
+            {
+                driver.State.OnFall += (s, e) => fallTracker.Combine(e);
+            }
+
+            driver.RunToCompletion();
+
+            return (ok && comboCount == 1) ? driver : null;
+        }
     }
 }
