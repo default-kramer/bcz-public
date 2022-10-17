@@ -40,6 +40,10 @@ namespace FF2.Core
         private PenaltySchedule penaltySchedule;
         private int waitingMillis = 0;
         private Moment lastMoment = new Moment(0); // TODO should see about enforcing "cannot change Kind without providing a Moment"
+        private int score = 0;
+        private readonly PayoutTable scorePayoutTable = PayoutTable.DefaultScorePayoutTable;
+
+        public int Score => score;
 
         /// <summary>
         /// Holds the action that will be attempted on the next <see cref="Tick"/>.
@@ -200,6 +204,9 @@ namespace FF2.Core
             {
                 if (currentCombo.AdjustedGroupCount > 0)
                 {
+                    var scorePayout = scorePayoutTable.GetPayout(currentCombo.AdjustedGroupCount);
+                    score += scorePayout;
+                    //Console.WriteLine($"Score: {score} (+{scorePayout})");
                     corruption = corruption.OnComboCompleted(currentCombo);
                     penalties.OnComboCompleted(currentCombo);
                     OnComboCompleted?.Invoke(this, currentCombo);

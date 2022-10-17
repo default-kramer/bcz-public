@@ -337,5 +337,15 @@ namespace FF2.Core
 
             return (ok && comboCount == 1) ? driver : null;
         }
+
+        public int TODO_CalculateScore()
+        {
+            var driver = RunToCompletion(null);
+            if (driver == null)
+            {
+                throw new Exception("TODO need separate data types - (unsolved puzzle and solved puzzle)");
+            }
+            return driver.State.Score;
+        }
     }
 }

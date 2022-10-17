@@ -12,33 +12,28 @@ public class GameViewerControl : Control
 {
     private ILogic logic = NullLogic.Instance;
 
-    public void SolvePuzzles(IReadOnlyList<Puzzle> puzzles)
-    {
-        DoPuzzle(new PuzzleProvider(puzzles, 0));
-    }
-
-    private void DoPuzzle(PuzzleProvider puzzleProvider)
+    public void SetLogic(ILogic newLogic)
     {
         logic.Cleanup();
-        var puzzle = puzzleProvider.Puzzle;
-        var state = new State(Grid.Clone(puzzle.InitialGrid), puzzle.MakeDeck());
-        var ticker = new DotnetTicker(state, NullReplayCollector.Instance);
-        SetupChildren(state, ticker);
-        logic = new SolvePuzzleLogic(ticker, this, puzzleProvider);
+        logic = newLogic;
+
+        var (state, ticker) = logic.TODO();
+        members.GridViewer.SetModel(new GridViewerModel(state, ticker));
+        members.PenaltyViewer.Model = state.MakePenaltyModel(ticker);
+        members.QueueViewer.Model = state.MakeQueueModel();
+        members.GameOverMenu.Visible = false;
     }
 
     public void WatchReplay(string filepath)
     {
         logic.Cleanup();
         var driver = ReplayReader.BuildReplayDriver(filepath);
-        SetupChildren(driver.Ticker.state, driver.Ticker);
-        logic = new WatchReplayLogic(driver);
+        var newLogic = new WatchReplayLogic(driver);
+        SetLogic(newLogic);
     }
 
     private void NewGame(SeededSettings ss)
     {
-        logic.Cleanup();
-
         var state = State.Create(ss);
         ReplayWriter? replayWriter = null;
         var listReplayCollector = new ListReplayCollector();
@@ -60,17 +55,8 @@ public class GameViewerControl : Control
         }
 
         var ticker = new DotnetTicker(state, replayCollector);
-        SetupChildren(state, ticker);
-
-        this.logic = new LiveGameLogic(replayWriter, ticker, state);
-    }
-
-    private void SetupChildren(State state, Ticker ticker)
-    {
-        members.GridViewer.SetModel(new GridViewerModel(state, ticker));
-        members.PenaltyViewer.Model = state.MakePenaltyModel(ticker);
-        members.QueueViewer.Model = state.MakeQueueModel();
-        members.GameOverMenu.Visible = false;
+        var newLogic = new LiveGameLogic(replayWriter, ticker, members);
+        SetLogic(newLogic);
     }
 
     readonly struct Members
@@ -184,7 +170,7 @@ public class GameViewerControl : Control
         members.PenaltyViewer.Update();
         members.QueueViewer.Update();
 
-        this.logic.CheckGameOver(members);
+        this.logic.CheckGameOver();
     }
 
     public void StartGame(SeededSettings ss)
@@ -193,12 +179,14 @@ public class GameViewerControl : Control
         members.GameOverMenu.Visible = false;
     }
 
-    interface ILogic
+    public interface ILogic
     {
         void Cleanup();
         void Process(float delta);
         void HandleInput();
-        void CheckGameOver(Members members);
+        void CheckGameOver();
+
+        (State, Ticker) TODO();
     }
 
     sealed class NullLogic : ILogic
@@ -206,19 +194,26 @@ public class GameViewerControl : Control
         public void Cleanup() { }
         public void Process(float delta) { }
         public void HandleInput() { }
-        public void CheckGameOver(Members members) { }
+        public void CheckGameOver() { }
+
+        public (State, Ticker) TODO()
+        {
+            State? s = null;
+            Ticker? t = null;
+            return (s, t)!;
+        }
 
         private NullLogic() { }
 
         public static readonly NullLogic Instance = new NullLogic();
     }
 
-    sealed class UserInputManager
+    public abstract class LogicBase : ILogic
     {
+        protected readonly DotnetTicker ticker;
         private bool holdingDrop = false;
-        private readonly DotnetTicker ticker;
 
-        public UserInputManager(DotnetTicker ticker)
+        protected LogicBase(DotnetTicker ticker)
         {
             this.ticker = ticker;
         }
@@ -228,7 +223,7 @@ public class GameViewerControl : Control
             return ticker.HandleCommand(command);
         }
 
-        public void HandleInput()
+        public virtual void HandleInput()
         {
             if (Input.IsActionJustPressed("game_left"))
             {
@@ -264,24 +259,35 @@ public class GameViewerControl : Control
                 }
             }
         }
-    }
 
-    sealed class LiveGameLogic : ILogic
-    {
-        private readonly ReplayWriter? replayWriter;
-        private readonly DotnetTicker ticker;
-        private readonly State state;
-        private readonly UserInputManager userInputManager;
-
-        public LiveGameLogic(ReplayWriter? replayWriter, DotnetTicker ticker, State state)
+        public virtual void Process(float delta)
         {
-            this.replayWriter = replayWriter;
-            this.ticker = ticker;
-            this.state = state;
-            this.userInputManager = new UserInputManager(ticker);
+            ticker._Process(delta);
         }
 
-        public void Cleanup()
+        public virtual void Cleanup() { }
+
+        public virtual void CheckGameOver() { }
+
+        public virtual (State, Ticker) TODO()
+        {
+            return (ticker.state, ticker);
+        }
+    }
+
+    sealed class LiveGameLogic : LogicBase
+    {
+        private readonly ReplayWriter? replayWriter;
+        private readonly Members members;
+
+        public LiveGameLogic(ReplayWriter? replayWriter, DotnetTicker ticker, Members members)
+            : base(ticker)
+        {
+            this.replayWriter = replayWriter;
+            this.members = members;
+        }
+
+        public override void Cleanup()
         {
             if (replayWriter != null)
             {
@@ -291,18 +297,9 @@ public class GameViewerControl : Control
             }
         }
 
-        public void Process(float delta)
+        public override void CheckGameOver()
         {
-            ticker._Process(delta);
-        }
-
-        public void HandleInput()
-        {
-            userInputManager.HandleInput();
-        }
-
-        public void CheckGameOver(Members members)
-        {
+            var state = ticker.state;
             if (state.Kind == StateKind.GameOver && !members.GameOverMenu.Visible)
             {
                 members.GameOverMenu.OnGameOver(state);
@@ -319,7 +316,9 @@ public class GameViewerControl : Control
             this.replayDriver = replayDriver;
         }
 
-        public void CheckGameOver(Members members) { }
+        public (State, Ticker) TODO() { return (replayDriver.Ticker.state, replayDriver.Ticker); }
+
+        public void CheckGameOver() { }
 
         public void Cleanup() { }
 
@@ -338,62 +337,6 @@ public class GameViewerControl : Control
                 now = now.AddMillis(millis);
             }
             replayDriver.Advance(now);
-        }
-    }
-
-    readonly struct PuzzleProvider
-    {
-        private readonly IReadOnlyList<Puzzle> Puzzles;
-        private readonly int Index;
-
-        public PuzzleProvider(IReadOnlyList<Puzzle> puzzles, int index)
-        {
-            this.Puzzles = puzzles;
-            this.Index = index;
-        }
-
-        public PuzzleProvider Next()
-        {
-            return new PuzzleProvider(Puzzles, (Index + 1) % Puzzles.Count);
-        }
-
-        public Puzzle Puzzle => Puzzles[Index];
-    }
-
-    class SolvePuzzleLogic : ILogic
-    {
-        private readonly DotnetTicker ticker;
-        private readonly UserInputManager userInputManager;
-        private readonly GameViewerControl parent;
-        private readonly PuzzleProvider puzzleProvider;
-
-        public SolvePuzzleLogic(DotnetTicker ticker, GameViewerControl parent, PuzzleProvider puzzleProvider)
-        {
-            this.ticker = ticker;
-            this.userInputManager = new UserInputManager(ticker);
-            this.parent = parent;
-            this.puzzleProvider = puzzleProvider;
-        }
-
-        public void CheckGameOver(Members members)
-        {
-            var state = ticker.state;
-            if (state.Kind == StateKind.GameOver)
-            {
-                parent.DoPuzzle(puzzleProvider.Next());
-            }
-        }
-
-        public void Cleanup() { }
-
-        public void HandleInput()
-        {
-            userInputManager.HandleInput();
-        }
-
-        public void Process(float delta)
-        {
-            ticker._Process(delta);
         }
     }
 }
