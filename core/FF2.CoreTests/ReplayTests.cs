@@ -19,6 +19,10 @@ namespace FF2.CoreTests
             return ReplayReader.BuildReplayDriver(path);
         }
 
+        /// <summary>
+        /// Returns one raw puzzle per combo in the original game.
+        /// This makes it safe to grab the Nth puzzle and know it will always be the same.
+        /// </summary>
         private static IReadOnlyList<Puzzle> GetPuzzlesRaw(string path)
         {
             path = Path.Combine(ReplayDirectory.FullName, path);
@@ -100,6 +104,34 @@ YY YY             BB
    YY          BB       
       BB    yy          
             YY          "));
+        }
+
+        [TestMethod]
+        public void Puzzle003()
+        {
+            // A simple regression test to make sure we're updating paired occupants correctly
+            // when one half of the pair is removed/replaced.
+            var puzzle = GetPuzzlesRaw("003.ffr")[1];
+            Assert.AreEqual(5, puzzle.Combo.NumVerticalGroups);
+            Assert.AreEqual(0, puzzle.Combo.NumHorizontalGroups);
+            Assert.IsTrue(puzzle.InitialGrid.CheckGridString(@"
+            yy          
+<b y>       yy          
+<b y> yy bb YY          
+   YY yy BB             
+      YY BB       BB    
+            RR    YY    
+            RR BB YY    
+            BB RR       "));
+
+            var distilled = puzzle.Distill()!.Value;
+            Assert.IsTrue(distilled.InitialGrid.CheckGridString(@"
+            yy          
+   yy       yy          
+   yy yy bb YY          
+   YY yy BB             
+      []                
+            RR          "));
         }
 
         private static readonly DirectoryInfo ReplayDirectory = FindReplayDirectory();

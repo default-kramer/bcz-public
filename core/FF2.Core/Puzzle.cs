@@ -161,11 +161,11 @@ namespace FF2.Core
                     var occ = clone.Get(loc);
                     if (occ.Kind != OccupantKind.None && occ.Color != Color.Blank)
                     {
-                        clone.Set(loc, Occupant.IndestructibleEnemy);
+                        var revertInfo = clone.SetWithDivorce(loc, Occupant.IndestructibleEnemy);
                         var temp = Try(clone);
                         if (temp == null)
                         {
-                            clone.Set(loc, occ); // revert it
+                            clone.Revert(revertInfo);
                         }
                         else
                         {
@@ -183,11 +183,11 @@ namespace FF2.Core
                     var occ = clone.Get(loc);
                     if (occ == Occupant.IndestructibleEnemy)
                     {
-                        clone.Set(loc, Occupant.None);
+                        var revertInfo = clone.SetWithDivorce(loc, Occupant.None);
                         var temp = Try(clone);
                         if (temp == null)
                         {
-                            clone.Set(loc, occ); // revert it
+                            clone.Revert(revertInfo);
                         }
                         else
                         {
@@ -210,7 +210,7 @@ namespace FF2.Core
                     var occ = grid.Get(loc);
                     if (occ.Kind == OccupantKind.Catalyst && occ.Color != Color.Blank)
                     {
-                        grid.Set(loc, Occupant.MakeEnemy(occ.Color));
+                        grid.SetWithDivorce(loc, Occupant.MakeEnemy(occ.Color));
                     }
                 }
             }

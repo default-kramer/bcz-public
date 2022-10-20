@@ -288,6 +288,57 @@ namespace FF2.Core
             cells[Index(loc)] = occ;
         }
 
+        /// <summary>
+        /// Set the given <paramref name="loc"/> to <paramref name="newOcc"/>.
+        /// If the previous occupant was paired, update its partner accordingly.
+        /// </summary>
+        public RevertInfo SetWithDivorce(Loc loc, Occupant newOcc)
+        {
+            stats = null;
+
+            var index = Index(loc);
+            var current = cells[index];
+            var revertInfo = new RevertInfo(index, current, index, current);
+
+            if (current.Kind == OccupantKind.Catalyst && current.Direction != Direction.None)
+            {
+                var otherLoc = loc.Neighbor(current.Direction);
+                var otherIndex = Index(otherLoc);
+                var otherOcc = cells[otherIndex];
+                if (otherOcc.Kind == OccupantKind.Catalyst)
+                {
+                    revertInfo = new RevertInfo(index, current, otherIndex, otherOcc);
+                    cells[otherIndex] = otherOcc.SetDirection(Direction.None);
+                }
+            }
+
+            cells[index] = newOcc;
+            return revertInfo;
+        }
+
+        public void Revert(RevertInfo r)
+        {
+            stats = null;
+            cells[r.index1] = r.occupant1;
+            cells[r.index2] = r.occupant2;
+        }
+
+        public readonly ref struct RevertInfo
+        {
+            public readonly int index1;
+            public readonly Occupant occupant1;
+            public readonly int index2;
+            public readonly Occupant occupant2;
+
+            public RevertInfo(int index1, Occupant occupant1, int index2, Occupant occupant2)
+            {
+                this.index1 = index1;
+                this.occupant1 = occupant1;
+                this.index2 = index2;
+                this.occupant2 = occupant2;
+            }
+        }
+
         public bool Fall(Span<int> fallCountBuffer)
         {
             return GridFallHelper.Fall(this, blockedFlagBuffer, assumeUnblockedBuffer, fallCountBuffer);

@@ -61,6 +61,8 @@ public class PuzzleControl : Control, PuzzleMenu.ILogic
                     .Select(x => x!.Value)
                     .Where(x => x.Combo.AdjustedGroupCount >= 3));
 
+                //Console.WriteLine($"Processed {file.FullName}, count is now {puzzles.Count}");
+
                 if (puzzles.Count > 3)
                 {
                     break;
