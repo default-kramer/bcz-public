@@ -26,6 +26,7 @@ namespace FF2.Core
     {
         int Width { get; }
         int Height { get; }
+        GridSize Size { get; }
         Occupant Get(Loc loc);
 
         bool InBounds(Loc loc);
@@ -110,6 +111,8 @@ namespace FF2.Core
         int IReadOnlyGrid.Width => Width;
 
         int IReadOnlyGrid.Height => Height;
+
+        public GridSize Size => new GridSize(this);
 
         public Occupant Get(Loc loc)
         {
@@ -367,57 +370,6 @@ namespace FF2.Core
         public override IImmutableGrid MakeImmutable()
         {
             return this;
-        }
-    }
-
-    static class GridStability
-    {
-        public static void Calculate(Span<bool> stability, IReadOnlyGrid grid)
-        {
-            int h = grid.Height;
-            int w = grid.Width;
-
-            for (int y = 0; y < h; y++)
-            {
-                // When calculating whether (x1, y1) is stable, we can only look at lower rows.
-                // This slice will cause an exception if we try to read any y2 >= y1.
-                var sliced = stability.Slice(0, y * w);
-
-                for (int x = 0; x < w; x++)
-                {
-                    var loc = new Loc(x, y);
-                    stability[loc.ToIndex(grid)] = Calculate(sliced, grid, loc);
-                }
-            }
-        }
-
-        private static bool Calculate(ReadOnlySpan<bool> stability, IReadOnlyGrid grid, Loc loc)
-        {
-            var occ = grid.Get(loc);
-            switch (occ.Kind)
-            {
-                case OccupantKind.Enemy:
-                    return true;
-                case OccupantKind.None:
-                    return false;
-                default:
-                    var check = loc.Neighbor(Direction.Down);
-                    bool stable = stability[check.ToIndex(grid)];
-                    if (stable)
-                    {
-                        return stable;
-                    }
-
-                    switch (occ.Direction)
-                    {
-                        case Direction.Left:
-                        case Direction.Right:
-                            check = check.Neighbor(occ.Direction);
-                            return stability[check.ToIndex(grid)];
-                        default:
-                            return stable;
-                    }
-            }
         }
     }
 }

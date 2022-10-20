@@ -1,24 +1,26 @@
 using FF2.Core;
 using FF2.Godot;
-using FF2.Godot.Controls;
 using Godot;
 using System;
 using System.Collections.Generic;
 using Color = FF2.Core.Color;
 
+#nullable enable
 
 public class GridViewerControl : Control
 {
-    private static readonly IReadOnlyGrid defaultGrid = Grid.Create(Grid.DefaultWidth, Grid.DefaultHeight);
+    private ILogic Logic = NullLogic.Instance;
 
-    private GridViewerModel Model;
-
-    public void SetModel(GridViewerModel model)
+    public void SetLogic(ILogic logic)
     {
-        this.Model = model;
+        this.Logic = logic;
     }
 
-    private IReadOnlyGrid grid { get { return Model?.Grid ?? defaultGrid; } }
+    public void SetLogic(Ticker ticker)
+    {
+        this.Logic = new StandardLogic(ticker);
+    }
+
     private TrackedSprite[] activeSprites = new TrackedSprite[400]; // should be way more than we need
 
     private SpritePool spritePool = null!;
@@ -35,15 +37,16 @@ public class GridViewerControl : Control
         elapsedSeconds += delta;
     }
 
-    private float GetCellSize(Vector2 maxSize)
+    private static float GetCellSize(Vector2 maxSize, GridSize gridSize)
     {
-        return Math.Min(maxSize.x / grid.Width, maxSize.y / grid.Height);
+        return Math.Min(maxSize.x / gridSize.Width, maxSize.y / gridSize.Height);
     }
 
     public Vector2 DesiredSize(Vector2 maxSize)
     {
-        float cellSize = GetCellSize(maxSize);
-        return new Vector2(cellSize * grid.Width, cellSize * grid.Height);
+        var gridSize = Logic.Grid.Size;
+        float cellSize = GetCellSize(maxSize, gridSize);
+        return new Vector2(cellSize * gridSize.Width, cellSize * gridSize.Height);
     }
 
     internal Vector2 CurrentSpriteScale { get; set; }
@@ -56,14 +59,12 @@ public class GridViewerControl : Control
 
     public override void _Draw()
     {
-        if (Model?.Grid == null)
-        {
-            return;
-        }
+        var grid = Logic.Grid;
+        var gridSize = grid.Size;
 
         spritePool = spritePool ?? NewRoot.GetSpritePool(this);
 
-        if (Model.ShouldFlicker)
+        if (Logic.ShouldFlicker)
         {
             flicker = flicker.Elapse(elapsedSeconds);
             elapsedSeconds = 0;
@@ -78,7 +79,7 @@ public class GridViewerControl : Control
         DrawRect(new Rect2(default(Vector2), this.RectSize), bgColor);
         var fullSize = this.RectSize - new Vector2(padding, padding);
 
-        float screenCellSize = GetCellSize(fullSize);
+        float screenCellSize = GetCellSize(fullSize, gridSize);
         float extraX = Math.Max(0, fullSize.x - screenCellSize * grid.Width);
         float extraY = Math.Max(0, fullSize.y - screenCellSize * grid.Height);
 
@@ -92,11 +93,11 @@ public class GridViewerControl : Control
         CurrentSpriteScale = spriteScale2;
         CurrentCellSize = screenCellSize;
 
-        var temp = Model.PreviewPlummet();
+        var temp = Logic.PreviewPlummet();
 
-        float burstProgress = Model.BurstProgress();
+        float burstProgress = Logic.BurstProgress();
 
-        var fallSampler = Model.GetFallSample();
+        var fallSampler = Logic.GetFallSample();
 
         for (int x = 0; x < grid.Width; x++)
         {
@@ -106,7 +107,7 @@ public class GridViewerControl : Control
                 var previewOcc = temp?.GetOcc(loc);
                 var occ = previewOcc ?? grid.Get(loc);
 
-                var destroyedOcc = Model.GetDestroyedOccupant(loc);
+                var destroyedOcc = Logic.GetDestroyedOccupant(loc);
                 if (destroyedOcc != Occupant.None)
                 {
                     occ = destroyedOcc;
@@ -152,7 +153,7 @@ public class GridViewerControl : Control
                     currentSprite = spritePool.Rent(kind, this);
                 }
 
-                if (currentSprite.IsSomething)
+                if (currentSprite.IsSomething && currentSprite.Sprite != null)
                 {
                     activeSprites[index] = currentSprite;
 
@@ -180,7 +181,7 @@ public class GridViewerControl : Control
                     var shader = (ShaderMaterial)sprite.Material;
                     shader.SetShaderParam("my_color", GameColors.ToVector(occ.Color));
                     shader.SetShaderParam("my_alpha", previewOcc.HasValue ? 0.75f : 1.0f);
-                    shader.SetShaderParam("destructionProgress", Model.DestructionProgress(loc));
+                    shader.SetShaderParam("destructionProgress", Logic.DestructionProgress(loc));
 
                     if (currentSprite.Kind == SpriteKind.Enemy)
                     {
@@ -195,9 +196,9 @@ public class GridViewerControl : Control
             }
         }
 
-        if (Model.ShouldFlicker)
+        if (Logic.ShouldFlicker)
         {
-            var height = Model.LastChanceProgress * RectSize.y;
+            var height = Logic.LastChanceProgress * RectSize.y;
             DrawRect(new Rect2(0, 0, RectSize.x, height), shroudColor, filled: true);
         }
     }
@@ -265,5 +266,129 @@ public class GridViewerControl : Control
 
         private const float quick = 0.033f;
         private static readonly float[] Flickers = new float[] { quick, quick, quick, 1.4f, quick, quick * 2, quick, quick, quick, 0.8f, quick, 0.4f, quick, quick, quick, 0.5f, quick * 2, 0.4f };
+    }
+
+    public interface ILogic
+    {
+        IReadOnlyGrid Grid { get; }
+
+        /// <summary>
+        /// This is used to make the grid flicker when there is very little time left.
+        /// </summary>
+        bool ShouldFlicker { get; }
+
+        /// <summary>
+        /// A value from 0 to 1, where 0 means "plenty of time left" and 0.98 means "you're almost done!"
+        /// Note: Current implementation can return negative numbers I think.
+        /// </summary>
+        float LastChanceProgress { get; }
+
+        Mover? PreviewPlummet();
+
+        float BurstProgress();
+
+        float DestructionProgress(Loc loc);
+
+        Occupant GetDestroyedOccupant(Loc loc);
+
+        FallSample? GetFallSample();
+    }
+
+    public sealed class NullLogic : ILogic
+    {
+        private static readonly IReadOnlyGrid defaultGrid = Grid.Create(Grid.DefaultWidth, Grid.DefaultHeight);
+
+        private NullLogic() { }
+
+        public static readonly NullLogic Instance = new NullLogic();
+
+        IReadOnlyGrid ILogic.Grid => defaultGrid;
+
+        public bool ShouldFlicker => false;
+
+        public float LastChanceProgress => 0f;
+
+        public float BurstProgress()
+        {
+            return 0f;
+        }
+
+        public float DestructionProgress(Loc loc)
+        {
+            return 0f;
+        }
+
+        public Occupant GetDestroyedOccupant(Loc loc)
+        {
+            return Occupant.None;
+        }
+
+        public FallSample? GetFallSample()
+        {
+            return null;
+        }
+
+        public Mover? PreviewPlummet()
+        {
+            return null;
+        }
+    }
+
+    public sealed class StandardLogic : ILogic
+    {
+        private readonly Ticker ticker;
+        private readonly State state;
+        private readonly ITickCalculations tickCalculations;
+
+        public StandardLogic(Ticker ticker)
+        {
+            this.ticker = ticker;
+            this.state = ticker.state;
+            this.tickCalculations = state.TickCalculations;
+        }
+
+        public IReadOnlyGrid Grid { get { return state.Grid; } }
+
+        public decimal CorruptionProgress { get { return state.CorruptionProgress; } }
+
+        const int LastChanceMillis = 5000;
+
+        public bool ShouldFlicker { get { return state.RemainingMillis < LastChanceMillis; } }
+
+        public float LastChanceProgress { get { return Convert.ToSingle(LastChanceMillis - state.RemainingMillis) / LastChanceMillis; } }
+
+        public Mover? PreviewPlummet() { return state.PreviewPlummet(); }
+
+        public int ColumnDestructionBitmap => tickCalculations.ColumnDestructionBitmap;
+        public int RowDestructionBitmap => tickCalculations.RowDestructionBitmap;
+
+        public float BurstProgress() { return ticker.BurstProgress(); }
+
+        public float DestructionIntensity()
+        {
+            return ticker.DestructionIntensity();
+        }
+
+        public FallSample? GetFallSample()
+        {
+            return ticker.GetFallSample();
+        }
+
+        public Occupant GetDestroyedOccupant(Loc loc)
+        {
+            return tickCalculations.GetDestroyedOccupant(loc, state.Grid);
+        }
+
+        public float DestructionProgress(Loc loc)
+        {
+            if (GetDestroyedOccupant(loc) != Occupant.None)
+            {
+                return ticker.DestructionProgress();
+            }
+            else
+            {
+                return 0;
+            }
+        }
     }
 }

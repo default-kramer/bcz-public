@@ -1,7 +1,6 @@
 using FF2.Core;
 using FF2.Core.ReplayModel;
 using FF2.Godot;
-using FF2.Godot.Controls;
 using Godot;
 using System;
 using System.Collections.Generic;
@@ -12,16 +11,14 @@ public class GameViewerControl : Control
 {
     private ILogic logic = NullLogic.Instance;
 
-    public void SetLogic(ILogic newLogic)
+    internal void SetLogic(ILogic newLogic)
     {
         logic.Cleanup();
         logic = newLogic;
-
-        var (state, ticker) = logic.TODO();
-        members.GridViewer.SetModel(new GridViewerModel(state, ticker));
-        members.PenaltyViewer.Model = state.MakePenaltyModel(ticker);
-        members.QueueViewer.Model = state.MakeQueueModel();
+        logic.Initialize(members);
         members.GameOverMenu.Visible = false;
+
+        OnSizeChanged(); // In case the grid size changed
     }
 
     public void WatchReplay(string filepath)
@@ -59,7 +56,7 @@ public class GameViewerControl : Control
         SetLogic(newLogic);
     }
 
-    readonly struct Members
+    internal readonly struct Members
     {
         public readonly PenaltyViewerControl PenaltyViewer;
         public readonly GridViewerControl GridViewer;
@@ -179,36 +176,49 @@ public class GameViewerControl : Control
         members.GameOverMenu.Visible = false;
     }
 
-    public interface ILogic
+    internal interface ILogic
     {
         void Cleanup();
         void Process(float delta);
         void HandleInput();
         void CheckGameOver();
-
-        (State, Ticker) TODO();
+        void Initialize(Members members);
     }
 
     sealed class NullLogic : ILogic
     {
+        private NullLogic() { }
+
+        public static readonly NullLogic Instance = new NullLogic();
+
         public void Cleanup() { }
         public void Process(float delta) { }
         public void HandleInput() { }
         public void CheckGameOver() { }
 
-        public (State, Ticker) TODO()
+        public void Initialize(Members members)
         {
-            State? s = null;
-            Ticker? t = null;
-            return (s, t)!;
+            members.GridViewer.SetLogic(GridViewerControl.NullLogic.Instance);
+            members.GridViewer.Visible = true;
+            // TODO should set a null model here... but we'll just make them invisible for now
+            members.PenaltyViewer.Visible = false;
+            members.QueueViewer.Visible = false;
         }
-
-        private NullLogic() { }
-
-        public static readonly NullLogic Instance = new NullLogic();
     }
 
-    public abstract class LogicBase : ILogic
+    private static void StandardInitialize(Members members, Ticker ticker)
+    {
+        members.GridViewer.SetLogic(ticker);
+        var state = ticker.state;
+        members.PenaltyViewer.Model = state.MakePenaltyModel(ticker);
+        members.QueueViewer.Model = state.MakeQueueModel();
+
+        members.GridViewer.Visible = true;
+        members.PenaltyViewer.Visible = true;
+        members.QueueViewer.Visible = true;
+    }
+
+    internal abstract class LogicBase : ILogic
     {
         protected readonly DotnetTicker ticker;
         private bool holdingDrop = false;
@@ -269,9 +279,9 @@ public class GameViewerControl : Control
 
         public virtual void CheckGameOver() { }
 
-        public virtual (State, Ticker) TODO()
+        public void Initialize(Members members)
         {
-            return (ticker.state, ticker);
+            StandardInitialize(members, ticker);
         }
     }
 
@@ -316,8 +326,6 @@ public class GameViewerControl : Control
             this.replayDriver = replayDriver;
         }
 
-        public (State, Ticker) TODO() { return (replayDriver.Ticker.state, replayDriver.Ticker); }
-
         public void CheckGameOver() { }
 
         public void Cleanup() { }
@@ -337,6 +345,11 @@ public class GameViewerControl : Control
                 now = now.AddMillis(millis);
             }
             replayDriver.Advance(now);
+        }
+
+        public void Initialize(Members members)
+        {
+            StandardInitialize(members, replayDriver.Ticker);
         }
     }
 }

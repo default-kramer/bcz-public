@@ -5,6 +5,8 @@ using System.Text;
 using System.Threading.Tasks;
 using Godot;
 
+#nullable enable
+
 namespace FF2.Godot
 {
     enum SpriteKind
