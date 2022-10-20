@@ -12,5 +12,14 @@ namespace FF2.Core
         {
             return new ReplayModel.CompositeReplayCollector(first, second);
         }
+
+        public static T Advance<T>(this IEnumerator<T> enumerator)
+        {
+            if (!enumerator.MoveNext())
+            {
+                throw new Exception("cannot advance enumerator");
+            }
+            return enumerator.Current;
+        }
     }
 }

@@ -50,22 +50,22 @@ public class PuzzleControl : Control, PuzzleMenu.ILogic
         //SolvePuzzles(puzzles);
 
         var puzzles = new List<Puzzle>();
-        var dir = new System.IO.DirectoryInfo(@"C:\fission-flare-recordings\raw");
+        //var dir = new System.IO.DirectoryInfo(@"C:\fission-flare-recordings\raw");
+        var dir = new System.IO.DirectoryInfo(@"C:\Users\kramer\Documents\code\ff2\core\FF2.CoreTests\Replays");
         foreach (var file in dir.EnumerateFiles("*.ffr"))
         {
             try
             {
-                var temp = FF2.Core.ReplayModel.ReplayReader.GetPuzzles(file.FullName);
+                var temp = FF2.Core.ReplayModel.ReplayReader.GetRawPuzzles(file.FullName);
                 puzzles.AddRange(temp.Select(TryDistill)
-                    .Where(x => x.HasValue)
-                    .Select(x => x!.Value)
-                    .Where(x => x.Combo.AdjustedGroupCount >= 3));
+                    .Where(x => x != null).Cast<Puzzle>()
+                    .Where(x => x.OriginalCombo.AdjustedGroupCount >= 3));
 
                 //Console.WriteLine($"Processed {file.FullName}, count is now {puzzles.Count}");
 
                 if (puzzles.Count > 3)
                 {
-                    break;
+                    //break;
                 }
             }
             catch (Exception ex)
@@ -77,7 +77,7 @@ public class PuzzleControl : Control, PuzzleMenu.ILogic
         SolvePuzzles(puzzles);
     }
 
-    static Puzzle? TryDistill(Puzzle puzzle)
+    static Puzzle? TryDistill(UnsolvedPuzzle puzzle)
     {
         try
         {
@@ -166,7 +166,7 @@ public class PuzzleControl : Control, PuzzleMenu.ILogic
             if (!gameOver && state.Kind == StateKind.GameOver)
             {
                 gameOver = true;
-                var targetScore = puzzle.TODO_CalculateScore();
+                var targetScore = puzzle.ExpectedScore;
                 var userScore = state.Score;
                 if (userScore >= targetScore)
                 {

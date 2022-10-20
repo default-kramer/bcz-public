@@ -174,18 +174,9 @@ namespace FF2.Core
 
             Slowmo = false;
             var colors = spawnDeck.Pop();
-            mover = NewMover(colors, grid);
+            mover = grid.NewMover(colors);
             OnCatalystSpawned?.Invoke(this, colors);
             return true;
-        }
-
-        private static Mover NewMover(SpawnItem item, IReadOnlyGrid grid)
-        {
-            var occA = Occupant.MakeCatalyst(item.LeftColor, Direction.Right);
-            var occB = Occupant.MakeCatalyst(item.RightColor, Direction.Left);
-            var locA = new Loc(grid.Width / 2 - 1, 0);
-            var locB = locA.Neighbor(Direction.Right);
-            return new Mover(locA, occA, locB, occB);
         }
 
         public Command? Approach(Orientation o)
@@ -305,9 +296,10 @@ namespace FF2.Core
                 return false;
             }
 
-            var m = mover.Value.PreviewPlummet(Grid);
-            if (grid.InBounds(m.LocA) && grid.InBounds(m.LocB))
+            var m2 = mover.Value.PreviewPlummet(Grid);
+            if (m2.HasValue)
             {
+                var m = m2.Value;
                 PreviousMove = m.GetMove(didBurst: false);
                 grid.Set(m.LocA, m.OccA);
                 grid.Set(m.LocB, m.OccB);

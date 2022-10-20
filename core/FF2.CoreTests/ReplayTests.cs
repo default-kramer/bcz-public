@@ -23,22 +23,15 @@ namespace FF2.CoreTests
         /// Returns one raw puzzle per combo in the original game.
         /// This makes it safe to grab the Nth puzzle and know it will always be the same.
         /// </summary>
-        private static IReadOnlyList<Puzzle> GetPuzzlesRaw(string path)
+        private static IReadOnlyList<UnsolvedPuzzle> GetRawPuzzles(string path)
         {
             path = Path.Combine(ReplayDirectory.FullName, path);
-            return ReplayReader.GetPuzzles(path);
+            return ReplayReader.GetRawPuzzles(path);
         }
 
-        private static Puzzle GetBiggestPuzzleRaw(string path)
+        private static UnsolvedPuzzle GetBiggestRawPuzzle(string path)
         {
-            return GetPuzzlesRaw(path).OrderByDescending(x => x.Combo.AdjustedGroupCount).First();
-        }
-
-        private static State RunToCompletion(Puzzle puzzle)
-        {
-            var driver = PuzzleReplayDriver.BuildPuzzleReplay(puzzle);
-            driver.RunToCompletion();
-            return driver.State;
+            return GetRawPuzzles(path).OrderByDescending(x => x.OriginalCombo.AdjustedGroupCount).First();
         }
 
         [TestMethod]
@@ -51,17 +44,19 @@ namespace FF2.CoreTests
         [TestMethod]
         public void Puzzle002()
         {
-            var rawPuzzles = GetPuzzlesRaw("002.ffr");
+            var rawPuzzles = GetRawPuzzles("002.ffr");
             Assert.AreEqual(14, rawPuzzles.Count);
             foreach (var raw in rawPuzzles)
             {
-                var distilled = raw.Distill()!.Value;
+                // Wait, does Distill() ever return null anymore??
+                var distilled = raw.Distill()!;
                 // TODO should filter out puzzles with zero enemies?
                 // Or always change at least 1 catalyst to an enemy?
                 //Assert.IsTrue(distilled.InitialGrid.CountEnemies() > 0);
-                var result = RunToCompletion(distilled);
-                Assert.AreEqual(0, result.Grid.CountEnemies());
-                if (result.Grid.Count(OccupantKind.Enemy) > 10)
+
+                var resultGrid = distilled.ResultGrid;
+                Assert.AreEqual(0, resultGrid.CountEnemies());
+                if (resultGrid.Count(OccupantKind.Enemy) > 10)
                 {
                     var asdf = 99;
                 }
@@ -69,11 +64,11 @@ namespace FF2.CoreTests
         }
 
         [TestMethod]
-        public void Puzzle002_Distill()
+        public void Puzzle002_10()
         {
-            var raw = GetBiggestPuzzleRaw("002.ffr");
-            Assert.AreEqual(5, raw.Combo.NumVerticalGroups);
-            Assert.AreEqual(1, raw.Combo.NumHorizontalGroups);
+            var raw = GetRawPuzzles("002.ffr")[10];
+            Assert.AreEqual(5, raw.OriginalCombo.NumVerticalGroups);
+            Assert.AreEqual(1, raw.OriginalCombo.NumHorizontalGroups);
             Assert.AreEqual(59492762, raw.InitialGrid.HashGrid());
 
             Assert.IsTrue(raw.InitialGrid.CheckGridString(@"
@@ -92,16 +87,28 @@ RR RR BB       YY
 YY YY             BB    
    RR RR       YY    BB "));
 
-            var distilled = raw.Distill()!.Value;
-            var asdf = RunToCompletion(distilled);
+            var distilled = raw.Distill()!;
 
-            Assert.IsTrue(distilled.InitialGrid.CheckGridString(@"
+            Assert.IsTrue(distilled.CheckString(@"
+                  <o y> 
+                  rr    
+                  rr    
+            <y b>       
+      bb                
+      bb                
+      oo                
+      bb                
+               <b r>    
+               oo       
+               bb       
+      <y y>             
+==|==|==|==|==|==|==|==|
                   oo oo 
-                  rr yy 
-                  RR YY 
+                  RR yy 
+                     YY 
                      YY 
             <y b>       
-   YY          BB       
+   YY          []       
       BB    yy          
             YY          "));
         }
@@ -111,9 +118,9 @@ YY YY             BB
         {
             // A simple regression test to make sure we're updating paired occupants correctly
             // when one half of the pair is removed/replaced.
-            var puzzle = GetPuzzlesRaw("003.ffr")[1];
-            Assert.AreEqual(5, puzzle.Combo.NumVerticalGroups);
-            Assert.AreEqual(0, puzzle.Combo.NumHorizontalGroups);
+            var puzzle = GetRawPuzzles("003.ffr")[1];
+            Assert.AreEqual(5, puzzle.OriginalCombo.NumVerticalGroups);
+            Assert.AreEqual(0, puzzle.OriginalCombo.NumHorizontalGroups);
             Assert.IsTrue(puzzle.InitialGrid.CheckGridString(@"
             yy          
 <b y>       yy          
@@ -124,13 +131,13 @@ YY YY             BB
             RR BB YY    
             BB RR       "));
 
-            var distilled = puzzle.Distill()!.Value;
+            var distilled = puzzle.Distill()!;
             Assert.IsTrue(distilled.InitialGrid.CheckGridString(@"
             yy          
    yy       yy          
    yy yy bb YY          
-   YY yy BB             
-      []                
+   YY YY BB             
+                        
             RR          "));
         }
 

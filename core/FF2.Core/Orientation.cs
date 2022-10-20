@@ -21,5 +21,10 @@ namespace FF2.Core
             this.Direction = direction;
             this.X = x;
         }
+
+        public override string ToString()
+        {
+            return $"(Orientation {Direction} {X})";
+        }
     }
 }

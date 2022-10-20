@@ -33,6 +33,8 @@ namespace FF2.Core
 
         bool IsVacant(Loc loc);
 
+        Mover NewMover(SpawnItem item);
+
         ReadOnlySpan<Occupant> ToSpan();
 
         IImmutableGrid MakeImmutable();
@@ -129,6 +131,15 @@ namespace FF2.Core
             return loc.Y * Width + loc.X;
         }
 
+        public Mover NewMover(SpawnItem item)
+        {
+            var occA = Occupant.MakeCatalyst(item.LeftColor, Direction.Right);
+            var occB = Occupant.MakeCatalyst(item.RightColor, Direction.Left);
+            var locA = new Loc(Width / 2 - 1, 0);
+            var locB = locA.Neighbor(Direction.Right);
+            return new Mover(locA, occA, locB, occB);
+        }
+
         public Loc Loc(int index)
         {
             return new Loc(index % Width, index / Width);
@@ -159,6 +170,11 @@ namespace FF2.Core
             return hash;
         }
 
+        public void Clear()
+        {
+            cells.AsSpan().Fill(Occupant.None);
+        }
+
 #if DEBUG
         const string Newline = "\n";
 
@@ -180,6 +196,18 @@ namespace FF2.Core
             }
         }
 
+        public static char GetLowercase(Color color)
+        {
+            return color switch
+            {
+                Color.Red => 'r',
+                Color.Yellow => 'y',
+                Color.Blue => 'b',
+                Color.Blank => 'o',
+                _ => throw new Exception("TODO: " + color),
+            };
+        }
+
         private static string PrintOcc(Occupant occ)
         {
             if (occ.Kind == OccupantKind.None)
@@ -191,26 +219,21 @@ namespace FF2.Core
                 return "[]";
             }
 
-            string x = occ.Color switch
+            char c = GetLowercase(occ.Color);
+
+            string str = occ.Direction switch
             {
-                Color.Red => "r",
-                Color.Yellow => "y",
-                Color.Blue => "b",
-                Color.Blank => "o",
-                _ => throw new Exception("TODO: " + occ.Color),
+                Direction.Left => $"{c}>",
+                Direction.Right => $"<{c}",
+                _ => $"{c}{c}",
             };
 
             if (occ.Kind == OccupantKind.Enemy)
             {
-                x = x.ToUpperInvariant();
+                str = str.ToUpperInvariant();
             }
 
-            return occ.Direction switch
-            {
-                Direction.Left => $"{x}>",
-                Direction.Right => $"<{x}",
-                _ => $"{x}{x}",
-            };
+            return str;
         }
 
         public bool CheckGridString(params string[] rows)
@@ -339,6 +362,11 @@ namespace FF2.Core
             }
         }
 
+        public void FallCompletely(Span<int> fallCountBuffer)
+        {
+            while (Fall(fallCountBuffer)) { }
+        }
+
         public bool Fall(Span<int> fallCountBuffer)
         {
             return GridFallHelper.Fall(this, blockedFlagBuffer, assumeUnblockedBuffer, fallCountBuffer);
@@ -411,6 +439,28 @@ namespace FF2.Core
             }
 
             return count;
+        }
+
+        /// <summary>
+        /// Place the given <paramref name="move"/> onto the current grid, or return false if there is no room.
+        /// The new occupants will be positioned as if the user performed a plummet.
+        /// You can follow this up with calls to Burst() and Fall() if you want to simulate a burst.
+        /// Then you are ready to start the destroy/fall cycle.
+        /// </summary>
+        public bool Place(Move move)
+        {
+            var mover = NewMover(move.SpawnItem);
+            mover = mover.JumpTo(move.Orientation);
+            mover = mover.ToTop(Height);
+            var plummet = mover.PreviewPlummet(this);
+            if (plummet.HasValue)
+            {
+                mover = plummet.Value;
+                Set(mover.LocA, mover.OccA);
+                Set(mover.LocB, mover.OccB);
+                return true;
+            }
+            return false;
         }
     }
 

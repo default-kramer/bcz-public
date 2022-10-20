@@ -6,17 +6,184 @@ using System.Threading.Tasks;
 
 namespace FF2.Core
 {
-    public readonly struct Puzzle
+    public abstract class PuzzleBase
+    {
+        private readonly Lazy<Puzzle?> solution;
+
+        public PuzzleBase()
+        {
+            solution = new Lazy<Puzzle?>(__Solve);
+        }
+
+        protected abstract Puzzle? __Solve(); // Wait this is dumb because Puzzle : UnsolvePuzzle anyway...
+
+        internal Puzzle? Solve(int minAGC)
+        {
+            var result = solution.Value;
+            if (result != null && result.LastCombo.AdjustedGroupCount >= minAGC)
+            {
+                return result;
+            }
+            return null;
+        }
+    }
+
+    public class Puzzle : UnsolvedPuzzle
+    {
+        public readonly int ExpectedScore;
+        public readonly Combo LastCombo;
+        public readonly IImmutableGrid ResultGrid;
+
+        public Puzzle(UnsolvedPuzzle d, int score, Combo lastCombo, IImmutableGrid resultGrid) : base(d)
+        {
+            this.ExpectedScore = score;
+            this.LastCombo = lastCombo;
+            this.ResultGrid = resultGrid;
+        }
+
+        protected override Puzzle? __Solve()
+        {
+            return this;
+        }
+
+        public Puzzle FinalAdjustment()
+        {
+            var result = this.RemoveUselessMoves(0);
+            result = result.StabilizeBottom();
+            return result;
+        }
+
+        private Puzzle RemoveUselessMoves(int index)
+        {
+            if (index >= Moves.Count)
+            {
+                return this;
+            }
+
+            var newMoves = this.Moves.ToList();
+            newMoves.RemoveAt(index);
+            var candidate = new UnsolvedPuzzle(this.InitialGrid, newMoves, this.OriginalCombo);
+            var result = candidate.Solve(this.OriginalCombo.AdjustedGroupCount);
+            return result?.RemoveUselessMoves(index)
+                ?? this.RemoveUselessMoves(index + 1);
+        }
+
+        private Puzzle StabilizeBottom()
+        {
+            var grid = Grid.Clone(this.InitialGrid);
+            if (grid.Fall(Lists.DummyBuffer))
+            {
+                return StabilizeBottom(0, Grid.Clone(this.InitialGrid));
+            }
+            else
+            {
+                return this;
+            }
+        }
+
+        private Puzzle StabilizeBottom(int x, Grid grid)
+        {
+            if (x >= grid.Width)
+            {
+                return this;
+            }
+
+            for (int y = 0; y < grid.Height; y++)
+            {
+                var loc = new Loc(x, y);
+                var occ = grid.Get(loc);
+                if (occ.Kind == OccupantKind.Enemy)
+                {
+                    return StabilizeBottom(x + 1, grid);
+                }
+                else if (occ.Kind == OccupantKind.Catalyst)
+                {
+                    var revertInfo = grid.SetWithDivorce(loc, Occupant.MakeEnemy(occ.Color));
+                    var result = Try(grid);
+                    if (result != null)
+                    {
+                        return result.StabilizeBottom(x + 1, grid);
+                    }
+                    else
+                    {
+                        grid.Revert(revertInfo);
+                        return this.StabilizeBottom(x + 1, grid);
+                    }
+                }
+            }
+
+            return this.StabilizeBottom(x + 1, grid);
+        }
+
+#if DEBUG
+        private static readonly string[] newlines = new string[] { "\r\n", "\n" };
+
+        // TODO clean this up!!!!
+        public bool CheckString(string expected)
+        {
+            var lines = expected.Split(newlines, StringSplitOptions.RemoveEmptyEntries);
+            var moves = lines.TakeWhile(x => !x.StartsWith("==")).ToArray();
+            var grid = lines.Skip(moves.Length + 1).ToArray();
+            bool gridOk = InitialGrid.CheckGridString(grid);
+            return gridOk && CheckMoves(moves);
+        }
+
+        public bool CheckMoves(params string[] expectedMoves)
+        {
+            // Use a grid of height 2 to reuse the CheckGridString logic.
+            // We will clear this grid, drop the move, and check that it matches.
+
+            var tempGrid = Grid.Create(InitialGrid.Width, 2); // height of 2 is enough for horizontal or vertical
+            string emptyRow = new string(' ', tempGrid.Width * 3); // 3 chars per cell
+            if (!tempGrid.CheckGridString(emptyRow, emptyRow))
+            {
+                throw new Exception("Assert failed");
+            }
+
+            // consume expectedMoves from bottom to top
+            using var iter = expectedMoves.Reverse().GetEnumerator();
+
+            foreach (var move in Moves)
+            {
+                tempGrid.Clear();
+
+                if (!tempGrid.Place(move))
+                {
+                    throw new Exception("WTF");
+                }
+                var dir = move.Orientation.Direction;
+
+                string expected1 = emptyRow;
+                string expected2 = iter.Advance();
+                if (dir == Direction.Up || dir == Direction.Down)
+                {
+                    expected1 = iter.Advance();
+                }
+
+                if (!tempGrid.CheckGridString(expected1, expected2))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+#endif
+    }
+
+    public class UnsolvedPuzzle : PuzzleBase
     {
         public readonly IImmutableGrid InitialGrid;
         public readonly IReadOnlyList<Move> Moves;
-        public readonly Combo Combo;
+        public readonly Combo OriginalCombo;
 
-        public Puzzle(IImmutableGrid initialGrid, IReadOnlyList<Move> moves, Combo combo)
+        public UnsolvedPuzzle(UnsolvedPuzzle def) : this(def.InitialGrid, def.Moves, def.OriginalCombo) { }
+
+        public UnsolvedPuzzle(IImmutableGrid initialGrid, IReadOnlyList<Move> moves, Combo combo)
         {
             this.InitialGrid = initialGrid;
             this.Moves = moves;
-            this.Combo = combo;
+            this.OriginalCombo = combo;
         }
 
         public ISpawnDeck MakeDeck()
@@ -47,7 +214,7 @@ namespace FF2.Core
             }
         }
 
-        public static IReadOnlyList<Puzzle> FindPuzzles(Ticker ticker, IReadOnlyList<Stamped<Command>> commands)
+        public static IReadOnlyList<UnsolvedPuzzle> FindRawPuzzles(Ticker ticker, IReadOnlyList<Stamped<Command>> commands)
         {
             var b = new PuzzleFinder(ticker, commands);
             b.GO();
@@ -80,7 +247,7 @@ namespace FF2.Core
             private IImmutableGrid? comboStartGrid = null;
             private List<Move> comboMoves = new();
 
-            public readonly List<Puzzle> Puzzles = new();
+            public readonly List<UnsolvedPuzzle> Puzzles = new();
 
             public void GO()
             {
@@ -115,7 +282,7 @@ namespace FF2.Core
                 {
                     comboMoves.Add(Ticker.state.PreviousMove);
 
-                    var puzzle = new Puzzle(comboStartGrid, comboMoves.ToList(), combo);
+                    var puzzle = new UnsolvedPuzzle(comboStartGrid, comboMoves.ToList(), combo);
                     Puzzles.Add(puzzle);
 
                     comboMoves.Clear();
@@ -126,21 +293,21 @@ namespace FF2.Core
 
         public Puzzle? Distill()
         {
-            Nullable<Puzzle> distilled;
+            UnsolvedPuzzle? distilled;
             //distilled = distilled?.RemoveExtraOccupants();
             //distilled = distilled?.ReplaceCatalysts() ?? distilled;
             distilled = this.Probe();
             distilled = distilled?.ShiftDown() ?? distilled;
-            distilled = distilled?.RemoveUselessMoves(0);
-            return distilled;
+            var p = distilled?.Solve(this.OriginalCombo.AdjustedGroupCount);
+            return p?.FinalAdjustment();
         }
 
-        private Puzzle? Try(Grid newGrid)
+        protected Puzzle? Try(Grid newGrid)
         {
-            var candidate = new Puzzle(newGrid.MakeImmutable(), this.Moves, this.Combo);
+            var candidate = new UnsolvedPuzzle(newGrid.MakeImmutable(), this.Moves, this.OriginalCombo);
             try
             {
-                return candidate.Validate() ? candidate : null;
+                return candidate.Solve(this.OriginalCombo.AdjustedGroupCount); // TODO unclear
             }
             catch (Exception ex) when (ex.Message.StartsWith("TODO command failed:")) // DO NOT CHECK IN
             {
@@ -148,10 +315,10 @@ namespace FF2.Core
             }
         }
 
-        private Puzzle Probe()
+        private UnsolvedPuzzle Probe()
         {
             var clone = Grid.Clone(InitialGrid);
-            Puzzle result = this;
+            UnsolvedPuzzle result = this;
 
             for (int y = 0; y < clone.Height; y++)
             {
@@ -169,7 +336,7 @@ namespace FF2.Core
                         }
                         else
                         {
-                            result = temp.Value;
+                            result = temp;
                         }
                     }
                 }
@@ -191,7 +358,7 @@ namespace FF2.Core
                         }
                         else
                         {
-                            result = temp.Value;
+                            result = temp;
                         }
                     }
                 }
@@ -216,16 +383,16 @@ namespace FF2.Core
             }
         }
 
-        public Puzzle? ReplaceCatalysts() // TODO make private
+        public UnsolvedPuzzle? ReplaceCatalysts() // TODO make private
         {
             var clone = Grid.Clone(this.InitialGrid);
             ReplaceCatalysts(clone);
             return Try(clone);
         }
 
-        private Puzzle? RemoveExtraEnemies()
+        private UnsolvedPuzzle? RemoveExtraEnemies()
         {
-            var resultGrid = RunToCompletion(null)!.State.Grid;
+            var resultGrid = Solve(OriginalCombo.AdjustedGroupCount)!.ResultGrid;
 
             var clone = Grid.Clone(this.InitialGrid);
 
@@ -245,10 +412,16 @@ namespace FF2.Core
             return Try(clone);
         }
 
-        public Puzzle? RemoveExtraOccupants()
+        [Obsolete("TODO do we need this?")]
+        public UnsolvedPuzzle? RemoveExtraOccupantsTODO()
         {
             var fallTracker = new FallTracker(InitialGrid);
-            var resultGrid = RunToCompletion(fallTracker)!.State.Grid;
+            var result = SolveAgain(fallTracker.ResetFallCountBuffer());
+            if (result == null)
+            {
+                return null;
+            }
+            var resultGrid = result.ResultGrid;
 
             var clone = Grid.Clone(this.InitialGrid);
             for (int x = 0; x < clone.Width; x++)
@@ -274,7 +447,7 @@ namespace FF2.Core
             return Try(clone);
         }
 
-        private Puzzle? ShiftDown()
+        private UnsolvedPuzzle? ShiftDown()
         {
             var clone = Grid.Clone(this.InitialGrid);
             int count = clone.ShiftToBottom();
@@ -285,67 +458,47 @@ namespace FF2.Core
             return Try(clone);
         }
 
-        private Puzzle RemoveUselessMoves(int index)
+        protected override Puzzle? __Solve()
         {
-            if (index >= Moves.Count)
-            {
-                return this;
-            }
-
-            var newMoves = this.Moves.ToList();
-            newMoves.RemoveAt(index);
-            var candidate = new Puzzle(this.InitialGrid, newMoves, this.Combo);
-
-            if (candidate.Validate())
-            {
-                return candidate.RemoveUselessMoves(index);
-            }
-            else
-            {
-                return RemoveUselessMoves(index + 1);
-            }
+            return SolveAgain(Lists.DummyBuffer);
         }
 
-        private bool Validate()
+        // TODO the fallCountBuffer will not be accurate if there is more than one fall cycle.
+        // In general, we probably want to abort immediately if there is more than one fall cycle.
+        private Puzzle? SolveAgain(Span<int> fallCountBuffer)
         {
-            return RunToCompletion(null) != null;
-        }
+            var grid = Grid.Clone(InitialGrid);
+            var width = grid.Width;
+            var height = grid.Height;
+            var combo = Combo.Empty;
+            var tc = new TickCalculations(grid);
+            int score = 0;
+            var p = PayoutTable.DefaultScorePayoutTable; // TODO make this clear
 
-        private PuzzleReplayDriver? RunToCompletion(FallTracker? fallTracker)
-        {
-            bool ok = false;
-            int comboCount = 0;
-            var expectedCombo = this.Combo;
-
-            var driver = PuzzleReplayDriver.BuildPuzzleReplay(this);
-
-            driver.State.OnComboCompleted += (s, e) =>
+            foreach (var move in Moves)
             {
-                comboCount++;
-                if (e.Equals(expectedCombo))
+                if (!grid.Place(move))
                 {
-                    ok = true;
+                    return null;
                 }
-            };
+                if (move.DidBurst)
+                {
+                    grid.Burst();
+                }
+                grid.FallCompletely(fallCountBuffer);
 
-            if (fallTracker != null)
-            {
-                driver.State.OnFall += (s, e) => fallTracker.Combine(e);
+                tc.Reset();
+                combo = Combo.Empty;
+                while (grid.Destroy(tc))
+                {
+                    combo = combo.AfterDestruction(tc);
+                    tc.Reset();
+                    grid.FallCompletely(fallCountBuffer);
+                }
+                score += p.GetPayout(combo.AdjustedGroupCount);
             }
 
-            driver.RunToCompletion();
-
-            return (ok && comboCount == 1) ? driver : null;
-        }
-
-        public int TODO_CalculateScore()
-        {
-            var driver = RunToCompletion(null);
-            if (driver == null)
-            {
-                throw new Exception("TODO need separate data types - (unsolved puzzle and solved puzzle)");
-            }
-            return driver.State.Score;
+            return new Puzzle(this, score, combo, grid.MakeImmutable());
         }
     }
 }

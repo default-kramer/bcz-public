@@ -18,5 +18,10 @@ namespace FF2.Core
             this.SpawnItem = spawnItem;
             this.DidBurst = didBurst;
         }
+
+        public override string ToString()
+        {
+            return $"(Move {SpawnItem} {Orientation} {DidBurst})";
+        }
     }
 }

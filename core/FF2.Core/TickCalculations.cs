@@ -23,6 +23,7 @@ namespace FF2.Core
         Occupant GetDestroyedOccupant(Loc loc, IReadOnlyGrid grid);
     }
 
+    // TODO rename to "DestructionCalculations" or something like that...
     /// <summary>
     /// Used to capture information during a call to <see cref="State.Tick(TickCalculations)"/>.
     /// </summary>

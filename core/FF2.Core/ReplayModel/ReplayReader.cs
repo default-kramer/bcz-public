@@ -39,12 +39,6 @@ namespace FF2.Core.ReplayModel
             }
         }
 
-        public static IReplayDriver FindBestCombo(string filename)
-        {
-            var puzzle = GetPuzzles(filename).OrderByDescending(x => x.Combo.AdjustedGroupCount).First();
-            return PuzzleReplayDriver.BuildPuzzleReplay(puzzle);
-        }
-
         public static ReplayDriver BuildReplayDriver(string filename)
         {
             var parser = new ReplayParser();
@@ -52,11 +46,11 @@ namespace FF2.Core.ReplayModel
             return parser.BuildReplayDriver();
         }
 
-        public static IReadOnlyList<Puzzle> GetPuzzles(string filename)
+        public static IReadOnlyList<UnsolvedPuzzle> GetRawPuzzles(string filename)
         {
             var parser = new ReplayParser();
             Read(filename, parser);
-            return parser.GetPuzzles();
+            return parser.GetRawPuzzles();
         }
 
         public int Read()
