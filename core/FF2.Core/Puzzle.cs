@@ -324,8 +324,7 @@ namespace FF2.Core
                 {
                     var loc = new Loc(x, y);
                     var occ = clone.Get(loc);
-                    // TODO fix the test here:
-                    if (occ.Kind != OccupantKind.None && occ.Color != Color.Blank)
+                    if (occ.Kind != OccupantKind.None)
                     {
                         var revertInfo = clone.SetWithDivorce(loc, Occupant.IndestructibleEnemy);
                         var temp = Try(clone);
