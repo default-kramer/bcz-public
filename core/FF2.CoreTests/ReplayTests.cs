@@ -71,7 +71,7 @@ namespace FF2.CoreTests
             Assert.AreEqual(1, raw.OriginalCombo.NumHorizontalGroups);
             Assert.AreEqual(59492762, raw.InitialGrid.HashGrid());
 
-            Assert.IsTrue(raw.InitialGrid.CheckGridString(@"
+            Assert.AreEqual("ok", raw.InitialGrid.DiffGridString(@"
                   oo oo 
                   rr yy 
    rr             RR YY 
@@ -121,7 +121,7 @@ YY YY             BB
             var puzzle = GetRawPuzzles("003.ffr")[1];
             Assert.AreEqual(5, puzzle.OriginalCombo.NumVerticalGroups);
             Assert.AreEqual(0, puzzle.OriginalCombo.NumHorizontalGroups);
-            Assert.IsTrue(puzzle.InitialGrid.CheckGridString(@"
+            Assert.AreEqual("ok", puzzle.InitialGrid.DiffGridString(@"
             yy          
 <b y>       yy          
 <b y> yy bb YY          
@@ -132,13 +132,44 @@ YY YY             BB
             BB RR       "));
 
             var distilled = puzzle.Distill()!;
-            Assert.IsTrue(distilled.InitialGrid.CheckGridString(@"
+            Assert.AreEqual("ok", distilled.InitialGrid.DiffGridString(@"
             yy          
    yy       yy          
    yy yy bb YY          
    YY YY BB             
                         
             RR          "));
+        }
+
+        [TestMethod]
+        public void Puzzle004_4()
+        {
+            // A simple regression where useless blanks were being left on the grid.
+            var raw = GetRawPuzzles("004.ffr")[4];
+            var distilled = raw.Distill()!;
+            Assert.AreEqual("ok", distilled.InitialGrid.DiffGridString(@"
+                     bb 
+                     bb 
+                     BB 
+            yy          
+            yy          
+            yy rr RR RR "));
+        }
+
+        [TestMethod]
+        public void Puzzle005_8()
+        {
+            // A simple regression where useless blanks were being left on the grid.
+            var raw = GetRawPuzzles("005.ffr")[8];
+            var distilled = raw.Distill()!;
+            Assert.AreEqual("ok", distilled.InitialGrid.DiffGridString(@"
+         rr             
+         oo             
+         rr             
+         <r y>          
+         RR          rr 
+                     rr 
+                  YY RR "));
         }
 
         private static readonly DirectoryInfo ReplayDirectory = FindReplayDirectory();

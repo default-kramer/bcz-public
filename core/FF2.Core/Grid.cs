@@ -42,9 +42,18 @@ namespace FF2.Core
         int HashGrid();
 
 #if DEBUG
+        /// <summary>
+        /// Just for tests. This is a property so you can easily grab it when debugging.
+        /// </summary>
         string PrintGrid { get; }
 
-        bool CheckGridString(params string[] rows);
+        /// <summary>
+        /// Just for tests. Returns "ok" if everything matches.
+        /// Otherwise returns a diff that should print well in test output.
+        /// Note: If <paramref name="rows"/> is exactly one string which contains any newlines,
+        /// we assume that caller is passing multiple rows separated by newlines.
+        /// </summary>
+        string DiffGridString(params string[] rows);
 #endif
     }
 
@@ -178,23 +187,22 @@ namespace FF2.Core
 #if DEBUG
         const string Newline = "\n";
 
-        public string PrintGrid
+        private string BuildGridString()
         {
-            get
+            var sb = new StringBuilder();
+            for (int y = Height - 1; y >= 0; y--)
             {
-                var sb = new StringBuilder();
-                for (int y = Height - 1; y >= 0; y--)
+                sb.Append(Newline);
+                for (int x = 0; x < Width; x++)
                 {
-                    sb.Append(Newline);
-                    for (int x = 0; x < Width; x++)
-                    {
-                        var occ = Get(new Loc(x, y));
-                        sb.Append(PrintOcc(occ)).Append(" ");
-                    }
+                    var occ = Get(new Loc(x, y));
+                    sb.Append(PrintOcc(occ)).Append(" ");
                 }
-                return sb.ToString();
             }
+            return sb.ToString();
         }
+
+        public string PrintGrid => BuildGridString();
 
         public static char GetLowercase(Color color)
         {
@@ -236,20 +244,49 @@ namespace FF2.Core
             return str;
         }
 
-        public bool CheckGridString(params string[] rows)
+        public string DiffGridString(params string[] expectedRows)
         {
-            string expected = rows[0];
-            if (rows.Length > 1)
+            if (expectedRows.Length == 0)
             {
-                expected = string.Join(Newline, rows);
+                return "No expectations given";
             }
-            expected = expected.Replace("\r\n", Newline);
-            if (expected.StartsWith(Newline))
+            if (expectedRows.Length == 1 && expectedRows.Single().Contains("\n"))
             {
-                expected = expected.Substring(Newline.Length);
+                expectedRows = expectedRows.Single().Split(Lists.Newlines, StringSplitOptions.RemoveEmptyEntries);
+                return DiffGridString(expectedRows);
             }
-            var actual = PrintGrid;
-            return actual.EndsWith(expected);
+
+            var gridString = BuildGridString();
+            var actualRows = gridString.Split(Lists.Newlines, StringSplitOptions.RemoveEmptyEntries);
+
+            if (expectedRows.Length > actualRows.Length)
+            {
+                return $"Expected at least {expectedRows.Length} rows, but grid only has {actualRows.Length}";
+            }
+
+            var diff = new StringBuilder();
+            bool isDifferent = false;
+            int extra = actualRows.Length - expectedRows.Length;
+
+            for (int i = 0; i < expectedRows.Length; i++)
+            {
+                string expectedRow = expectedRows[i];
+                string actualRow = actualRows[i + extra];
+                string prefix = "  ";
+                if (expectedRow != actualRow)
+                {
+                    prefix = "! ";
+                    isDifferent = true;
+                }
+                // The leading newline is important for unit test output
+                diff.AppendLine().Append($"{prefix}Expected |{expectedRow}| Actual |{actualRow}|");
+            }
+
+            if (isDifferent)
+            {
+                return diff.ToString();
+            }
+            return "ok";
         }
 #endif
     }

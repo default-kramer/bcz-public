@@ -49,32 +49,54 @@ public class PuzzleControl : Control, PuzzleMenu.ILogic
         //puzzles = puzzles.Select(x => x.Distill().Value).ToList();
         //SolvePuzzles(puzzles);
 
-        var puzzles = new List<Puzzle>();
-        //var dir = new System.IO.DirectoryInfo(@"C:\fission-flare-recordings\raw");
-        var dir = new System.IO.DirectoryInfo(@"C:\Users\kramer\Documents\code\ff2\core\FF2.CoreTests\Replays");
-        foreach (var file in dir.EnumerateFiles("*.ffr"))
+        var dir = new System.IO.DirectoryInfo(@"C:\fission-flare-recordings\raw");
+        //var dir = new System.IO.DirectoryInfo(@"C:\Users\kramer\Documents\code\ff2\core\FF2.CoreTests\Replays");
+        var puzzles = CollectPuzzles(dir);
+        SolvePuzzles(puzzles);
+    }
+
+    private IReadOnlyList<PuzzleInfo> CollectPuzzles(System.IO.DirectoryInfo searchDir)
+    {
+        var collector = new List<PuzzleInfo>();
+        var iter = searchDir.EnumerateFiles("*.ffr").GetEnumerator();
+        // Grab 3 puzzles
+        CollectPuzzles(iter, collector, 3);
+        // Now continue collection of any more puzzles on a background thread
+        var th = new System.Threading.Thread(() => CollectPuzzles(iter, collector, int.MaxValue));
+        th.Start();
+        return collector;
+    }
+
+    private void CollectPuzzles(IEnumerator<System.IO.FileInfo> replayFiles, List<PuzzleInfo> collector, int limit)
+    {
+        while (collector.Count < limit && replayFiles.MoveNext())
         {
             try
             {
-                var temp = FF2.Core.ReplayModel.ReplayReader.GetRawPuzzles(file.FullName);
-                puzzles.AddRange(temp.Select(TryDistill)
-                    .Where(x => x != null).Cast<Puzzle>()
-                    .Where(x => x.OriginalCombo.AdjustedGroupCount >= 3));
-
-                //Console.WriteLine($"Processed {file.FullName}, count is now {puzzles.Count}");
-
-                if (puzzles.Count > 3)
-                {
-                    //break;
-                }
+                CollectPuzzles(replayFiles.Current, collector);
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.ToString());
+                Console.WriteLine($"Error in {replayFiles.Current.FullName} - {ex.ToString()}");
             }
         }
+    }
 
-        SolvePuzzles(puzzles);
+    private void CollectPuzzles(System.IO.FileInfo replayFile, List<PuzzleInfo> collector)
+    {
+        var temp = FF2.Core.ReplayModel.ReplayReader.GetRawPuzzles(replayFile.FullName);
+        for (int i = 0; i < temp.Count; i++)
+        {
+            var item = temp[i];
+            var d = TryDistill(item);
+            if (d == null || d.OriginalCombo.AdjustedGroupCount < 3)
+            {
+                continue;
+            }
+
+            var pi = new PuzzleInfo(d, $"{replayFile.FullName} :: {i}");
+            collector.Add(pi);
+        }
     }
 
     static Puzzle? TryDistill(UnsolvedPuzzle puzzle)
@@ -90,14 +112,20 @@ public class PuzzleControl : Control, PuzzleMenu.ILogic
         }
     }
 
-    public void SolvePuzzles(IReadOnlyList<Puzzle> puzzles)
+    public void SolvePuzzles(IReadOnlyList<PuzzleInfo> puzzles)
     {
         puzzleProvider = new PuzzleProvider(puzzles, 0);
-        DoPuzzle(puzzleProvider.Value.Puzzle);
+        DoPuzzle(puzzleProvider.Value.Puzzle, true);
     }
 
-    private void DoPuzzle(Puzzle puzzle)
+    private void DoPuzzle(PuzzleInfo puzzleInfo, bool firstTime)
     {
+        if (firstTime)
+        {
+            puzzleInfo.BeforeShow();
+        }
+
+        var puzzle = puzzleInfo.Puzzle;
         var state = new State(Grid.Clone(puzzle.InitialGrid), puzzle.MakeDeck());
         var ticker = new DotnetTicker(state, NullReplayCollector.Instance);
         var logic = new SolvePuzzleLogic(ticker, puzzle, this);
@@ -122,7 +150,7 @@ public class PuzzleControl : Control, PuzzleMenu.ILogic
         {
             HideMenu();
             puzzleProvider = puzzleProvider.Value.Next();
-            DoPuzzle(puzzleProvider.Value.Puzzle);
+            DoPuzzle(puzzleProvider.Value.Puzzle, true);
         }
     }
 
@@ -131,7 +159,7 @@ public class PuzzleControl : Control, PuzzleMenu.ILogic
         if (puzzleProvider.HasValue)
         {
             HideMenu();
-            DoPuzzle(puzzleProvider.Value.Puzzle);
+            DoPuzzle(puzzleProvider.Value.Puzzle, false);
         }
     }
 
@@ -182,10 +210,10 @@ public class PuzzleControl : Control, PuzzleMenu.ILogic
 
     readonly struct PuzzleProvider
     {
-        private readonly IReadOnlyList<Puzzle> Puzzles;
+        private readonly IReadOnlyList<PuzzleInfo> Puzzles;
         private readonly int Index;
 
-        public PuzzleProvider(IReadOnlyList<Puzzle> puzzles, int index)
+        public PuzzleProvider(IReadOnlyList<PuzzleInfo> puzzles, int index)
         {
             this.Puzzles = puzzles;
             this.Index = index;
@@ -196,6 +224,25 @@ public class PuzzleControl : Control, PuzzleMenu.ILogic
             return new PuzzleProvider(Puzzles, (Index + 1) % Puzzles.Count);
         }
 
-        public Puzzle Puzzle => Puzzles[Index];
+        public PuzzleInfo Puzzle => Puzzles[Index];
+    }
+
+    public sealed class PuzzleInfo
+    {
+        private readonly Puzzle puzzle;
+        private readonly string info;
+
+        public PuzzleInfo(Puzzle puzzle, string info)
+        {
+            this.puzzle = puzzle;
+            this.info = info;
+        }
+
+        public Puzzle Puzzle => puzzle;
+
+        public void BeforeShow()
+        {
+            Console.WriteLine("Starting puzzle: " + info);
+        }
     }
 }

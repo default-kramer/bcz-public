@@ -116,15 +116,13 @@ namespace FF2.Core
         }
 
 #if DEBUG
-        private static readonly string[] newlines = new string[] { "\r\n", "\n" };
-
         // TODO clean this up!!!!
         public bool CheckString(string expected)
         {
-            var lines = expected.Split(newlines, StringSplitOptions.RemoveEmptyEntries);
+            var lines = expected.Split(Lists.Newlines, StringSplitOptions.RemoveEmptyEntries);
             var moves = lines.TakeWhile(x => !x.StartsWith("==")).ToArray();
             var grid = lines.Skip(moves.Length + 1).ToArray();
-            bool gridOk = InitialGrid.CheckGridString(grid);
+            bool gridOk = InitialGrid.DiffGridString(grid) == "ok";
             return gridOk && CheckMoves(moves);
         }
 
@@ -135,7 +133,7 @@ namespace FF2.Core
 
             var tempGrid = Grid.Create(InitialGrid.Width, 2); // height of 2 is enough for horizontal or vertical
             string emptyRow = new string(' ', tempGrid.Width * 3); // 3 chars per cell
-            if (!tempGrid.CheckGridString(emptyRow, emptyRow))
+            if (tempGrid.DiffGridString(emptyRow, emptyRow) != "ok")
             {
                 throw new Exception("Assert failed");
             }
@@ -160,7 +158,7 @@ namespace FF2.Core
                     expected1 = iter.Advance();
                 }
 
-                if (!tempGrid.CheckGridString(expected1, expected2))
+                if (tempGrid.DiffGridString(expected1, expected2) != "ok")
                 {
                     return false;
                 }
@@ -326,6 +324,7 @@ namespace FF2.Core
                 {
                     var loc = new Loc(x, y);
                     var occ = clone.Get(loc);
+                    // TODO fix the test here:
                     if (occ.Kind != OccupantKind.None && occ.Color != Color.Blank)
                     {
                         var revertInfo = clone.SetWithDivorce(loc, Occupant.IndestructibleEnemy);
