@@ -30,12 +30,11 @@ namespace FF2.Core
     public sealed class State
     {
         private readonly Grid grid;
-        private readonly TickCalculations tickCalculations;
         private readonly FallAnimationSampler fallSampler;
         private readonly ISpawnDeck spawnDeck;
         private Mover? mover;
         private CorruptionManager corruption;
-        private Combo currentCombo;
+        private ComboInfo currentCombo;
         private readonly PenaltyManager penalties;
         private PenaltySchedule penaltySchedule;
         private int waitingMillis = 0;
@@ -61,27 +60,27 @@ namespace FF2.Core
 
         public delegate void EventHandler<T>(State sender, T args);
 
-        public event EventHandler<Combo>? OnComboCompleted;
+        // TODO remove these where possible:
+        public event EventHandler<ComboInfo>? OnComboCompleted;
         public event EventHandler<SpawnItem>? OnCatalystSpawned;
         public event EventHandler<FallAnimationSampler>? OnFall;
 
         public State(Grid grid, ISpawnDeck spawnDeck)
         {
             this.grid = grid;
-            this.tickCalculations = new TickCalculations(grid);
             this.fallSampler = new FallAnimationSampler(grid);
             this.spawnDeck = spawnDeck;
             mover = null;
             Kind = StateKind.Spawning;
             corruption = new CorruptionManager();
-            currentCombo = Combo.Empty;
+            currentCombo = ComboInfo.Empty;
             penalties = new PenaltyManager();
             penaltySchedule = PenaltySchedule.BasicSchedule(10 * 1000);
         }
 
         public IReadOnlyGrid Grid { get { return grid; } }
 
-        public ITickCalculations TickCalculations => this.tickCalculations;
+        public ITickCalculations TickCalculations => grid.TickCalc;
 
         public static State Create(SeededSettings ss)
         {
@@ -186,23 +185,25 @@ namespace FF2.Core
 
         private bool Destroy()
         {
-            var result = grid.Destroy(tickCalculations);
+            var newCombo = currentCombo;
+            var result = grid.Destroy(ref newCombo);
             if (result)
             {
-                currentCombo = currentCombo.AfterDestruction(tickCalculations);
+                currentCombo = newCombo;
             }
             else
             {
-                if (currentCombo.AdjustedGroupCount > 0)
+                var TODO = currentCombo.PermissiveCombo;
+                if (TODO.AdjustedGroupCount > 0)
                 {
-                    var scorePayout = scorePayoutTable.GetPayout(currentCombo.AdjustedGroupCount);
+                    var scorePayout = scorePayoutTable.GetPayout(TODO.AdjustedGroupCount);
                     score += scorePayout;
                     //Console.WriteLine($"Score: {score} (+{scorePayout})");
-                    corruption = corruption.OnComboCompleted(currentCombo);
-                    penalties.OnComboCompleted(currentCombo);
+                    corruption = corruption.OnComboCompleted(TODO);
+                    penalties.OnComboCompleted(TODO);
                     OnComboCompleted?.Invoke(this, currentCombo);
                 }
-                currentCombo = Combo.Empty;
+                currentCombo = ComboInfo.Empty;
             }
             Slowmo = Slowmo || result;
             return result;
@@ -214,8 +215,7 @@ namespace FF2.Core
         /// </summary>
         public bool Tick(Moment now)
         {
-            tickCalculations.Reset();
-
+            grid.PreTick();
             var retval = DoTick(now);
             if (retval && grid.Stats.EnemyCount == 0)
             {

@@ -27,7 +27,7 @@ namespace FF2.Core
     /// <summary>
     /// Used to capture information during a call to <see cref="State.Tick(TickCalculations)"/>.
     /// </summary>
-    sealed class TickCalculations : ITickCalculations
+    sealed class GTickCalculations : ITickCalculations
     {
         /// <summary>
         /// For the background shader.
@@ -43,10 +43,12 @@ namespace FF2.Core
 
         private Occupant[] destroyedOccupants;
 
-        public int NumVerticalGroups;
-        public int NumHorizontalGroups;
+        public int NumVerticalGroupsLoose;
+        public int NumHorizontalGroupsLoose;
+        public int NumVerticalGroupsStrict;
+        public int NumHorizontalGroupsStrict;
 
-        public TickCalculations(IReadOnlyGrid grid)
+        public GTickCalculations(IReadOnlyGrid grid)
         {
             destroyedOccupants = new Occupant[grid.Width * grid.Height];
         }
@@ -59,19 +61,29 @@ namespace FF2.Core
             ColumnDestructionBitmap = 0;
             RowDestructionBitmap = 0;
             destroyedOccupants.AsSpan().Fill(Occupant.None);
-            NumVerticalGroups = 0;
-            NumHorizontalGroups = 0;
+            NumVerticalGroupsLoose = 0;
+            NumHorizontalGroupsLoose = 0;
+            NumVerticalGroupsStrict = 0;
+            NumHorizontalGroupsStrict = 0;
         }
 
-        public void AddColumnDestruction(int x)
+        public void AddColumnDestruction(int x, bool hasEnemy)
         {
-            NumVerticalGroups++;
+            NumVerticalGroupsLoose++;
+            if (hasEnemy)
+            {
+                NumVerticalGroupsStrict++;
+            }
             ColumnDestructionBitmap |= 1 << x;
         }
 
-        public void AddRowDestruction(int y, IReadOnlyGrid grid)
+        public void AddRowDestruction(int y, IReadOnlyGrid grid, bool hasEnemy)
         {
-            NumHorizontalGroups++;
+            NumHorizontalGroupsLoose++;
+            if (hasEnemy)
+            {
+                NumHorizontalGroupsStrict++;
+            }
             y = grid.Height - 1 - y; // the shader uses Y=0 at the top
             RowDestructionBitmap |= 1 << y;
         }

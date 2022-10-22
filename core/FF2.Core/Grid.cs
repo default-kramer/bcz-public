@@ -297,6 +297,9 @@ namespace FF2.Core
         private readonly bool[] assumeUnblockedBuffer;
         private readonly GridDestroyHelper.Group[] groupsBuffer;
         private GridStats? stats = null; // null when recalculation is needed
+        private readonly GTickCalculations tickCalculations;
+
+        public ITickCalculations TickCalc => tickCalculations;
 
         public GridStats Stats
         {
@@ -313,6 +316,7 @@ namespace FF2.Core
             this.blockedFlagBuffer = new GridFallHelper.BlockedFlag[size];
             this.assumeUnblockedBuffer = new bool[size];
             this.groupsBuffer = new GridDestroyHelper.Group[size];
+            this.tickCalculations = new GTickCalculations(this);
         }
 
         public static Grid Create(int width, int height)
@@ -409,9 +413,26 @@ namespace FF2.Core
             return GridFallHelper.Fall(this, blockedFlagBuffer, assumeUnblockedBuffer, fallCountBuffer);
         }
 
-        internal bool Destroy(TickCalculations calculations)
+        /// <summary>
+        /// TODO - I refactored the "tick calcluations" stuff and introduced a weird issue that (seemingly) only affects the drawing.
+        /// Probably has to do with GetDestroyedOccupant preserving the recently-destroyed occupants for too long.
+        /// For now I'll just make sure to call Reset() before every tick to preserve the old behavior.
+        /// Better would be for that UI code to check the state to know whether it should call GetDestroyedOccupant or not.
+        /// </summary>
+        internal void PreTick()
         {
-            return new GridDestroyHelper(this, groupsBuffer, calculations).Execute(this);
+            tickCalculations.Reset();
+        }
+
+        internal bool Destroy(ref ComboInfo info)
+        {
+            tickCalculations.Reset();
+            bool result = new GridDestroyHelper(this, groupsBuffer, tickCalculations).Execute(this);
+            if (result)
+            {
+                info = info.AfterDestruction(tickCalculations);
+            }
+            return result;
         }
 
         public void Burst()

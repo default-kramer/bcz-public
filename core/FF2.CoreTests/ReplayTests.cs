@@ -19,6 +19,17 @@ namespace FF2.CoreTests
             return ReplayReader.BuildReplayDriver(path);
         }
 
+        private static (UnsolvedPuzzle, Puzzle) Get(string path, int index)
+        {
+            var raw = GetRawPuzzles(path)[index];
+            var distilled = raw.Distill();
+            if (distilled == null)
+            {
+                throw new Exception("Distill() returned null");
+            }
+            return (raw, distilled);
+        }
+
         /// <summary>
         /// Returns one raw puzzle per combo in the original game.
         /// This makes it safe to grab the Nth puzzle and know it will always be the same.
@@ -27,11 +38,6 @@ namespace FF2.CoreTests
         {
             path = Path.Combine(ReplayDirectory.FullName, path);
             return ReplayReader.GetRawPuzzles(path);
-        }
-
-        private static UnsolvedPuzzle GetBiggestRawPuzzle(string path)
-        {
-            return GetRawPuzzles(path).OrderByDescending(x => x.OriginalCombo.AdjustedGroupCount).First();
         }
 
         [TestMethod]
@@ -67,8 +73,8 @@ namespace FF2.CoreTests
         public void Puzzle002_10()
         {
             var raw = GetRawPuzzles("002.ffr")[10];
-            Assert.AreEqual(5, raw.OriginalCombo.NumVerticalGroups);
-            Assert.AreEqual(1, raw.OriginalCombo.NumHorizontalGroups);
+            Assert.AreEqual(5, raw.OriginalCombo.PermissiveCombo.NumVerticalGroups);
+            Assert.AreEqual(1, raw.OriginalCombo.PermissiveCombo.NumHorizontalGroups);
             Assert.AreEqual(59492762, raw.InitialGrid.HashGrid());
 
             Assert.AreEqual("ok", raw.InitialGrid.DiffGridString(@"
@@ -119,8 +125,8 @@ YY YY             BB
             // A simple regression test to make sure we're updating paired occupants correctly
             // when one half of the pair is removed/replaced.
             var puzzle = GetRawPuzzles("003.ffr")[1];
-            Assert.AreEqual(5, puzzle.OriginalCombo.NumVerticalGroups);
-            Assert.AreEqual(0, puzzle.OriginalCombo.NumHorizontalGroups);
+            Assert.AreEqual(5, puzzle.OriginalCombo.PermissiveCombo.NumVerticalGroups);
+            Assert.AreEqual(0, puzzle.OriginalCombo.PermissiveCombo.NumHorizontalGroups);
             Assert.AreEqual("ok", puzzle.InitialGrid.DiffGridString(@"
             yy          
 <b y>       yy          
@@ -197,6 +203,38 @@ BB                      "));
             yy          
             YY          
          BB BB          "));
+        }
+
+        [TestMethod]
+        public void Puzzle007_1()
+        {
+            // This is a good example of a puzzle having all-catalyst groups.
+            // The distillery provides this information so we can filter these puzzles out if we want.
+            var (raw, distilled) = Get("007.ffr", 1);
+            var rc = raw.OriginalCombo;
+            var dc = distilled.LastCombo;
+
+            // Note that both of them have at least 1 all-catalyst group
+            Assert.AreEqual(2, dc.AllCatalystGroupCount);
+            Assert.AreEqual(1, rc.AllCatalystGroupCount);
+            // Permissive is always 4v0h
+            Assert.AreEqual(4, dc.PermissiveCombo.NumVerticalGroups);
+            Assert.AreEqual(0, dc.PermissiveCombo.NumHorizontalGroups);
+            Assert.AreEqual(4, rc.PermissiveCombo.NumVerticalGroups);
+            Assert.AreEqual(0, rc.PermissiveCombo.NumHorizontalGroups);
+            // Strict is 3v0h raw but 2v0h distilled
+            Assert.AreEqual(2, dc.StrictCombo.NumVerticalGroups);
+            Assert.AreEqual(0, dc.StrictCombo.NumHorizontalGroups);
+            Assert.AreEqual(3, rc.StrictCombo.NumVerticalGroups);
+            Assert.AreEqual(0, rc.StrictCombo.NumHorizontalGroups);
+
+
+            // Just making sure I have the correct puzzle:
+            Assert.AreEqual("ok", distilled.InitialGrid.DiffGridString(@"
+            BB          
+                        
+                        
+         BB             "));
         }
 
         private static readonly DirectoryInfo ReplayDirectory = FindReplayDirectory();

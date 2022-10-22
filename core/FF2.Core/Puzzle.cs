@@ -17,10 +17,15 @@ namespace FF2.Core
 
         protected abstract Puzzle? __Solve(); // Wait this is dumb because Puzzle : UnsolvePuzzle anyway...
 
+        internal Puzzle? Solve(ComboInfo combo)
+        {
+            return Solve(combo.PermissiveCombo.AdjustedGroupCount);
+        }
+
         internal Puzzle? Solve(int minAGC)
         {
             var result = solution.Value;
-            if (result != null && result.LastCombo.AdjustedGroupCount >= minAGC)
+            if (result != null && result.LastCombo.PermissiveCombo.AdjustedGroupCount >= minAGC)
             {
                 return result;
             }
@@ -31,10 +36,10 @@ namespace FF2.Core
     public class Puzzle : UnsolvedPuzzle
     {
         public readonly int ExpectedScore;
-        public readonly Combo LastCombo;
+        public readonly ComboInfo LastCombo;
         public readonly IImmutableGrid ResultGrid;
 
-        public Puzzle(UnsolvedPuzzle d, int score, Combo lastCombo, IImmutableGrid resultGrid) : base(d)
+        public Puzzle(UnsolvedPuzzle d, int score, ComboInfo lastCombo, IImmutableGrid resultGrid) : base(d)
         {
             this.ExpectedScore = score;
             this.LastCombo = lastCombo;
@@ -63,7 +68,7 @@ namespace FF2.Core
             var newMoves = this.Moves.ToList();
             newMoves.RemoveAt(index);
             var candidate = new UnsolvedPuzzle(this.InitialGrid, newMoves, this.OriginalCombo);
-            var result = candidate.Solve(this.OriginalCombo.AdjustedGroupCount);
+            var result = candidate.Solve(this.OriginalCombo);
             return result?.RemoveUselessMoves(index)
                 ?? this.RemoveUselessMoves(index + 1);
         }
@@ -173,11 +178,11 @@ namespace FF2.Core
     {
         public readonly IImmutableGrid InitialGrid;
         public readonly IReadOnlyList<Move> Moves;
-        public readonly Combo OriginalCombo;
+        public readonly ComboInfo OriginalCombo;
 
         public UnsolvedPuzzle(UnsolvedPuzzle def) : this(def.InitialGrid, def.Moves, def.OriginalCombo) { }
 
-        public UnsolvedPuzzle(IImmutableGrid initialGrid, IReadOnlyList<Move> moves, Combo combo)
+        public UnsolvedPuzzle(IImmutableGrid initialGrid, IReadOnlyList<Move> moves, ComboInfo combo)
         {
             this.InitialGrid = initialGrid;
             this.Moves = moves;
@@ -274,7 +279,7 @@ namespace FF2.Core
                 }
             }
 
-            private void State_OnComboCompleted(object? sender, Combo combo)
+            private void State_OnComboCompleted(object? sender, ComboInfo combo)
             {
                 if (comboStartGrid != null)
                 {
@@ -294,7 +299,7 @@ namespace FF2.Core
             UnsolvedPuzzle? distilled;
             distilled = this.Probe();
             distilled = distilled?.ShiftDown() ?? distilled;
-            var p = distilled?.Solve(this.OriginalCombo.AdjustedGroupCount);
+            var p = distilled?.Solve(this.OriginalCombo);
             return p?.FinalAdjustment();
         }
 
@@ -303,7 +308,7 @@ namespace FF2.Core
             var candidate = new UnsolvedPuzzle(newGrid.MakeImmutable(), this.Moves, this.OriginalCombo);
             try
             {
-                return candidate.Solve(this.OriginalCombo.AdjustedGroupCount); // TODO unclear
+                return candidate.Solve(this.OriginalCombo); // TODO unclear
             }
             catch (Exception ex) when (ex.Message.StartsWith("TODO command failed:")) // DO NOT CHECK IN
             {
@@ -412,8 +417,7 @@ namespace FF2.Core
             var grid = Grid.Clone(InitialGrid);
             var width = grid.Width;
             var height = grid.Height;
-            var combo = Combo.Empty;
-            var tc = new TickCalculations(grid);
+            var combo = ComboInfo.Empty;
             int score = 0;
             var p = PayoutTable.DefaultScorePayoutTable; // TODO make this clear
 
@@ -429,15 +433,12 @@ namespace FF2.Core
                 }
                 grid.FallCompletely(fallCountBuffer);
 
-                tc.Reset();
-                combo = Combo.Empty;
-                while (grid.Destroy(tc))
+                combo = ComboInfo.Empty;
+                while (grid.Destroy(ref combo))
                 {
-                    combo = combo.AfterDestruction(tc);
-                    tc.Reset();
                     grid.FallCompletely(fallCountBuffer);
                 }
-                score += p.GetPayout(combo.AdjustedGroupCount);
+                score += p.GetPayout(combo.PermissiveCombo.AdjustedGroupCount);
             }
 
             return new Puzzle(this, score, combo, grid.MakeImmutable());

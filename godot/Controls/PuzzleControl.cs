@@ -89,9 +89,15 @@ public class PuzzleControl : Control, PuzzleMenu.ILogic
         {
             var item = temp[i];
             var d = TryDistill(item);
-            if (d == null || d.OriginalCombo.AdjustedGroupCount < 3)
+            if (d == null || d.OriginalCombo.PermissiveCombo.AdjustedGroupCount < 3)
             {
                 continue;
+            }
+
+            // TEMP TESTING - see if there are any good puzzles with catalyst-only groups
+            if (d.LastCombo.AllCatalystGroupCount == 0)
+            {
+                //continue;
             }
 
             var pi = new PuzzleInfo(d, $"{replayFile.FullName} :: {i}");
