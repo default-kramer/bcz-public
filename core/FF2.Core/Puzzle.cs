@@ -292,8 +292,6 @@ namespace FF2.Core
         public Puzzle? Distill()
         {
             UnsolvedPuzzle? distilled;
-            //distilled = distilled?.RemoveExtraOccupants();
-            //distilled = distilled?.ReplaceCatalysts() ?? distilled;
             distilled = this.Probe();
             distilled = distilled?.ShiftDown() ?? distilled;
             var p = distilled?.Solve(this.OriginalCombo.AdjustedGroupCount);
@@ -318,6 +316,8 @@ namespace FF2.Core
             var clone = Grid.Clone(InitialGrid);
             UnsolvedPuzzle result = this;
 
+            // This pass determines which occupants are relevant by attempting to change
+            // each one into an IndestructibleEnemy
             for (int y = 0; y < clone.Height; y++)
             {
                 for (int x = 0; x < clone.Width; x++)
@@ -326,20 +326,14 @@ namespace FF2.Core
                     var occ = clone.Get(loc);
                     if (occ.Kind != OccupantKind.None)
                     {
-                        var revertInfo = clone.SetWithDivorce(loc, Occupant.IndestructibleEnemy);
-                        var temp = Try(clone);
-                        if (temp == null)
-                        {
-                            clone.Revert(revertInfo);
-                        }
-                        else
-                        {
-                            result = temp;
-                        }
+                        Try(ref result, clone, clone.SetWithDivorce(loc, Occupant.IndestructibleEnemy));
                     }
                 }
             }
 
+            // This pass:
+            // 1) Removes every IndestructibleEnemy that can be removed.
+            // 2) Converts catalysts to enemies. This is done to avoid empty groups.
             for (int y = 0; y < clone.Height; y++)
             {
                 for (int x = 0; x < clone.Width; x++)
@@ -348,15 +342,32 @@ namespace FF2.Core
                     var occ = clone.Get(loc);
                     if (occ == Occupant.IndestructibleEnemy)
                     {
-                        var revertInfo = clone.SetWithDivorce(loc, Occupant.None);
-                        var temp = Try(clone);
-                        if (temp == null)
+                        Try(ref result, clone, clone.SetWithDivorce(loc, Occupant.None));
+                    }
+                    else if (occ.Kind == OccupantKind.Catalyst)
+                    {
+                        // We could be way more aggressive and try to convert every single catalyst to an enemy,
+                        // but my gut instinct is that might leak too much information about the puzzle.
+                        // (Admittedly I haven't given this idea much thought...)
+                        // Plus, I just think it's more tasteful to use a lighter touch.
+                        // So we will only target catalysts that don't have a matching color beneath them.
+                        // Also, let's always try to avoid touching paired catalysts.
+                        bool isUnpaired = occ.Direction == Direction.None;
+                        bool hasMatchBelow;
+                        if (y == 0)
                         {
-                            clone.Revert(revertInfo);
+                            hasMatchBelow = false;
+                            isUnpaired = true; // The bottom row is an exception - we will break pairs
                         }
                         else
                         {
-                            result = temp;
+                            var below = clone.Get(loc.Neighbor(Direction.Down));
+                            hasMatchBelow = below.Color == occ.Color;
+                        }
+
+                        if (isUnpaired && !hasMatchBelow)
+                        {
+                            Try(ref result, clone, clone.SetWithDivorce(loc, Occupant.MakeEnemy(occ.Color)));
                         }
                     }
                 }
@@ -365,84 +376,17 @@ namespace FF2.Core
             return result;
         }
 
-        private static void ReplaceCatalysts(Grid grid)
+        private void Try(ref UnsolvedPuzzle result, Grid grid, Grid.RevertInfo revertInfo)
         {
-            for (int x = 0; x < grid.Width; x++)
+            var temp = Try(grid);
+            if (temp == null)
             {
-                for (int y = 0; y < grid.Height; y++)
-                {
-                    var loc = new Loc(x, y);
-                    var occ = grid.Get(loc);
-                    if (occ.Kind == OccupantKind.Catalyst && occ.Color != Color.Blank)
-                    {
-                        grid.SetWithDivorce(loc, Occupant.MakeEnemy(occ.Color));
-                    }
-                }
+                grid.Revert(revertInfo);
             }
-        }
-
-        public UnsolvedPuzzle? ReplaceCatalysts() // TODO make private
-        {
-            var clone = Grid.Clone(this.InitialGrid);
-            ReplaceCatalysts(clone);
-            return Try(clone);
-        }
-
-        private UnsolvedPuzzle? RemoveExtraEnemies()
-        {
-            var resultGrid = Solve(OriginalCombo.AdjustedGroupCount)!.ResultGrid;
-
-            var clone = Grid.Clone(this.InitialGrid);
-
-            for (int x = 0; x < clone.Width; x++)
+            else
             {
-                for (int y = 0; y < clone.Height; y++)
-                {
-                    var loc = new Loc(x, y);
-                    var occ = resultGrid.Get(loc);
-                    if (occ.Kind == OccupantKind.Enemy)
-                    {
-                        clone.Set(loc, Occupant.None);
-                    }
-                }
+                result = temp;
             }
-
-            return Try(clone);
-        }
-
-        [Obsolete("TODO do we need this?")]
-        public UnsolvedPuzzle? RemoveExtraOccupantsTODO()
-        {
-            var fallTracker = new FallTracker(InitialGrid);
-            var result = SolveAgain(fallTracker.ResetFallCountBuffer());
-            if (result == null)
-            {
-                return null;
-            }
-            var resultGrid = result.ResultGrid;
-
-            var clone = Grid.Clone(this.InitialGrid);
-            for (int x = 0; x < clone.Width; x++)
-            {
-                for (int y = 0; y < clone.Height; y++)
-                {
-                    var loc = new Loc(x, y);
-                    var occ = resultGrid.Get(loc);
-                    if (occ.Kind != OccupantKind.None)
-                    {
-                        var loc2 = fallTracker.GetOriginalLoc(loc);
-                        clone.Set(loc2, Occupant.None);
-                    }
-                }
-            }
-
-            // Sometimes we will leave important catalysts hanging in midair, like this:
-            // <r r> RR
-            //          BB
-            // But other times we will leave important catalysts
-            //ReplaceCatalysts(clone);
-
-            return Try(clone);
         }
 
         private UnsolvedPuzzle? ShiftDown()

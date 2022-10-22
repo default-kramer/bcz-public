@@ -153,7 +153,7 @@ YY YY             BB
                      BB 
             yy          
             yy          
-            yy rr RR RR "));
+            YY RR RR RR "));
         }
 
         [TestMethod]
@@ -170,6 +170,33 @@ YY YY             BB
          RR          rr 
                      rr 
                   YY RR "));
+        }
+
+        [TestMethod]
+        public void Puzzle006_8()
+        {
+            var raw = GetRawPuzzles("006.ffr")[8];
+            var distilled = raw.Distill()!;
+            // We convert bb->BB
+            Assert.AreEqual("ok", distilled.InitialGrid.DiffGridString(@"
+   yy RR                
+   yy                   
+bb YY                   
+BB                      "));
+        }
+
+        [TestMethod]
+        public void Puzzle006_11()
+        {
+            var raw = GetRawPuzzles("006.ffr")[11];
+            var distilled = raw.Distill()!;
+            // We convert rr->RR and yy->YY
+            Assert.AreEqual("ok", distilled.InitialGrid.DiffGridString(@"
+            rr          
+            RR          
+            yy          
+            YY          
+         BB BB          "));
         }
 
         private static readonly DirectoryInfo ReplayDirectory = FindReplayDirectory();
