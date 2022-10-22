@@ -259,6 +259,22 @@ YY oo
         }
 
         [TestMethod]
+        public void Puzzle009_1()
+        {
+            // TODO - We want to convert at least the red half of the <r y> into an RR.
+            // This should be easy enough - we just have to notice that this conversion keeps
+            // the loose combo the same and improves the strict combo (at least the way I played it).
+            var (raw, distilled) = Get("009.ffr", 1);
+            Assert.AreEqual("ok", distilled.InitialGrid.DiffGridString(@"
+                     bb 
+               yy    bb 
+               YY    BB 
+   RR yy                
+bb    YY                
+BB                      "));
+        }
+
+        [TestMethod]
         public void ensure_no_duplicate_replay_files()
         {
             // Make sure I don't put the same replay file in here multiple times
