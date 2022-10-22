@@ -211,7 +211,12 @@ namespace FF2.Core
                 mover = mover.Rotate(true, gridWidth: int.MaxValue);
             }
             int dx = target.X - mover.Orientation.X;
-            return new Mover(mover.LocA.Add(dx, 0), mover.OccA, mover.LocB.Add(dx, 0), mover.OccB);
+            return mover.Jump(dx, 0);
+        }
+
+        public Mover Jump(int dx, int dy)
+        {
+            return new Mover(LocA.Add(dx, dy), OccA, LocB.Add(dx, dy), OccB);
         }
 
         /// <summary>

@@ -53,7 +53,8 @@ namespace FF2.Core
 
         public Puzzle FinalAdjustment()
         {
-            var result = this.RemoveUselessMoves(0);
+            var result = this;
+            result = result.RemoveUselessMoves(0);
             result = result.StabilizeBottom();
             return result;
         }
@@ -119,59 +120,6 @@ namespace FF2.Core
 
             return this.StabilizeBottom(x + 1, grid);
         }
-
-#if DEBUG
-        // TODO clean this up!!!!
-        public bool CheckString(string expected)
-        {
-            var lines = expected.Split(Lists.Newlines, StringSplitOptions.RemoveEmptyEntries);
-            var moves = lines.TakeWhile(x => !x.StartsWith("==")).ToArray();
-            var grid = lines.Skip(moves.Length + 1).ToArray();
-            bool gridOk = InitialGrid.DiffGridString(grid) == "ok";
-            return gridOk && CheckMoves(moves);
-        }
-
-        public bool CheckMoves(params string[] expectedMoves)
-        {
-            // Use a grid of height 2 to reuse the CheckGridString logic.
-            // We will clear this grid, drop the move, and check that it matches.
-
-            var tempGrid = Grid.Create(InitialGrid.Width, 2); // height of 2 is enough for horizontal or vertical
-            string emptyRow = new string(' ', tempGrid.Width * 3); // 3 chars per cell
-            if (tempGrid.DiffGridString(emptyRow, emptyRow) != "ok")
-            {
-                throw new Exception("Assert failed");
-            }
-
-            // consume expectedMoves from bottom to top
-            using var iter = expectedMoves.Reverse().GetEnumerator();
-
-            foreach (var move in Moves)
-            {
-                tempGrid.Clear();
-
-                if (!tempGrid.Place(move))
-                {
-                    throw new Exception("WTF");
-                }
-                var dir = move.Orientation.Direction;
-
-                string expected1 = emptyRow;
-                string expected2 = iter.Advance();
-                if (dir == Direction.Up || dir == Direction.Down)
-                {
-                    expected1 = iter.Advance();
-                }
-
-                if (tempGrid.DiffGridString(expected1, expected2) != "ok")
-                {
-                    return false;
-                }
-            }
-
-            return true;
-        }
-#endif
     }
 
     public class UnsolvedPuzzle : PuzzleBase
@@ -297,8 +245,9 @@ namespace FF2.Core
         public Puzzle? Distill()
         {
             UnsolvedPuzzle? distilled;
-            distilled = this.Probe();
+            distilled = this.Probe(true);
             distilled = distilled?.ShiftDown() ?? distilled;
+            distilled = distilled?.Probe(false) ?? distilled;
             var p = distilled?.Solve(this.OriginalCombo);
             return p?.FinalAdjustment();
         }
@@ -316,22 +265,25 @@ namespace FF2.Core
             }
         }
 
-        private UnsolvedPuzzle Probe()
+        private UnsolvedPuzzle Probe(bool TODO)
         {
             var clone = Grid.Clone(InitialGrid);
             UnsolvedPuzzle result = this;
 
             // This pass determines which occupants are relevant by attempting to change
             // each one into an IndestructibleEnemy
-            for (int y = 0; y < clone.Height; y++)
+            if (TODO)
             {
-                for (int x = 0; x < clone.Width; x++)
+                for (int y = 0; y < clone.Height; y++)
                 {
-                    var loc = new Loc(x, y);
-                    var occ = clone.Get(loc);
-                    if (occ.Kind != OccupantKind.None)
+                    for (int x = 0; x < clone.Width; x++)
                     {
-                        Try(ref result, clone, clone.SetWithDivorce(loc, Occupant.IndestructibleEnemy));
+                        var loc = new Loc(x, y);
+                        var occ = clone.Get(loc);
+                        if (occ.Kind != OccupantKind.None)
+                        {
+                            Try(ref result, clone, clone.SetWithDivorce(loc, Occupant.IndestructibleEnemy));
+                        }
                     }
                 }
             }
@@ -443,5 +395,28 @@ namespace FF2.Core
 
             return new Puzzle(this, score, combo, grid.MakeImmutable());
         }
+
+#if DEBUG
+        /// <summary>
+        /// For unit tests only. Creates a grid representing all the moves.
+        /// Each horizontal drop will get one row to itself.
+        /// Each vertical drop will get two rows to itself.
+        /// </summary>
+        public IReadOnlyGrid BuildMovesGrid()
+        {
+            var grid = Grid.Create(InitialGrid.Width, Moves.Count * 2); // At most each move will need two rows of the grid
+            int y = 0;
+            foreach (var move in Moves)
+            {
+                var mover = grid.NewMover(move.SpawnItem);
+                mover = mover.JumpTo(move.Orientation);
+                mover = mover.Jump(0, y - Math.Min(mover.LocA.Y, mover.LocB.Y));
+                y += mover.LocA.Y == mover.LocB.Y ? 1 : 2;
+                grid.Set(mover.LocA, mover.OccA);
+                grid.Set(mover.LocB, mover.OccB);
+            }
+            return grid;
+        }
+#endif
     }
 }

@@ -95,7 +95,7 @@ YY YY             BB
 
             var distilled = raw.Distill()!;
 
-            Assert.IsTrue(distilled.CheckString(@"
+            Assert.AreEqual("ok", distilled.BuildMovesGrid().DiffGridString(@"
                   <o y> 
                   rr    
                   rr    
@@ -107,8 +107,8 @@ YY YY             BB
                <b r>    
                oo       
                bb       
-      <y y>             
-==|==|==|==|==|==|==|==|
+      <y y>             "));
+            Assert.AreEqual("ok", distilled.InitialGrid.DiffGridString(@"
                   oo oo 
                   RR yy 
                      YY 
@@ -235,6 +235,64 @@ BB                      "));
                         
                         
          BB             "));
+        }
+
+        [TestMethod]
+        public void Puzzle008_7()
+        {
+            // Regression - we were failing to do the rr->RR conversion on the bottom row
+            var (raw, distilled) = Get("008.ffr", 7);
+            Assert.AreEqual("ok", distilled.BuildMovesGrid().DiffGridString(@"
+yy                      
+yy                      
+   rr                   
+   rr                   
+oo                      
+yy                      
+      <b y>             
+      oo                
+      bb                
+   <r b>                "));
+            Assert.AreEqual("ok", distilled.InitialGrid.DiffGridString(@"
+YY oo                   
+   RR BB                "));
+        }
+
+        [TestMethod]
+        public void ensure_no_duplicate_replay_files()
+        {
+            // Make sure I don't put the same replay file in here multiple times
+
+            var dict = new Dictionary<long, List<FileInfo>>(); // key is file length
+            foreach (var file in ReplayDirectory.EnumerateFiles("*.ffr"))
+            {
+                var key = file.Length;
+                if (!dict.ContainsKey(key))
+                {
+                    dict[key] = new List<FileInfo>();
+                }
+                dict[key].Add(file);
+            }
+            Assert.IsTrue(dict.Count > 5);
+
+            foreach (var key in dict.Keys)
+            {
+                var files = dict[key];
+                for (int i = 0; i < files.Count; i++)
+                {
+                    for (int j = i + 1; j < files.Count; j++)
+                    {
+                        var iName = files[i].FullName;
+                        var jName = files[j].FullName;
+                        var iText = File.ReadAllText(iName);
+                        var jText = File.ReadAllText(jName);
+                        if (iText == jText)
+                        {
+                            Assert.Fail($"Duplicate file: {iName} and {jName}");
+                        }
+                    }
+                }
+            }
         }
 
         private static readonly DirectoryInfo ReplayDirectory = FindReplayDirectory();

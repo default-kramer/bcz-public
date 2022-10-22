@@ -246,14 +246,13 @@ namespace FF2.Core
 
         public string DiffGridString(params string[] expectedRows)
         {
-            if (expectedRows.Length == 0)
-            {
-                return "No expectations given";
-            }
             if (expectedRows.Length == 1 && expectedRows.Single().Contains("\n"))
             {
                 expectedRows = expectedRows.Single().Split(Lists.Newlines, StringSplitOptions.RemoveEmptyEntries);
-                return DiffGridString(expectedRows);
+            }
+            if (expectedRows.Length == 0)
+            {
+                return "No expectations given";
             }
 
             var gridString = BuildGridString();
