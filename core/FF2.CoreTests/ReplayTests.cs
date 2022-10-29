@@ -19,14 +19,10 @@ namespace FF2.CoreTests
             return ReplayReader.BuildReplayDriver(path);
         }
 
-        private static (UnsolvedPuzzle, Puzzle) Get(string path, int index)
+        private static (Puzzle, Puzzle) Get(string path, int index)
         {
             var raw = GetRawPuzzles(path)[index];
             var distilled = raw.Distill();
-            if (distilled == null)
-            {
-                throw new Exception("Distill() returned null");
-            }
             return (raw, distilled);
         }
 
@@ -34,7 +30,7 @@ namespace FF2.CoreTests
         /// Returns one raw puzzle per combo in the original game.
         /// This makes it safe to grab the Nth puzzle and know it will always be the same.
         /// </summary>
-        private static IReadOnlyList<UnsolvedPuzzle> GetRawPuzzles(string path)
+        private static IReadOnlyList<Puzzle> GetRawPuzzles(string path)
         {
             path = Path.Combine(ReplayDirectory.FullName, path);
             return ReplayReader.GetRawPuzzles(path);
@@ -48,24 +44,18 @@ namespace FF2.CoreTests
         }
 
         [TestMethod]
-        public void Puzzle002()
+        public void Puzzle002_all_enemies_cleared()
         {
+            // Make sure that every puzzle has more than zero enemies, and that the solution clears them all.
             var rawPuzzles = GetRawPuzzles("002.ffr");
             Assert.AreEqual(14, rawPuzzles.Count);
             foreach (var raw in rawPuzzles)
             {
-                // Wait, does Distill() ever return null anymore??
-                var distilled = raw.Distill()!;
-                // TODO should filter out puzzles with zero enemies?
-                // Or always change at least 1 catalyst to an enemy?
-                //Assert.IsTrue(distilled.InitialGrid.CountEnemies() > 0);
+                var distilled = raw.Distill();
+                Assert.IsTrue(distilled.InitialGrid.CountEnemies() > 0);
 
-                var resultGrid = distilled.ResultGrid;
+                var resultGrid = distilled.TEMP_ResultGrid();
                 Assert.AreEqual(0, resultGrid.CountEnemies());
-                if (resultGrid.Count(OccupantKind.Enemy) > 10)
-                {
-                    var asdf = 99;
-                }
             }
         }
 
@@ -73,8 +63,8 @@ namespace FF2.CoreTests
         public void Puzzle002_10()
         {
             var raw = GetRawPuzzles("002.ffr")[10];
-            Assert.AreEqual(5, raw.OriginalCombo.PermissiveCombo.NumVerticalGroups);
-            Assert.AreEqual(1, raw.OriginalCombo.PermissiveCombo.NumHorizontalGroups);
+            Assert.AreEqual(5, raw.LastCombo.PermissiveCombo.NumVerticalGroups);
+            Assert.AreEqual(1, raw.LastCombo.PermissiveCombo.NumHorizontalGroups);
             Assert.AreEqual(59492762, raw.InitialGrid.HashGrid());
 
             Assert.AreEqual("ok", raw.InitialGrid.DiffGridString(@"
@@ -95,7 +85,11 @@ YY YY             BB
 
             var distilled = raw.Distill()!;
 
-            Assert.AreEqual("ok", distilled.BuildMovesGrid().DiffGridString(@"
+            // Better code means we were able to remove a useless move
+            Assert.AreEqual(8, raw.Moves.Count);
+            Assert.AreEqual(7, distilled.Moves.Count);
+
+            Assert.AreEqual("ok", distilled.DiffMoves(@"
                   <o y> 
                   rr    
                   rr    
@@ -105,16 +99,14 @@ YY YY             BB
       oo                
       bb                
                <b r>    
-               oo       
-               bb       
       <y y>             "));
-            Assert.AreEqual("ok", distilled.InitialGrid.DiffGridString(@"
-                  oo oo 
-                  RR yy 
-                     YY 
+
+            Assert.AreEqual("ok", distilled.DiffGrid(@"
+                  oo yy 
+                  RR YY 
                      YY 
             <y b>       
-   YY          []       
+   YY          BB       
       BB    yy          
             YY          "));
         }
@@ -125,8 +117,8 @@ YY YY             BB
             // A simple regression test to make sure we're updating paired occupants correctly
             // when one half of the pair is removed/replaced.
             var puzzle = GetRawPuzzles("003.ffr")[1];
-            Assert.AreEqual(5, puzzle.OriginalCombo.PermissiveCombo.NumVerticalGroups);
-            Assert.AreEqual(0, puzzle.OriginalCombo.PermissiveCombo.NumHorizontalGroups);
+            Assert.AreEqual(5, puzzle.LastCombo.PermissiveCombo.NumVerticalGroups);
+            Assert.AreEqual(0, puzzle.LastCombo.PermissiveCombo.NumHorizontalGroups);
             Assert.AreEqual("ok", puzzle.InitialGrid.DiffGridString(@"
             yy          
 <b y>       yy          
@@ -138,12 +130,20 @@ YY YY             BB
             BB RR       "));
 
             var distilled = puzzle.Distill()!;
-            Assert.AreEqual("ok", distilled.InitialGrid.DiffGridString(@"
+            Assert.AreEqual("ok", distilled.DiffMoves(@"
+   <y y>                
+      <y b>             
+            rr          
+            rr          
+         <b r>          
+            yy          
+            oo          "));
+            Assert.AreEqual("ok", distilled.DiffGrid(@"
             yy          
    yy       yy          
-   yy yy bb YY          
-   YY YY BB             
-                        
+   yy    bb YY          
+   YY yy BB             
+      YY                
             RR          "));
         }
 
@@ -153,13 +153,13 @@ YY YY             BB
             // A simple regression where useless blanks were being left on the grid.
             var raw = GetRawPuzzles("004.ffr")[4];
             var distilled = raw.Distill()!;
-            Assert.AreEqual("ok", distilled.InitialGrid.DiffGridString(@"
+            Assert.AreEqual("ok", distilled.DiffGrid(@"
                      bb 
                      bb 
                      BB 
             yy          
             yy          
-            YY RR RR RR "));
+            YY rr RR RR "));
         }
 
         [TestMethod]
@@ -168,7 +168,7 @@ YY YY             BB
             // A simple regression where useless blanks were being left on the grid.
             var raw = GetRawPuzzles("005.ffr")[8];
             var distilled = raw.Distill()!;
-            Assert.AreEqual("ok", distilled.InitialGrid.DiffGridString(@"
+            Assert.AreEqual("ok", distilled.DiffGrid(@"
          rr             
          oo             
          rr             
@@ -184,7 +184,7 @@ YY YY             BB
             var raw = GetRawPuzzles("006.ffr")[8];
             var distilled = raw.Distill()!;
             // We convert bb->BB
-            Assert.AreEqual("ok", distilled.InitialGrid.DiffGridString(@"
+            Assert.AreEqual("ok", distilled.DiffGrid(@"
    yy RR                
    yy                   
 bb YY                   
@@ -197,44 +197,44 @@ BB                      "));
             var raw = GetRawPuzzles("006.ffr")[11];
             var distilled = raw.Distill()!;
             // We convert rr->RR and yy->YY
-            Assert.AreEqual("ok", distilled.InitialGrid.DiffGridString(@"
+            Assert.AreEqual("ok", distilled.DiffGrid(@"
             rr          
             RR          
             yy          
             YY          
-         BB BB          "));
+         bb BB          "));
         }
 
         [TestMethod]
         public void Puzzle007_1()
         {
             // This is a good example of a puzzle having all-catalyst groups.
-            // The distillery provides this information so we can filter these puzzles out if we want.
+            // Well, it *was* until I improved the distillery. Not so much anymore.
+            // Now it is a nice regression that when the last move of the original combo is deemed useless
+            // and removed, we still usually want the last move of the distilled combo to be a burst.
             var (raw, distilled) = Get("007.ffr", 1);
-            var rc = raw.OriginalCombo;
-            var dc = distilled.LastCombo;
 
-            // Note that both of them have at least 1 all-catalyst group
-            Assert.AreEqual(2, dc.AllCatalystGroupCount);
-            Assert.AreEqual(1, rc.AllCatalystGroupCount);
-            // Permissive is always 4v0h
-            Assert.AreEqual(4, dc.PermissiveCombo.NumVerticalGroups);
-            Assert.AreEqual(0, dc.PermissiveCombo.NumHorizontalGroups);
-            Assert.AreEqual(4, rc.PermissiveCombo.NumVerticalGroups);
-            Assert.AreEqual(0, rc.PermissiveCombo.NumHorizontalGroups);
-            // Strict is 3v0h raw but 2v0h distilled
-            Assert.AreEqual(2, dc.StrictCombo.NumVerticalGroups);
-            Assert.AreEqual(0, dc.StrictCombo.NumHorizontalGroups);
-            Assert.AreEqual(3, rc.StrictCombo.NumVerticalGroups);
-            Assert.AreEqual(0, rc.StrictCombo.NumHorizontalGroups);
-
-
-            // Just making sure I have the correct puzzle:
-            Assert.AreEqual("ok", distilled.InitialGrid.DiffGridString(@"
+            // First make sure the grid looks as expected, otherwise the other assertions will most likely fail.
+            Assert.AreEqual("ok", distilled.DiffMoves(@"
+      <o b>             
+      <y b>             
+         <b b>          
+            <o y>       
+            <b y>       
+            <b y>       "));
+            Assert.AreEqual("ok", distilled.DiffGrid(@"
             BB          
                         
-                        
+               YY       
          BB             "));
+
+            Assert.AreEqual(12, raw.Moves.Count);
+            Assert.AreEqual(6, distilled.Moves.Count);
+            Assert.AreNotEqual(distilled.Moves.Last(), raw.Moves.Last());
+            Assert.IsTrue(distilled.Moves.Last().DidBurst);
+            Assert.IsTrue(raw.Moves.Last().DidBurst);
+            Assert.AreEqual(1, raw.Moves.Where(m => m.DidBurst).Count());
+            Assert.AreEqual(1, distilled.Moves.Where(m => m.DidBurst).Count());
         }
 
         [TestMethod]
@@ -242,7 +242,8 @@ BB                      "));
         {
             // Regression - we were failing to do the rr->RR conversion on the bottom row
             var (raw, distilled) = Get("008.ffr", 7);
-            Assert.AreEqual("ok", distilled.BuildMovesGrid().DiffGridString(@"
+
+            Assert.AreEqual("ok", distilled.DiffMoves(@"
 yy                      
 yy                      
    rr                   
@@ -253,19 +254,32 @@ yy
       oo                
       bb                
    <r b>                "));
-            Assert.AreEqual("ok", distilled.InitialGrid.DiffGridString(@"
-YY oo                   
-   RR BB                "));
+
+            Assert.AreEqual("ok", distilled.DiffGrid(@"
+YY                      
+   oo                   
+   RR                   
+      BB                "));
         }
 
         [TestMethod]
         public void Puzzle009_1()
         {
-            // TODO - We want to convert at least the red half of the <r y> into an RR.
-            // This should be easy enough - we just have to notice that this conversion keeps
-            // the loose combo the same and improves the strict combo (at least the way I played it).
+            // On the left side, we change an <r y> into RR yy to avoid an all-catalyst red group.
             var (raw, distilled) = Get("009.ffr", 1);
-            Assert.AreEqual("ok", distilled.InitialGrid.DiffGridString(@"
+
+            Assert.AreEqual("ok", distilled.DiffMoves(@"
+<b r>                   
+               yy       
+               oo       
+      yy                
+      yy                
+<b r>                   
+                     bb 
+                     oo 
+   <r o>                
+               <y b>    "));
+            Assert.AreEqual("ok", distilled.DiffGrid(@"
                      bb 
                yy    bb 
                YY    BB 

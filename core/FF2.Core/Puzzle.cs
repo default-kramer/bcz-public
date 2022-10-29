@@ -6,141 +6,244 @@ using System.Threading.Tasks;
 
 namespace FF2.Core
 {
-    public abstract class PuzzleBase
+    /// <summary>
+    /// When you start from the <see cref="InitialGrid"/> and apply the <see cref="Moves"/>
+    /// in order, the following guarantees should hold:
+    /// 1) Each move will be legal.
+    /// 2) The last move will cause destruction and produce the <see cref="LastCombo"/>.
+    /// 3) None of the other moves will cause destruction.
+    /// </summary>
+    public class Puzzle
     {
-        private readonly Lazy<Puzzle?> solution;
-
-        public PuzzleBase()
-        {
-            solution = new Lazy<Puzzle?>(__Solve);
-        }
-
-        protected abstract Puzzle? __Solve(); // Wait this is dumb because Puzzle : UnsolvePuzzle anyway...
-
-        internal Puzzle? Solve(ComboInfo combo)
-        {
-            return Solve(combo.PermissiveCombo.AdjustedGroupCount);
-        }
-
-        internal Puzzle? Solve(int minAGC)
-        {
-            var result = solution.Value;
-            if (result != null && result.LastCombo.PermissiveCombo.AdjustedGroupCount >= minAGC)
-            {
-                return result;
-            }
-            return null;
-        }
-    }
-
-    public class Puzzle : UnsolvedPuzzle
-    {
-        public readonly int ExpectedScore;
+        public readonly IImmutableGrid InitialGrid;
+        public readonly IReadOnlyList<Move> Moves;
         public readonly ComboInfo LastCombo;
-        public readonly IImmutableGrid ResultGrid;
 
-        public Puzzle(UnsolvedPuzzle d, int score, ComboInfo lastCombo, IImmutableGrid resultGrid) : base(d)
+        private int StrictCount => this.LastCombo.StrictCombo.AdjustedGroupCount;
+
+        private bool IsNotWorseThan(Puzzle other)
         {
-            this.ExpectedScore = score;
+            return StrictCount >= other.StrictCount;
+        }
+
+        private bool IsBetterThan(Puzzle? other)
+        {
+            return other == null || StrictCount > other.StrictCount;
+        }
+
+        public IImmutableGrid TEMP_ResultGrid()
+        {
+            return SolveAndReturnGrid(this.InitialGrid, this.Moves)!.Value.Item1.MakeImmutable();
+        }
+
+        public Puzzle(IImmutableGrid initialGrid, IReadOnlyList<Move> moves, ComboInfo lastCombo)
+        {
+            this.InitialGrid = initialGrid;
+            this.Moves = moves;
             this.LastCombo = lastCombo;
-            this.ResultGrid = resultGrid;
-        }
-
-        protected override Puzzle? __Solve()
-        {
-            return this;
-        }
-
-        public Puzzle FinalAdjustment()
-        {
-            var result = this;
-            result = result.RemoveUselessMoves(0);
-            result = result.StabilizeBottom();
-            return result;
         }
 
         private Puzzle RemoveUselessMoves(int index)
         {
-            if (index >= Moves.Count)
+            if (index >= Moves.Count || Moves.Count < 2)
             {
                 return this;
             }
 
             var newMoves = this.Moves.ToList();
             newMoves.RemoveAt(index);
-            var candidate = new UnsolvedPuzzle(this.InitialGrid, newMoves, this.OriginalCombo);
-            var result = candidate.Solve(this.OriginalCombo);
-            return result?.RemoveUselessMoves(index)
-                ?? this.RemoveUselessMoves(index + 1);
-        }
 
-        private Puzzle StabilizeBottom()
-        {
-            var grid = Grid.Clone(this.InitialGrid);
-            if (grid.Fall(Lists.DummyBuffer))
+            if (index == newMoves.Count)
             {
-                return StabilizeBottom(0, Grid.Clone(this.InitialGrid));
+                // Make sure the last move is a burst.
+                // Perhaps we should only do this if the last move of the original was a burst, but I cannot
+                // imagine a good puzzle that is ruined when the last move is changed from non-burst to burst.
+                // So I think it's always "safe" to end with a burst.
+                newMoves[index - 1] = newMoves[index - 1].MakeBurst();
+            }
+
+            var result = Solve(this.InitialGrid, newMoves);
+            if (this.IsBetterThan(result))
+            {
+                return this.RemoveUselessMoves(index + 1);
             }
             else
             {
-                return this;
+                return result!.RemoveUselessMoves(index);
             }
         }
 
-        private Puzzle StabilizeBottom(int x, Grid grid)
+        public Puzzle Distill()
         {
-            if (x >= grid.Width)
+            var winner = this;
+            var grid = Grid.Clone(this.InitialGrid);
+
+            // It's important to maximize the strict combo before doing anything else,
+            // because later steps attempt to remove everything that is not needed to keep
+            // the strict combo from regressing.
+            ImproveStrictCombo(grid, ref winner);
+
+            Calcify(grid, ref winner);
+
+            Prune(grid, ref winner);
+
+            ShiftDown(grid, ref winner);
+
+            // TODO everything we've done might have left floating occupants.
+            // This fact is (usually / always ?) irrelevant because they fall
+            // when the first move is played.
+            // WARNING! Grid is not reverted here.
+            if (grid.FallCompletely(Lists.DummyBuffer)
+                && Try(grid, winner, out var candidate)
+                && candidate.IsNotWorseThan(winner))
             {
-                return this;
+                winner = candidate;
             }
 
+            return winner.RemoveUselessMoves(0);
+        }
+
+        /// <summary>
+        /// Identify semi-irrelevant occupants by changing them to an <see cref="Occupant.IndestructibleEnemy"/>.
+        /// This is less disruptive to the grid's stability than removing them entirely.
+        /// </summary>
+        private static void Calcify(Grid grid, ref Puzzle winner)
+        {
             for (int y = 0; y < grid.Height; y++)
             {
-                var loc = new Loc(x, y);
-                var occ = grid.Get(loc);
-                if (occ.Kind == OccupantKind.Enemy)
+                for (int x = 0; x < grid.Width; x++)
                 {
-                    return StabilizeBottom(x + 1, grid);
-                }
-                else if (occ.Kind == OccupantKind.Catalyst)
-                {
-                    var revertInfo = grid.SetWithDivorce(loc, Occupant.MakeEnemy(occ.Color));
-                    var result = Try(grid);
-                    if (result != null)
+                    var loc = new Loc(x, y);
+                    var existing = grid.Get(loc);
+                    if (existing.Kind == OccupantKind.None)
                     {
-                        return result.StabilizeBottom(x + 1, grid);
+                        continue;
+                    }
+
+                    var revertInfo = grid.SetWithDivorce(loc, Occupant.IndestructibleEnemy);
+                    if (Try(grid, winner, out var candidate)
+                       && candidate.IsNotWorseThan(winner))
+                    {
+                        winner = candidate;
                     }
                     else
                     {
                         grid.Revert(revertInfo);
-                        return this.StabilizeBottom(x + 1, grid);
                     }
                 }
             }
-
-            return this.StabilizeBottom(x + 1, grid);
         }
-    }
 
-    public class UnsolvedPuzzle : PuzzleBase
-    {
-        public readonly IImmutableGrid InitialGrid;
-        public readonly IReadOnlyList<Move> Moves;
-        public readonly ComboInfo OriginalCombo;
-
-        public UnsolvedPuzzle(UnsolvedPuzzle def) : this(def.InitialGrid, def.Moves, def.OriginalCombo) { }
-
-        public UnsolvedPuzzle(IImmutableGrid initialGrid, IReadOnlyList<Move> moves, ComboInfo combo)
+        /// <summary>
+        /// The original combo may have permissive (all-catalyst) groups, but we prefer strict groups.
+        /// So this tries all possible catalyst->enemy conversions and keeps only those which improve the strict combo.
+        /// </summary>
+        private static void ImproveStrictCombo(Grid grid, ref Puzzle winner)
         {
-            this.InitialGrid = initialGrid;
-            this.Moves = moves;
-            this.OriginalCombo = combo;
+            for (int y = 0; y < grid.Height; y++)
+            {
+                for (int x = 0; x < grid.Width; x++)
+                {
+                    var loc = new Loc(x, y);
+                    var existing = grid.Get(loc);
+                    if (existing.Kind != OccupantKind.Catalyst)
+                    {
+                        continue;
+                    }
+
+                    var enemy = Occupant.MakeEnemy(existing.Color);
+
+                    var revertInfo = grid.SetWithDivorce(loc, enemy);
+                    if (Try(grid, winner, out var candidate)
+                        // Must improve the strict count, otherwise we'll leave it as a catalyst
+                        && candidate.IsBetterThan(winner))
+                    {
+                        winner = candidate;
+                    }
+                    else
+                    {
+                        grid.Revert(revertInfo);
+                    }
+                }
+            }
         }
 
-        public ISpawnDeck MakeDeck()
+        /// <summary>
+        /// Identify totally-irrelevant occupants by removing them from the grid.
+        /// </summary>
+        private static void Prune(Grid grid, ref Puzzle winner)
         {
-            return new FixedSpawnDeck(Moves.Select(x => x.SpawnItem).ToList());
+            for (int y = 0; y < grid.Height; y++)
+            {
+                for (int x = 0; x < grid.Width; x++)
+                {
+                    var loc = new Loc(x, y);
+                    var existing = grid.Get(loc);
+                    if (existing.Kind == OccupantKind.None)
+                    {
+                        continue;
+                    }
+
+                    var revertInfo = grid.SetWithDivorce(loc, Occupant.None);
+                    if (Try(grid, winner, out var candidate)
+                        && candidate.IsNotWorseThan(winner))
+                    {
+                        winner = candidate;
+                    }
+                    else
+                    {
+                        grid.Revert(revertInfo);
+                    }
+                }
+            }
         }
+
+        private static bool Try(IReadOnlyGrid newGrid, Puzzle winner, out Puzzle result)
+        {
+            return Try(newGrid.MakeImmutable(), winner.Moves, out result);
+        }
+
+        private static bool Try(IImmutableGrid newGrid, IReadOnlyList<Move> moves, out Puzzle result)
+        {
+            var temp = Solve(newGrid, moves);
+            if (temp != null)
+            {
+                result = temp;
+                return true;
+            }
+            result = null!;
+            return false;
+        }
+
+        private static bool ShiftDown(Grid grid, ref Puzzle winner)
+        {
+            int shiftAmount = grid.CountEmptyBottomRows();
+            while (shiftAmount > 0)
+            {
+                grid.ShiftDown(shiftAmount);
+
+                if (Try(grid, winner, out var candidate)
+                    && candidate.IsNotWorseThan(winner))
+                {
+                    winner = candidate;
+                    return true;
+                }
+                else
+                {
+                    // If for some reason we can't remove all N empty bottom rows, let's try N-1.
+                    // I should create a unit test for this scenario because it's hard to articulate
+                    // why I think this is desirable (so this could easily be a bug).
+                    shiftAmount--;
+                }
+
+                // Revert the ShiftDown!
+                grid.CopyFrom(winner.InitialGrid);
+            }
+
+            return false;
+        }
+
+        public ISpawnDeck MakeDeck() => new FixedSpawnDeck(Moves.Select(x => x.SpawnItem).ToList());
 
         class FixedSpawnDeck : ISpawnDeck
         {
@@ -165,7 +268,7 @@ namespace FF2.Core
             }
         }
 
-        public static IReadOnlyList<UnsolvedPuzzle> FindRawPuzzles(Ticker ticker, IReadOnlyList<Stamped<Command>> commands)
+        public static IReadOnlyList<Puzzle> FindRawPuzzles(Ticker ticker, IReadOnlyList<Stamped<Command>> commands)
         {
             var b = new PuzzleFinder(ticker, commands);
             b.GO();
@@ -198,7 +301,7 @@ namespace FF2.Core
             private IImmutableGrid? comboStartGrid = null;
             private List<Move> comboMoves = new();
 
-            public readonly List<UnsolvedPuzzle> Puzzles = new();
+            public readonly List<Puzzle> Puzzles = new();
 
             public void GO()
             {
@@ -233,7 +336,7 @@ namespace FF2.Core
                 {
                     comboMoves.Add(Ticker.state.PreviousMove);
 
-                    var puzzle = new UnsolvedPuzzle(comboStartGrid, comboMoves.ToList(), combo);
+                    var puzzle = new Puzzle(comboStartGrid, comboMoves.ToList(), combo);
                     Puzzles.Add(puzzle);
 
                     comboMoves.Clear();
@@ -242,138 +345,22 @@ namespace FF2.Core
             }
         }
 
-        public Puzzle? Distill()
+        public static Puzzle? Solve(IImmutableGrid initialGrid, IReadOnlyList<Move> moves)
         {
-            UnsolvedPuzzle? distilled;
-            distilled = this.Probe(true);
-            distilled = distilled?.ShiftDown() ?? distilled;
-            distilled = distilled?.Probe(false) ?? distilled;
-            var p = distilled?.Solve(this.OriginalCombo);
-            return p?.FinalAdjustment();
+            var result = SolveAndReturnGrid(initialGrid, moves);
+            if (result.HasValue)
+            {
+                return new Puzzle(initialGrid, moves, result.Value.Item2);
+            }
+            return null;
         }
 
-        protected Puzzle? Try(Grid newGrid)
+        public static (Grid, ComboInfo)? SolveAndReturnGrid(IImmutableGrid initialGrid, IReadOnlyList<Move> moves)
         {
-            var candidate = new UnsolvedPuzzle(newGrid.MakeImmutable(), this.Moves, this.OriginalCombo);
-            try
-            {
-                return candidate.Solve(this.OriginalCombo); // TODO unclear
-            }
-            catch (Exception ex) when (ex.Message.StartsWith("TODO command failed:")) // DO NOT CHECK IN
-            {
-                return null;
-            }
-        }
-
-        private UnsolvedPuzzle Probe(bool TODO)
-        {
-            var clone = Grid.Clone(InitialGrid);
-            UnsolvedPuzzle result = this;
-
-            // This pass determines which occupants are relevant by attempting to change
-            // each one into an IndestructibleEnemy
-            if (TODO)
-            {
-                for (int y = 0; y < clone.Height; y++)
-                {
-                    for (int x = 0; x < clone.Width; x++)
-                    {
-                        var loc = new Loc(x, y);
-                        var occ = clone.Get(loc);
-                        if (occ.Kind != OccupantKind.None)
-                        {
-                            Try(ref result, clone, clone.SetWithDivorce(loc, Occupant.IndestructibleEnemy));
-                        }
-                    }
-                }
-            }
-
-            // This pass:
-            // 1) Removes every IndestructibleEnemy that can be removed.
-            // 2) Converts catalysts to enemies. This is done to avoid empty groups.
-            for (int y = 0; y < clone.Height; y++)
-            {
-                for (int x = 0; x < clone.Width; x++)
-                {
-                    var loc = new Loc(x, y);
-                    var occ = clone.Get(loc);
-                    if (occ == Occupant.IndestructibleEnemy)
-                    {
-                        Try(ref result, clone, clone.SetWithDivorce(loc, Occupant.None));
-                    }
-                    else if (occ.Kind == OccupantKind.Catalyst)
-                    {
-                        // We could be way more aggressive and try to convert every single catalyst to an enemy,
-                        // but my gut instinct is that might leak too much information about the puzzle.
-                        // (Admittedly I haven't given this idea much thought...)
-                        // Plus, I just think it's more tasteful to use a lighter touch.
-                        // So we will only target catalysts that don't have a matching color beneath them.
-                        // Also, let's always try to avoid touching paired catalysts.
-                        bool isUnpaired = occ.Direction == Direction.None;
-                        bool hasMatchBelow;
-                        if (y == 0)
-                        {
-                            hasMatchBelow = false;
-                            isUnpaired = true; // The bottom row is an exception - we will break pairs
-                        }
-                        else
-                        {
-                            var below = clone.Get(loc.Neighbor(Direction.Down));
-                            hasMatchBelow = below.Color == occ.Color;
-                        }
-
-                        if (isUnpaired && !hasMatchBelow)
-                        {
-                            Try(ref result, clone, clone.SetWithDivorce(loc, Occupant.MakeEnemy(occ.Color)));
-                        }
-                    }
-                }
-            }
-
-            return result;
-        }
-
-        private void Try(ref UnsolvedPuzzle result, Grid grid, Grid.RevertInfo revertInfo)
-        {
-            var temp = Try(grid);
-            if (temp == null)
-            {
-                grid.Revert(revertInfo);
-            }
-            else
-            {
-                result = temp;
-            }
-        }
-
-        private UnsolvedPuzzle? ShiftDown()
-        {
-            var clone = Grid.Clone(this.InitialGrid);
-            int count = clone.ShiftToBottom();
-            if (count == 0)
-            {
-                return null;
-            }
-            return Try(clone);
-        }
-
-        protected override Puzzle? __Solve()
-        {
-            return SolveAgain(Lists.DummyBuffer);
-        }
-
-        // TODO the fallCountBuffer will not be accurate if there is more than one fall cycle.
-        // In general, we probably want to abort immediately if there is more than one fall cycle.
-        private Puzzle? SolveAgain(Span<int> fallCountBuffer)
-        {
-            var grid = Grid.Clone(InitialGrid);
-            var width = grid.Width;
-            var height = grid.Height;
+            var grid = Grid.Clone(initialGrid);
             var combo = ComboInfo.Empty;
-            int score = 0;
-            var p = PayoutTable.DefaultScorePayoutTable; // TODO make this clear
 
-            foreach (var move in Moves)
+            foreach (var move in moves)
             {
                 if (!grid.Place(move))
                 {
@@ -383,17 +370,16 @@ namespace FF2.Core
                 {
                     grid.Burst();
                 }
-                grid.FallCompletely(fallCountBuffer);
+                grid.FallCompletely(Lists.DummyBuffer);
 
                 combo = ComboInfo.Empty;
                 while (grid.Destroy(ref combo))
                 {
-                    grid.FallCompletely(fallCountBuffer);
+                    grid.FallCompletely(Lists.DummyBuffer);
                 }
-                score += p.GetPayout(combo.PermissiveCombo.AdjustedGroupCount);
             }
 
-            return new Puzzle(this, score, combo, grid.MakeImmutable());
+            return (grid, combo);
         }
 
 #if DEBUG

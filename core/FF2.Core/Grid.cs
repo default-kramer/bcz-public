@@ -17,6 +17,11 @@ namespace FF2.Core
             this.Width = grid.Width;
             this.Height = grid.Height;
         }
+
+        public int LocIndex(Loc loc)
+        {
+            return loc.Y * Width + loc.X;
+        }
     }
 
     /// <summary>
@@ -270,7 +275,16 @@ namespace FF2.Core
             for (int i = 0; i < expectedRows.Length; i++)
             {
                 string expectedRow = expectedRows[i];
-                string actualRow = actualRows[i + extra];
+                string actualRow;
+                int actualIndex = i + extra;
+                if (actualIndex < actualRows.Length && actualIndex > -1)
+                {
+                    actualRow = actualRows[actualIndex];
+                }
+                else
+                {
+                    actualRow = "<< out of bounds >>";
+                }
                 string prefix = "  ";
                 if (expectedRow != actualRow)
                 {
@@ -285,6 +299,15 @@ namespace FF2.Core
             {
                 return diff.ToString();
             }
+
+            for (int i = 0; i < extra; i++)
+            {
+                if (!string.IsNullOrWhiteSpace(actualRows[i]))
+                {
+                    return "ok:partial";
+                }
+            }
+
             return "ok";
         }
 #endif
@@ -338,6 +361,11 @@ namespace FF2.Core
             var grid = new Grid(copyFrom.Width, copyFrom.Height);
             copyFrom.ToSpan().CopyTo(grid.cells);
             return grid;
+        }
+
+        public void CopyFrom(IReadOnlyGrid copyFrom)
+        {
+            copyFrom.ToSpan().CopyTo(this.cells);
         }
 
         public override IImmutableGrid MakeImmutable()
@@ -402,14 +430,24 @@ namespace FF2.Core
             }
         }
 
-        public void FallCompletely(Span<int> fallCountBuffer)
+        public bool FallCompletely(Span<int> fallCountBuffer)
         {
+            bool retval = Fall(fallCountBuffer);
             while (Fall(fallCountBuffer)) { }
+            return retval;
         }
 
         public bool Fall(Span<int> fallCountBuffer)
         {
             return GridFallHelper.Fall(this, blockedFlagBuffer, assumeUnblockedBuffer, fallCountBuffer);
+        }
+
+        /// <summary>
+        /// Test whether <see cref="Fall"/> will return true without mutating the grid.
+        /// </summary>
+        public bool CanFall()
+        {
+            return GridFallHelper.CanFall(this, blockedFlagBuffer, assumeUnblockedBuffer);
         }
 
         /// <summary>
@@ -451,7 +489,7 @@ namespace FF2.Core
             GridDestroyHelper.PostDestroy(this);
         }
 
-        private int CountEmptyBottomRows()
+        public int CountEmptyBottomRows()
         {
             int y = 0;
             while (y < Height)
@@ -468,14 +506,8 @@ namespace FF2.Core
             return y;
         }
 
-        public int ShiftToBottom()
+        public int ShiftDown(int count)
         {
-            int count = CountEmptyBottomRows();
-            if (count == 0)
-            {
-                return count;
-            }
-
             for (int y = 0; y < Height; y++)
             {
                 int y2 = y + count;

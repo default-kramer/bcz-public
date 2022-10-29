@@ -49,8 +49,8 @@ public class PuzzleControl : Control, PuzzleMenu.ILogic
         //puzzles = puzzles.Select(x => x.Distill().Value).ToList();
         //SolvePuzzles(puzzles);
 
-        var dir = new System.IO.DirectoryInfo(@"C:\fission-flare-recordings\raw");
-        //var dir = new System.IO.DirectoryInfo(@"C:\Users\kramer\Documents\code\ff2\core\FF2.CoreTests\Replays");
+        //var dir = new System.IO.DirectoryInfo(@"C:\fission-flare-recordings\raw");
+        var dir = new System.IO.DirectoryInfo(@"C:\Users\kramer\Documents\code\ff2\core\FF2.CoreTests\Replays");
         var puzzles = CollectPuzzles(dir);
         SolvePuzzles(puzzles);
     }
@@ -88,8 +88,8 @@ public class PuzzleControl : Control, PuzzleMenu.ILogic
         for (int i = 0; i < temp.Count; i++)
         {
             var item = temp[i];
-            var d = TryDistill(item);
-            if (d == null || d.OriginalCombo.PermissiveCombo.AdjustedGroupCount < 3)
+            var d = item.Distill();
+            if (d == null || d.LastCombo.PermissiveCombo.AdjustedGroupCount < 3)
             {
                 continue;
             }
@@ -102,19 +102,6 @@ public class PuzzleControl : Control, PuzzleMenu.ILogic
 
             var pi = new PuzzleInfo(d, $"{replayFile.FullName} :: {i}");
             collector.Add(pi);
-        }
-    }
-
-    static Puzzle? TryDistill(UnsolvedPuzzle puzzle)
-    {
-        try
-        {
-            return puzzle.Distill();
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine(ex.ToString());
-            return null;
         }
     }
 
@@ -200,7 +187,7 @@ public class PuzzleControl : Control, PuzzleMenu.ILogic
             if (!gameOver && state.Kind == StateKind.GameOver)
             {
                 gameOver = true;
-                var targetScore = puzzle.ExpectedScore;
+                var targetScore = state.GetHypotheticalScore(puzzle.LastCombo);
                 var userScore = state.Score;
                 if (userScore >= targetScore)
                 {

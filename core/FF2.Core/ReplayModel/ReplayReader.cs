@@ -46,7 +46,7 @@ namespace FF2.Core.ReplayModel
             return parser.BuildReplayDriver();
         }
 
-        public static IReadOnlyList<UnsolvedPuzzle> GetRawPuzzles(string filename)
+        public static IReadOnlyList<Puzzle> GetRawPuzzles(string filename)
         {
             var parser = new ReplayParser();
             Read(filename, parser);

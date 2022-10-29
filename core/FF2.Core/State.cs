@@ -196,7 +196,7 @@ namespace FF2.Core
                 var TODO = currentCombo.PermissiveCombo;
                 if (TODO.AdjustedGroupCount > 0)
                 {
-                    var scorePayout = scorePayoutTable.GetPayout(TODO.AdjustedGroupCount);
+                    var scorePayout = GetHypotheticalScore(currentCombo);
                     score += scorePayout;
                     //Console.WriteLine($"Score: {score} (+{scorePayout})");
                     corruption = corruption.OnComboCompleted(TODO);
@@ -207,6 +207,14 @@ namespace FF2.Core
             }
             Slowmo = Slowmo || result;
             return result;
+        }
+
+        /// <summary>
+        /// If the given <paramref name="combo"/> were played, how much would it score?
+        /// </summary>
+        public int GetHypotheticalScore(ComboInfo combo)
+        {
+            return scorePayoutTable.GetPayout(combo.PermissiveCombo.AdjustedGroupCount);
         }
 
         /// <summary>

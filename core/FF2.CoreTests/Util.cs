@@ -32,5 +32,24 @@ namespace FF2.CoreTests
                 .Where(x => x.Item2.Kind == OccupantKind.Enemy && x.Item2.Color != Color.Blank)
                 .Count();
         }
+
+        public static string DiffGrid(this Puzzle? puzzle, string expected)
+        {
+            if (puzzle == null)
+            {
+                return "<puzzle was null>";
+            }
+            return puzzle.InitialGrid.DiffGridString(expected);
+        }
+
+        public static string DiffMoves(this Puzzle? puzzle, string expected)
+        {
+            if (puzzle == null)
+            {
+                return "<puzzle was null>";
+            }
+            var movesGrid = puzzle.BuildMovesGrid();
+            return movesGrid.DiffGridString(expected);
+        }
     }
 }
