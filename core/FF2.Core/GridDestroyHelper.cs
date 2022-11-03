@@ -14,9 +14,9 @@ namespace FF2.Core
     {
         private readonly IReadOnlyGrid grid;
         private readonly Group[] groups;
-        private readonly TickCalculations calculations;
+        private readonly DestructionCalculations calculations;
 
-        public GridDestroyHelper(IReadOnlyGrid grid, Group[] groupsBuffer, TickCalculations calculations)
+        public GridDestroyHelper(IReadOnlyGrid grid, Group[] groupsBuffer, DestructionCalculations calculations)
         {
             this.grid = grid;
             this.groups = groupsBuffer;
@@ -84,7 +84,7 @@ namespace FF2.Core
                         if (dir != Direction.None)
                         {
                             var partnerLoc = loc.Neighbor(dir);
-                            if (grid.IsVacant(partnerLoc))
+                            if (grid.InBounds(partnerLoc) && grid.IsVacant(partnerLoc)) // TODO I'm not sure why the bounds check is needed. Do I have a different bug?
                             {
                                 occ = occ.SetDirection(Direction.None);
                                 grid.Set(loc, occ);
@@ -95,7 +95,7 @@ namespace FF2.Core
             }
         }
 
-        void FindGroups(int groupCount, TickCalculations calculations)
+        void FindGroups(int groupCount, DestructionCalculations calculations)
         {
             // For each row, find runs Left-to-Right
             for (int y = 0; y < grid.Height; y++)
@@ -118,7 +118,7 @@ namespace FF2.Core
             }
         }
 
-        private Loc HandleRun(Loc loc, Direction direction, int groupCount, TickCalculations calculations)
+        private Loc HandleRun(Loc loc, Direction direction, int groupCount, DestructionCalculations calculations)
         {
             var occ = grid.Get(loc);
             var runColor = occ.Color;
@@ -131,6 +131,7 @@ namespace FF2.Core
                 // Cursor will end up being 1 Loc beyond the end of the run, possibly out-of-bounds
                 Loc cursor = loc.Neighbor(direction);
                 int runCount = 1;
+                bool hasEnemy = occ.Kind == OccupantKind.Enemy;
 
                 while (grid.InBounds(cursor))
                 {
@@ -138,6 +139,7 @@ namespace FF2.Core
                     if (occ2.Color == runColor)
                     {
                         runCount++;
+                        hasEnemy = hasEnemy || occ2.Kind == OccupantKind.Enemy;
                         cursor = cursor.Neighbor(direction);
                     }
                     else
@@ -148,7 +150,7 @@ namespace FF2.Core
 
                 for (Loc iter = loc; iter != cursor; iter = iter.Neighbor(direction))
                 {
-                    var index = grid.Index(iter);
+                    var index = iter.ToIndex(grid);
                     groups[index] = groups[index].AdjustCount(direction, runCount);
                 }
 
@@ -156,11 +158,11 @@ namespace FF2.Core
                 {
                     if (direction == Direction.Up)
                     {
-                        calculations.AddColumnDestruction(loc.X);
+                        calculations.AddColumnDestruction(loc.X, hasEnemy);
                     }
                     else if (direction == Direction.Right)
                     {
-                        calculations.AddRowDestruction(loc.Y, grid);
+                        calculations.AddRowDestruction(loc.Y, grid, hasEnemy);
                     }
                     else
                     {

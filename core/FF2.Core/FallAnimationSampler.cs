@@ -16,6 +16,7 @@ namespace FF2.Core
         {
             this.grid = grid;
             this.fallCountBuffer = new int[grid.Width * grid.Height];
+            ResetFallCountBuffer();
         }
 
         internal Span<int> ResetFallCountBuffer()
@@ -34,7 +35,7 @@ namespace FF2.Core
 
         private int GetFall(Loc loc)
         {
-            var index = grid.Index(loc);
+            var index = loc.ToIndex(grid);
             return fallCountBuffer[index];
         }
 

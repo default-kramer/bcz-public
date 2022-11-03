@@ -45,10 +45,9 @@ namespace FF2.Core
 
         /// <summary>
         /// Returns a new mover indicating where this mover would land if it were dropped
-        /// onto the given grid. If the grid cannot accept this mover, the return value
-        /// will have out-of-bounds Locs.
+        /// onto the given grid. Returns null if the grid cannot accept this mover.
         /// </summary>
-        public Mover PreviewPlummet(IReadOnlyGrid grid)
+        public Mover? PreviewPlummet(IReadOnlyGrid grid)
         {
             var top = ToTop(grid.Height);
             var a = top.LocA;
@@ -64,7 +63,12 @@ namespace FF2.Core
             a = a.Neighbor(Direction.Up);
             b = b.Neighbor(Direction.Up);
 
-            return new Mover(a, OccA, b, OccB);
+            var result = new Mover(a, OccA, b, OccB);
+            if (grid.InBounds(result.LocA) && grid.InBounds(result.LocB))
+            {
+                return result;
+            }
+            return null;
         }
 
         public Occupant? GetOcc(Loc loc)
@@ -194,6 +198,25 @@ namespace FF2.Core
             }
 
             return new Mover(new Loc(ax, ay), OccA.SetDirection(aDir), new Loc(bx, by), OccB.SetDirection(bDir));
+        }
+
+        /// <summary>
+        /// Warning: This can return an out-of-bounds mover.
+        /// </summary>
+        public Mover JumpTo(Orientation target)
+        {
+            var mover = this;
+            while (mover.Orientation.Direction != target.Direction)
+            {
+                mover = mover.Rotate(true, gridWidth: int.MaxValue);
+            }
+            int dx = target.X - mover.Orientation.X;
+            return mover.Jump(dx, 0);
+        }
+
+        public Mover Jump(int dx, int dy)
+        {
+            return new Mover(LocA.Add(dx, dy), OccA, LocB.Add(dx, dy), OccB);
         }
 
         /// <summary>

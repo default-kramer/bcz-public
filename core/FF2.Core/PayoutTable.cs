@@ -44,5 +44,8 @@ namespace FF2.Core
 
         public static readonly PayoutTable DefaultCorruptionAccelerationPayoutTable
             = new PayoutTable(CorruptionManager.CorruptionAccelerationDenominator, 1m, 1.2m, 1.4m, 1.7m, 2m, 2.5m);
+
+        public static readonly PayoutTable DefaultScorePayoutTable
+            = new PayoutTable(100, 0m, 0.5m, 1m, 2.5m, 4.5m, 7m, 10m, 15m);
     }
 }

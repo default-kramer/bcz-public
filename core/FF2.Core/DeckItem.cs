@@ -16,5 +16,12 @@ namespace FF2.Core
             this.LeftColor = left;
             this.RightColor = right;
         }
+
+        public override string ToString()
+        {
+            char l = Grid.GetLowercase(LeftColor);
+            char r = Grid.GetLowercase(RightColor);
+            return $"(SpawnItem {l} {r})";
+        }
     }
 }

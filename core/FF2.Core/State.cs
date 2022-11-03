@@ -30,16 +30,19 @@ namespace FF2.Core
     public sealed class State
     {
         private readonly Grid grid;
-        private readonly TickCalculations tickCalculations;
         private readonly FallAnimationSampler fallSampler;
         private readonly ISpawnDeck spawnDeck;
         private Mover? mover;
         private CorruptionManager corruption;
-        private Combo currentCombo;
+        private ComboInfo currentCombo;
         private readonly PenaltyManager penalties;
         private PenaltySchedule penaltySchedule;
         private int waitingMillis = 0;
         private Moment lastMoment = new Moment(0); // TODO should see about enforcing "cannot change Kind without providing a Moment"
+        private int score = 0;
+        private readonly PayoutTable scorePayoutTable = PayoutTable.DefaultScorePayoutTable;
+
+        public int Score => score;
 
         /// <summary>
         /// Holds the action that will be attempted on the next <see cref="Tick"/>.
@@ -55,23 +58,29 @@ namespace FF2.Core
 
         public bool ClearedAllEnemies { get; private set; }
 
+        public delegate void EventHandler<T>(State sender, T args);
+
+        // Not sure how I feel about using events here...
+        // Be careful to avoid subscribing to something that will live longer than you expect.
+        public event EventHandler<ComboInfo>? OnComboCompleted;
+        public event EventHandler<SpawnItem>? OnCatalystSpawned;
+
         public State(Grid grid, ISpawnDeck spawnDeck)
         {
             this.grid = grid;
-            this.tickCalculations = new TickCalculations(grid);
             this.fallSampler = new FallAnimationSampler(grid);
             this.spawnDeck = spawnDeck;
             mover = null;
             Kind = StateKind.Spawning;
             corruption = new CorruptionManager();
-            currentCombo = Combo.Empty;
+            currentCombo = ComboInfo.Empty;
             penalties = new PenaltyManager();
             penaltySchedule = PenaltySchedule.BasicSchedule(10 * 1000);
         }
 
         public IReadOnlyGrid Grid { get { return grid; } }
 
-        public ITickCalculations TickCalculations => this.tickCalculations;
+        public ITickCalculations TickCalculations => grid.TickCalc;
 
         public static State Create(SeededSettings ss)
         {
@@ -164,18 +173,9 @@ namespace FF2.Core
 
             Slowmo = false;
             var colors = spawnDeck.Pop();
-            mover = NewMover(colors, grid);
+            mover = grid.NewMover(colors);
             OnCatalystSpawned?.Invoke(this, colors);
             return true;
-        }
-
-        private static Mover NewMover(SpawnItem item, IReadOnlyGrid grid)
-        {
-            var occA = Occupant.MakeCatalyst(item.LeftColor, Direction.Right);
-            var occB = Occupant.MakeCatalyst(item.RightColor, Direction.Left);
-            var locA = new Loc(grid.Width / 2 - 1, 0);
-            var locB = locA.Neighbor(Direction.Right);
-            return new Mover(locA, occA, locB, occB);
         }
 
         public Command? Approach(Orientation o)
@@ -185,27 +185,37 @@ namespace FF2.Core
 
         private bool Destroy()
         {
-            var result = grid.Destroy(tickCalculations);
+            var newCombo = currentCombo;
+            var result = grid.Destroy(ref newCombo);
             if (result)
             {
-                currentCombo = currentCombo.AfterDestruction(tickCalculations);
+                currentCombo = newCombo;
             }
             else
             {
-                if (currentCombo.AdjustedGroupCount > 0)
+                if (currentCombo.TotalNumGroups > 0)
                 {
-                    corruption = corruption.OnComboCompleted(currentCombo);
-                    penalties.OnComboCompleted(currentCombo);
+                    var rewardCombo = currentCombo.ComboToReward;
+                    var scorePayout = GetHypotheticalScore(currentCombo);
+                    score += scorePayout;
+                    //Console.WriteLine($"Score: {score} (+{scorePayout})");
+                    corruption = corruption.OnComboCompleted(rewardCombo);
+                    penalties.OnComboCompleted(rewardCombo);
                     OnComboCompleted?.Invoke(this, currentCombo);
                 }
-                currentCombo = Combo.Empty;
+                currentCombo = ComboInfo.Empty;
             }
             Slowmo = Slowmo || result;
             return result;
         }
 
-        public event EventHandler<Combo>? OnComboCompleted;
-        public event EventHandler<SpawnItem>? OnCatalystSpawned;
+        /// <summary>
+        /// If the given <paramref name="combo"/> were played, how much would it score?
+        /// </summary>
+        public int GetHypotheticalScore(ComboInfo combo)
+        {
+            return scorePayoutTable.GetPayout(combo.ComboToReward.AdjustedGroupCount);
+        }
 
         /// <summary>
         /// Return false if nothing changes, or if <see cref="Kind"/> is the only thing that changes.
@@ -213,8 +223,7 @@ namespace FF2.Core
         /// </summary>
         public bool Tick(Moment now)
         {
-            tickCalculations.Reset();
-
+            grid.PreTick();
             var retval = DoTick(now);
             if (retval && grid.Stats.EnemyCount == 0)
             {
@@ -291,9 +300,10 @@ namespace FF2.Core
                 return false;
             }
 
-            var m = mover.Value.PreviewPlummet(Grid);
-            if (grid.InBounds(m.LocA) && grid.InBounds(m.LocB))
+            var m2 = mover.Value.PreviewPlummet(Grid);
+            if (m2.HasValue)
             {
+                var m = m2.Value;
                 PreviousMove = m.GetMove(didBurst: false);
                 grid.Set(m.LocA, m.OccA);
                 grid.Set(m.LocB, m.OccB);

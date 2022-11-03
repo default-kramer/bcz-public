@@ -1,7 +1,6 @@
 using FF2.Core;
 using FF2.Core.ReplayModel;
 using FF2.Godot;
-using FF2.Godot.Controls;
 using Godot;
 using System;
 using System.Collections.Generic;
@@ -12,33 +11,26 @@ public class GameViewerControl : Control
 {
     private ILogic logic = NullLogic.Instance;
 
-    public void SolvePuzzles(IReadOnlyList<Puzzle> puzzles)
-    {
-        DoPuzzle(new PuzzleProvider(puzzles, 0));
-    }
-
-    private void DoPuzzle(PuzzleProvider puzzleProvider)
+    internal void SetLogic(ILogic newLogic)
     {
         logic.Cleanup();
-        var puzzle = puzzleProvider.Puzzle;
-        var state = new State(Grid.Clone(puzzle.InitialGrid), puzzle.MakeDeck());
-        var ticker = new DotnetTicker(state, NullReplayCollector.Instance);
-        SetupChildren(state, ticker);
-        logic = new SolvePuzzleLogic(ticker, this, puzzleProvider);
+        logic = newLogic;
+        logic.Initialize(members);
+        members.GameOverMenu.Visible = false;
+
+        OnSizeChanged(); // In case the grid size changed
     }
 
     public void WatchReplay(string filepath)
     {
         logic.Cleanup();
         var driver = ReplayReader.BuildReplayDriver(filepath);
-        SetupChildren(driver.Ticker.state, driver.Ticker);
-        logic = new WatchReplayLogic(driver);
+        var newLogic = new WatchReplayLogic(driver);
+        SetLogic(newLogic);
     }
 
     private void NewGame(SeededSettings ss)
     {
-        logic.Cleanup();
-
         var state = State.Create(ss);
         ReplayWriter? replayWriter = null;
         var listReplayCollector = new ListReplayCollector();
@@ -60,20 +52,11 @@ public class GameViewerControl : Control
         }
 
         var ticker = new DotnetTicker(state, replayCollector);
-        SetupChildren(state, ticker);
-
-        this.logic = new LiveGameLogic(replayWriter, ticker, state);
+        var newLogic = new LiveGameLogic(replayWriter, ticker, members);
+        SetLogic(newLogic);
     }
 
-    private void SetupChildren(State state, Ticker ticker)
-    {
-        members.GridViewer.SetModel(new GridViewerModel(state, ticker));
-        members.PenaltyViewer.Model = state.MakePenaltyModel(ticker);
-        members.QueueViewer.Model = state.MakeQueueModel();
-        members.GameOverMenu.Visible = false;
-    }
-
-    readonly struct Members
+    internal readonly struct Members
     {
         public readonly PenaltyViewerControl PenaltyViewer;
         public readonly GridViewerControl GridViewer;
@@ -184,7 +167,7 @@ public class GameViewerControl : Control
         members.PenaltyViewer.Update();
         members.QueueViewer.Update();
 
-        this.logic.CheckGameOver(members);
+        this.logic.CheckGameOver();
     }
 
     public void StartGame(SeededSettings ss)
@@ -193,32 +176,54 @@ public class GameViewerControl : Control
         members.GameOverMenu.Visible = false;
     }
 
-    interface ILogic
+    internal interface ILogic
     {
         void Cleanup();
         void Process(float delta);
         void HandleInput();
-        void CheckGameOver(Members members);
+        void CheckGameOver();
+        void Initialize(Members members);
     }
 
     sealed class NullLogic : ILogic
     {
-        public void Cleanup() { }
-        public void Process(float delta) { }
-        public void HandleInput() { }
-        public void CheckGameOver(Members members) { }
-
         private NullLogic() { }
 
         public static readonly NullLogic Instance = new NullLogic();
+
+        public void Cleanup() { }
+        public void Process(float delta) { }
+        public void HandleInput() { }
+        public void CheckGameOver() { }
+
+        public void Initialize(Members members)
+        {
+            members.GridViewer.SetLogic(GridViewerControl.NullLogic.Instance);
+            members.GridViewer.Visible = true;
+            // TODO should set a null model here... but we'll just make them invisible for now
+            members.PenaltyViewer.Visible = false;
+            members.QueueViewer.Visible = false;
+        }
     }
 
-    sealed class UserInputManager
+    private static void StandardInitialize(Members members, Ticker ticker)
     {
-        private bool holdingDrop = false;
-        private readonly DotnetTicker ticker;
+        members.GridViewer.SetLogic(ticker);
+        var state = ticker.state;
+        members.PenaltyViewer.Model = state.MakePenaltyModel(ticker);
+        members.QueueViewer.Model = state.MakeQueueModel();
 
-        public UserInputManager(DotnetTicker ticker)
+        members.GridViewer.Visible = true;
+        members.PenaltyViewer.Visible = true;
+        members.QueueViewer.Visible = true;
+    }
+
+    internal abstract class LogicBase : ILogic
+    {
+        protected readonly DotnetTicker ticker;
+        private bool holdingDrop = false;
+
+        protected LogicBase(DotnetTicker ticker)
         {
             this.ticker = ticker;
         }
@@ -228,7 +233,7 @@ public class GameViewerControl : Control
             return ticker.HandleCommand(command);
         }
 
-        public void HandleInput()
+        public virtual void HandleInput()
         {
             if (Input.IsActionJustPressed("game_left"))
             {
@@ -264,24 +269,35 @@ public class GameViewerControl : Control
                 }
             }
         }
-    }
 
-    sealed class LiveGameLogic : ILogic
-    {
-        private readonly ReplayWriter? replayWriter;
-        private readonly DotnetTicker ticker;
-        private readonly State state;
-        private readonly UserInputManager userInputManager;
-
-        public LiveGameLogic(ReplayWriter? replayWriter, DotnetTicker ticker, State state)
+        public virtual void Process(float delta)
         {
-            this.replayWriter = replayWriter;
-            this.ticker = ticker;
-            this.state = state;
-            this.userInputManager = new UserInputManager(ticker);
+            ticker._Process(delta);
         }
 
-        public void Cleanup()
+        public virtual void Cleanup() { }
+
+        public virtual void CheckGameOver() { }
+
+        public void Initialize(Members members)
+        {
+            StandardInitialize(members, ticker);
+        }
+    }
+
+    sealed class LiveGameLogic : LogicBase
+    {
+        private readonly ReplayWriter? replayWriter;
+        private readonly Members members;
+
+        public LiveGameLogic(ReplayWriter? replayWriter, DotnetTicker ticker, Members members)
+            : base(ticker)
+        {
+            this.replayWriter = replayWriter;
+            this.members = members;
+        }
+
+        public override void Cleanup()
         {
             if (replayWriter != null)
             {
@@ -291,18 +307,9 @@ public class GameViewerControl : Control
             }
         }
 
-        public void Process(float delta)
+        public override void CheckGameOver()
         {
-            ticker._Process(delta);
-        }
-
-        public void HandleInput()
-        {
-            userInputManager.HandleInput();
-        }
-
-        public void CheckGameOver(Members members)
-        {
+            var state = ticker.state;
             if (state.Kind == StateKind.GameOver && !members.GameOverMenu.Visible)
             {
                 members.GameOverMenu.OnGameOver(state);
@@ -319,7 +326,7 @@ public class GameViewerControl : Control
             this.replayDriver = replayDriver;
         }
 
-        public void CheckGameOver(Members members) { }
+        public void CheckGameOver() { }
 
         public void Cleanup() { }
 
@@ -339,61 +346,10 @@ public class GameViewerControl : Control
             }
             replayDriver.Advance(now);
         }
-    }
 
-    readonly struct PuzzleProvider
-    {
-        private readonly IReadOnlyList<Puzzle> Puzzles;
-        private readonly int Index;
-
-        public PuzzleProvider(IReadOnlyList<Puzzle> puzzles, int index)
+        public void Initialize(Members members)
         {
-            this.Puzzles = puzzles;
-            this.Index = index;
-        }
-
-        public PuzzleProvider Next()
-        {
-            return new PuzzleProvider(Puzzles, (Index + 1) % Puzzles.Count);
-        }
-
-        public Puzzle Puzzle => Puzzles[Index];
-    }
-
-    class SolvePuzzleLogic : ILogic
-    {
-        private readonly DotnetTicker ticker;
-        private readonly UserInputManager userInputManager;
-        private readonly GameViewerControl parent;
-        private readonly PuzzleProvider puzzleProvider;
-
-        public SolvePuzzleLogic(DotnetTicker ticker, GameViewerControl parent, PuzzleProvider puzzleProvider)
-        {
-            this.ticker = ticker;
-            this.userInputManager = new UserInputManager(ticker);
-            this.parent = parent;
-            this.puzzleProvider = puzzleProvider;
-        }
-
-        public void CheckGameOver(Members members)
-        {
-            var state = ticker.state;
-            if (state.Kind == StateKind.GameOver)
-            {
-                parent.DoPuzzle(puzzleProvider.Next());
-            }
-        }
-
-        public void Cleanup() { }
-
-        public void HandleInput()
-        {
-            userInputManager.HandleInput();
-        }
-
-        public void Process(float delta)
-        {
-            ticker._Process(delta);
+            StandardInitialize(members, replayDriver.Ticker);
         }
     }
 }

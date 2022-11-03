@@ -7,6 +7,23 @@ using System.Threading.Tasks;
 
 namespace FF2.Core
 {
+    public readonly ref struct GridSize
+    {
+        public readonly int Width;
+        public readonly int Height;
+
+        public GridSize(IReadOnlyGrid grid)
+        {
+            this.Width = grid.Width;
+            this.Height = grid.Height;
+        }
+
+        public int LocIndex(Loc loc)
+        {
+            return loc.Y * Width + loc.X;
+        }
+    }
+
     /// <summary>
     /// A read-only reference to a grid which might be mutated by someone else.
     /// </summary>
@@ -14,13 +31,14 @@ namespace FF2.Core
     {
         int Width { get; }
         int Height { get; }
+        GridSize Size { get; }
         Occupant Get(Loc loc);
-
-        int Index(Loc loc);
 
         bool InBounds(Loc loc);
 
         bool IsVacant(Loc loc);
+
+        Mover NewMover(SpawnItem item);
 
         ReadOnlySpan<Occupant> ToSpan();
 
@@ -29,9 +47,18 @@ namespace FF2.Core
         int HashGrid();
 
 #if DEBUG
+        /// <summary>
+        /// Just for tests. This is a property so you can easily grab it when debugging.
+        /// </summary>
         string PrintGrid { get; }
 
-        bool CheckGridString(params string[] rows);
+        /// <summary>
+        /// Just for tests. Returns "ok" if everything matches.
+        /// Otherwise returns a diff that should print well in test output.
+        /// Note: If <paramref name="rows"/> is exactly one string which contains any newlines,
+        /// we assume the caller is passing multiple rows separated by newlines.
+        /// </summary>
+        string DiffGridString(params string[] rows);
 #endif
     }
 
@@ -44,19 +71,29 @@ namespace FF2.Core
     public readonly struct GridStats
     {
         public readonly int EnemyCount;
+        public readonly int OccupantCount;
 
         public GridStats(Grid grid)
         {
             EnemyCount = 0;
+            OccupantCount = 0;
 
             for (int x = 0; x < grid.Width; x++)
             {
                 for (int y = 0; y < grid.Height; y++)
                 {
                     var occ = grid.Get(new Loc(x, y));
-                    if (occ.Kind == OccupantKind.Enemy)
+                    switch (occ.Kind)
                     {
-                        EnemyCount++;
+                        case OccupantKind.Enemy:
+                            EnemyCount++;
+                            OccupantCount++;
+                            break;
+                        case OccupantKind.None:
+                            break;
+                        default:
+                            OccupantCount++;
+                            break;
                     }
                 }
             }
@@ -91,6 +128,8 @@ namespace FF2.Core
 
         int IReadOnlyGrid.Height => Height;
 
+        public GridSize Size => new GridSize(this);
+
         public Occupant Get(Loc loc)
         {
             return cells[Index(loc)];
@@ -104,6 +143,20 @@ namespace FF2.Core
         public int Index(Loc loc)
         {
             return loc.Y * Width + loc.X;
+        }
+
+        public Mover NewMover(SpawnItem item)
+        {
+            var occA = Occupant.MakeCatalyst(item.LeftColor, Direction.Right);
+            var occB = Occupant.MakeCatalyst(item.RightColor, Direction.Left);
+            var locA = new Loc(Width / 2 - 1, 0);
+            var locB = locA.Neighbor(Direction.Right);
+            return new Mover(locA, occA, locB, occB);
+        }
+
+        public Loc Loc(int index)
+        {
+            return new Loc(index % Width, index / Width);
         }
 
         public bool IsVacant(Loc loc)
@@ -131,25 +184,41 @@ namespace FF2.Core
             return hash;
         }
 
+        public void Clear()
+        {
+            cells.AsSpan().Fill(Occupant.None);
+        }
+
 #if DEBUG
         const string Newline = "\n";
 
-        public string PrintGrid
+        private string BuildGridString()
         {
-            get
+            var sb = new StringBuilder();
+            for (int y = Height - 1; y >= 0; y--)
             {
-                var sb = new StringBuilder();
-                for (int y = Height - 1; y >= 0; y--)
+                sb.Append(Newline);
+                for (int x = 0; x < Width; x++)
                 {
-                    sb.Append(Newline);
-                    for (int x = 0; x < Width; x++)
-                    {
-                        var occ = Get(new Loc(x, y));
-                        sb.Append(PrintOcc(occ)).Append(" ");
-                    }
+                    var occ = Get(new Loc(x, y));
+                    sb.Append(PrintOcc(occ)).Append(" ");
                 }
-                return sb.ToString();
             }
+            return sb.ToString();
+        }
+
+        public string PrintGrid => BuildGridString();
+
+        public static char GetLowercase(Color color)
+        {
+            return color switch
+            {
+                Color.Red => 'r',
+                Color.Yellow => 'y',
+                Color.Blue => 'b',
+                Color.Blank => 'o',
+                _ => throw new Exception("TODO: " + color),
+            };
         }
 
         private static string PrintOcc(Occupant occ)
@@ -158,43 +227,88 @@ namespace FF2.Core
             {
                 return "  ";
             }
-
-            string x = occ.Color switch
+            if (occ.Kind == OccupantKind.Enemy && occ.Color == Color.Blank)
             {
-                Color.Red => "r",
-                Color.Yellow => "y",
-                Color.Blue => "b",
-                Color.Blank => "o",
-                _ => throw new Exception("TODO: " + occ.Color),
+                return "[]";
+            }
+
+            char c = GetLowercase(occ.Color);
+
+            string str = occ.Direction switch
+            {
+                Direction.Left => $"{c}>",
+                Direction.Right => $"<{c}",
+                _ => $"{c}{c}",
             };
 
             if (occ.Kind == OccupantKind.Enemy)
             {
-                x = x.ToUpperInvariant();
+                str = str.ToUpperInvariant();
             }
 
-            return occ.Direction switch
-            {
-                Direction.Left => $"{x}>",
-                Direction.Right => $"<{x}",
-                _ => $"{x}{x}",
-            };
+            return str;
         }
 
-        public bool CheckGridString(params string[] rows)
+        public string DiffGridString(params string[] expectedRows)
         {
-            string expected = rows[0];
-            if (rows.Length > 1)
+            if (expectedRows.Length == 1 && expectedRows.Single().Contains("\n"))
             {
-                expected = string.Join(Newline, rows);
+                expectedRows = expectedRows.Single().Split(Lists.Newlines, StringSplitOptions.RemoveEmptyEntries);
             }
-            expected = expected.Replace("\r\n", Newline);
-            if (expected.StartsWith(Newline))
+            if (expectedRows.Length == 0)
             {
-                expected = expected.Substring(Newline.Length);
+                return "No expectations given";
             }
-            var actual = PrintGrid;
-            return actual.EndsWith(expected);
+
+            var gridString = BuildGridString();
+            var actualRows = gridString.Split(Lists.Newlines, StringSplitOptions.RemoveEmptyEntries);
+
+            if (expectedRows.Length > actualRows.Length)
+            {
+                return $"Expected at least {expectedRows.Length} rows, but grid only has {actualRows.Length}";
+            }
+
+            var diff = new StringBuilder();
+            bool isDifferent = false;
+            int extra = actualRows.Length - expectedRows.Length;
+
+            for (int i = 0; i < expectedRows.Length; i++)
+            {
+                string expectedRow = expectedRows[i];
+                string actualRow;
+                int actualIndex = i + extra;
+                if (actualIndex < actualRows.Length && actualIndex > -1)
+                {
+                    actualRow = actualRows[actualIndex];
+                }
+                else
+                {
+                    actualRow = "<< out of bounds >>";
+                }
+                string prefix = "  ";
+                if (expectedRow != actualRow)
+                {
+                    prefix = "! ";
+                    isDifferent = true;
+                }
+                // The leading newline is important for unit test output
+                diff.AppendLine().Append($"{prefix}Expected |{expectedRow}| Actual |{actualRow}|");
+            }
+
+            if (isDifferent)
+            {
+                return diff.ToString();
+            }
+
+            for (int i = 0; i < extra; i++)
+            {
+                if (!string.IsNullOrWhiteSpace(actualRows[i]))
+                {
+                    return "ok:partial";
+                }
+            }
+
+            return "ok";
         }
 #endif
     }
@@ -205,6 +319,9 @@ namespace FF2.Core
         private readonly bool[] assumeUnblockedBuffer;
         private readonly GridDestroyHelper.Group[] groupsBuffer;
         private GridStats? stats = null; // null when recalculation is needed
+        private readonly DestructionCalculations tickCalculations;
+
+        public ITickCalculations TickCalc => tickCalculations;
 
         public GridStats Stats
         {
@@ -221,6 +338,7 @@ namespace FF2.Core
             this.blockedFlagBuffer = new GridFallHelper.BlockedFlag[size];
             this.assumeUnblockedBuffer = new bool[size];
             this.groupsBuffer = new GridDestroyHelper.Group[size];
+            this.tickCalculations = new DestructionCalculations(this);
         }
 
         public static Grid Create(int width, int height)
@@ -245,6 +363,11 @@ namespace FF2.Core
             return grid;
         }
 
+        public void CopyFrom(IReadOnlyGrid copyFrom)
+        {
+            copyFrom.ToSpan().CopyTo(this.cells);
+        }
+
         public override IImmutableGrid MakeImmutable()
         {
             return new ImmutableGrid(this);
@@ -256,14 +379,97 @@ namespace FF2.Core
             cells[Index(loc)] = occ;
         }
 
+        /// <summary>
+        /// Set the given <paramref name="loc"/> to <paramref name="newOcc"/>.
+        /// If the previous occupant was paired, update its partner accordingly.
+        /// </summary>
+        public RevertInfo SetWithDivorce(Loc loc, Occupant newOcc)
+        {
+            stats = null;
+
+            var index = Index(loc);
+            var current = cells[index];
+            var revertInfo = new RevertInfo(index, current, index, current);
+
+            if (current.Kind == OccupantKind.Catalyst && current.Direction != Direction.None)
+            {
+                var otherLoc = loc.Neighbor(current.Direction);
+                var otherIndex = Index(otherLoc);
+                var otherOcc = cells[otherIndex];
+                if (otherOcc.Kind == OccupantKind.Catalyst)
+                {
+                    revertInfo = new RevertInfo(index, current, otherIndex, otherOcc);
+                    cells[otherIndex] = otherOcc.SetDirection(Direction.None);
+                }
+            }
+
+            cells[index] = newOcc;
+            return revertInfo;
+        }
+
+        public void Revert(RevertInfo r)
+        {
+            stats = null;
+            cells[r.index1] = r.occupant1;
+            cells[r.index2] = r.occupant2;
+        }
+
+        public readonly ref struct RevertInfo
+        {
+            public readonly int index1;
+            public readonly Occupant occupant1;
+            public readonly int index2;
+            public readonly Occupant occupant2;
+
+            public RevertInfo(int index1, Occupant occupant1, int index2, Occupant occupant2)
+            {
+                this.index1 = index1;
+                this.occupant1 = occupant1;
+                this.index2 = index2;
+                this.occupant2 = occupant2;
+            }
+        }
+
+        public bool FallCompletely(Span<int> fallCountBuffer)
+        {
+            bool retval = Fall(fallCountBuffer);
+            while (Fall(fallCountBuffer)) { }
+            return retval;
+        }
+
         public bool Fall(Span<int> fallCountBuffer)
         {
             return GridFallHelper.Fall(this, blockedFlagBuffer, assumeUnblockedBuffer, fallCountBuffer);
         }
 
-        internal bool Destroy(TickCalculations calculations)
+        /// <summary>
+        /// Test whether <see cref="Fall"/> will return true without mutating the grid.
+        /// </summary>
+        public bool CanFall()
         {
-            return new GridDestroyHelper(this, groupsBuffer, calculations).Execute(this);
+            return GridFallHelper.CanFall(this, blockedFlagBuffer, assumeUnblockedBuffer);
+        }
+
+        /// <summary>
+        /// TODO - I refactored the "tick calcluations" stuff and introduced a weird issue that (seemingly) only affects the drawing.
+        /// Probably has to do with GetDestroyedOccupant preserving the recently-destroyed occupants for too long.
+        /// For now I'll just make sure to call Reset() before every tick to preserve the old behavior.
+        /// Better would be for that UI code to check the state to know whether it should call GetDestroyedOccupant or not.
+        /// </summary>
+        internal void PreTick()
+        {
+            tickCalculations.Reset();
+        }
+
+        internal bool Destroy(ref ComboInfo info)
+        {
+            tickCalculations.Reset();
+            bool result = new GridDestroyHelper(this, groupsBuffer, tickCalculations).Execute(this);
+            if (result)
+            {
+                info = info.AfterDestruction(tickCalculations);
+            }
+            return result;
         }
 
         public void Burst()
@@ -274,13 +480,76 @@ namespace FF2.Core
                 {
                     var loc = new Loc(x, y);
                     var occ = Get(loc);
-                    if (occ.Kind != OccupantKind.None && occ.Color == Color.Blank)
+                    if (occ.Kind == OccupantKind.Catalyst && occ.Color == Color.Blank)
                     {
                         Set(loc, Occupant.None);
                     }
                 }
             }
             GridDestroyHelper.PostDestroy(this);
+        }
+
+        public int CountEmptyBottomRows()
+        {
+            int y = 0;
+            while (y < Height)
+            {
+                for (int x = 0; x < Width; x++)
+                {
+                    if (!IsVacant(new Loc(x, y)))
+                    {
+                        return y;
+                    }
+                }
+                y++;
+            }
+            return y;
+        }
+
+        public int ShiftDown(int count)
+        {
+            for (int y = 0; y < Height; y++)
+            {
+                int y2 = y + count;
+                if (y2 < Height)
+                {
+                    for (int x = 0; x < Width; x++)
+                    {
+                        Set(new Loc(x, y), Get(new Loc(x, y2)));
+                    }
+                }
+                else
+                {
+                    for (int x = 0; x < Width; x++)
+                    {
+                        Set(new Loc(x, y), Occupant.None);
+                    }
+                }
+            }
+
+            return count;
+        }
+
+        /// <summary>
+        /// Place the given <paramref name="move"/> onto the current grid, or return false if there is no room.
+        /// The new occupants will be positioned as if the user performed a plummet.
+        /// You can follow this up with calls to Burst() and Fall() if you want to simulate a burst.
+        /// Then you are ready to start the destroy/fall cycle.
+        /// </summary>
+        public bool Place(Move move)
+        {
+            var mover = NewMover(move.SpawnItem);
+            mover = mover.JumpTo(move.Orientation);
+            mover = mover.ToTop(Height);
+            var plummet = mover.PreviewPlummet(this);
+            if (plummet.HasValue)
+            {
+                mover = plummet.Value;
+                Set(mover.LocA, mover.OccA);
+                Set(mover.LocB, mover.OccB);
+                return true;
+            }
+            return false;
         }
     }
 

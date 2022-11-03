@@ -151,10 +151,10 @@ namespace FF2.Core.ReplayModel
             return new ReplayDriver(ticker, Game.ReplayCollector.Commands);
         }
 
-        public IReadOnlyList<Puzzle> GetPuzzles()
+        public IReadOnlyList<Puzzle> GetRawPuzzles()
         {
             var ticker = new Ticker(BuildState(), NullReplayCollector.Instance);
-            return Puzzle.FindPuzzles(ticker, Game.ReplayCollector.Commands);
+            return Puzzle.FindRawPuzzles(ticker, Game.ReplayCollector.Commands);
         }
     }
 }

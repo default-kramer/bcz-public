@@ -28,19 +28,30 @@ namespace FF2.Core
         /// </param>
         public static bool Fall(Grid grid, Span<BlockedFlag> results, Span<bool> assumeUnblocked, Span<int> fallCounter)
         {
-            results.Fill(BlockedFlag.Unsure);
-            assumeUnblocked.Fill(false);
-
-            CalcBlocked(grid, results, assumeUnblocked);
-
+            Calculate(grid, results, assumeUnblocked);
             return ApplyResults(grid, results, fallCounter);
         }
 
-        private static void CalcBlocked(Grid grid, Span<BlockedFlag> results, Span<bool> assumeUnblocked)
+        public static bool CanFall(IReadOnlyGrid grid, Span<BlockedFlag> results, Span<bool> assumeUnblocked)
         {
-            for (int y = 0; y < grid.Height; y++)
+            Calculate(grid, results, assumeUnblocked);
+            return TestResults(grid, results);
+        }
+
+        private static void Calculate(IReadOnlyGrid grid, Span<BlockedFlag> results, Span<bool> assumeUnblocked)
+        {
+            results.Fill(BlockedFlag.Unsure);
+            assumeUnblocked.Fill(false);
+            CalcBlocked(grid, results, assumeUnblocked);
+        }
+
+        private static void CalcBlocked(IReadOnlyGrid grid, Span<BlockedFlag> results, Span<bool> assumeUnblocked)
+        {
+            var size = grid.Size;
+
+            for (int y = 0; y < size.Height; y++)
             {
-                for (int x = 0; x < grid.Width; x++)
+                for (int x = 0; x < size.Width; x++)
                 {
                     var loc = new Loc(x, y);
                     // IsBlocked(...) is a recursive function.
@@ -49,7 +60,7 @@ namespace FF2.Core
                     // So we pass it as a ReadOnlySpan to guarantee this.
                     ReadOnlySpan<BlockedFlag> readOnlyResults = results;
                     bool blocked = IsBlocked(grid, readOnlyResults, assumeUnblocked, loc);
-                    results[grid.Index(loc)] = blocked ? BlockedFlag.Blocked : BlockedFlag.Unblocked;
+                    results[size.LocIndex(loc)] = blocked ? BlockedFlag.Blocked : BlockedFlag.Unblocked;
                 }
             }
         }
@@ -62,14 +73,16 @@ namespace FF2.Core
         /// The non-trivial case is to assume that the loc is unblocked and recursively check
         /// that all of its dependencies are also unblocked.
         /// </summary>
-        private static bool IsBlocked(Grid grid, ReadOnlySpan<BlockedFlag> results, Span<bool> assumeUnblocked, Loc loc)
+        private static bool IsBlocked(IReadOnlyGrid grid, ReadOnlySpan<BlockedFlag> results, Span<bool> assumeUnblocked, Loc loc)
         {
+            var size = grid.Size;
+
             if (!grid.InBounds(loc))
             {
                 return true; // can't fall off the grid
             }
 
-            var idx = grid.Index(loc);
+            var idx = size.LocIndex(loc);
             if (assumeUnblocked[idx])
             {
                 return false;
@@ -128,8 +141,7 @@ namespace FF2.Core
                     var fromIndex = grid.Index(fromLoc);
                     var occ = grid.Get(fromLoc);
 
-                    if (occ.Kind != OccupantKind.None
-                        && results[fromIndex] == BlockedFlag.Unblocked)
+                    if (CanFall(occ, results[fromIndex]))
                     {
                         var toLoc = fromLoc.Neighbor(Direction.Down);
                         grid.Set(toLoc, occ);
@@ -143,6 +155,32 @@ namespace FF2.Core
             }
 
             return any;
+        }
+
+        static bool CanFall(Occupant occ, BlockedFlag blocked)
+        {
+            return occ.Kind != OccupantKind.None && blocked == BlockedFlag.Unblocked;
+        }
+
+        static bool TestResults(IReadOnlyGrid grid, ReadOnlySpan<BlockedFlag> results)
+        {
+            var size = grid.Size;
+
+            for (int y = 1; y < grid.Height; y++)
+            {
+                for (int x = 0; x < grid.Width; x++)
+                {
+                    var loc = new Loc(x, y);
+                    var index = size.LocIndex(loc);
+                    var occ = grid.Get(loc);
+                    if (CanFall(occ, results[index]))
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
         }
     }
 }

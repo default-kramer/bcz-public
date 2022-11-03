@@ -6,6 +6,10 @@ using System.Threading.Tasks;
 
 namespace FF2.Core
 {
+    /// <summary>
+    /// A read-only view of the <see cref="DestructionCalculations"/>.
+    /// (This should probably be renamed to IDestructionCalculations...)
+    /// </summary>
     public interface ITickCalculations
     {
         /// <summary>
@@ -24,9 +28,9 @@ namespace FF2.Core
     }
 
     /// <summary>
-    /// Used to capture information during a call to <see cref="State.Tick(TickCalculations)"/>.
+    /// Used to accumulate information during the <see cref="Grid.Destroy"/> process.
     /// </summary>
-    sealed class TickCalculations : ITickCalculations
+    sealed class DestructionCalculations : ITickCalculations
     {
         /// <summary>
         /// For the background shader.
@@ -42,10 +46,12 @@ namespace FF2.Core
 
         private Occupant[] destroyedOccupants;
 
-        public int NumVerticalGroups;
-        public int NumHorizontalGroups;
+        public int NumVerticalGroupsLoose;
+        public int NumHorizontalGroupsLoose;
+        public int NumVerticalGroupsStrict;
+        public int NumHorizontalGroupsStrict;
 
-        public TickCalculations(IReadOnlyGrid grid)
+        public DestructionCalculations(IReadOnlyGrid grid)
         {
             destroyedOccupants = new Occupant[grid.Width * grid.Height];
         }
@@ -58,19 +64,29 @@ namespace FF2.Core
             ColumnDestructionBitmap = 0;
             RowDestructionBitmap = 0;
             destroyedOccupants.AsSpan().Fill(Occupant.None);
-            NumVerticalGroups = 0;
-            NumHorizontalGroups = 0;
+            NumVerticalGroupsLoose = 0;
+            NumHorizontalGroupsLoose = 0;
+            NumVerticalGroupsStrict = 0;
+            NumHorizontalGroupsStrict = 0;
         }
 
-        public void AddColumnDestruction(int x)
+        public void AddColumnDestruction(int x, bool hasEnemy)
         {
-            NumVerticalGroups++;
+            NumVerticalGroupsLoose++;
+            if (hasEnemy)
+            {
+                NumVerticalGroupsStrict++;
+            }
             ColumnDestructionBitmap |= 1 << x;
         }
 
-        public void AddRowDestruction(int y, IReadOnlyGrid grid)
+        public void AddRowDestruction(int y, IReadOnlyGrid grid, bool hasEnemy)
         {
-            NumHorizontalGroups++;
+            NumHorizontalGroupsLoose++;
+            if (hasEnemy)
+            {
+                NumHorizontalGroupsStrict++;
+            }
             y = grid.Height - 1 - y; // the shader uses Y=0 at the top
             RowDestructionBitmap |= 1 << y;
         }
@@ -83,12 +99,12 @@ namespace FF2.Core
                 destroyedOccupants = new Occupant[size];
             }
 
-            destroyedOccupants[grid.Index(loc)] = occupant;
+            destroyedOccupants[loc.ToIndex(grid)] = occupant;
         }
 
         public Occupant GetDestroyedOccupant(Loc loc, IReadOnlyGrid grid)
         {
-            return destroyedOccupants[grid.Index(loc)];
+            return destroyedOccupants[loc.ToIndex(grid)];
         }
     }
 }

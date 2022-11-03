@@ -39,6 +39,23 @@ namespace FF2.Core
             }
         }
 
+        public int ToIndex(IReadOnlyGrid grid)
+        {
+            return Y * grid.Width + X;
+        }
+
+        public static Loc FromIndex(int index, IReadOnlyGrid grid)
+        {
+            var width = grid.Width;
+            return new Loc(index % width, index / width);
+        }
+
+        public static Loc FromIndex(int index, GridSize size)
+        {
+            var width = size.Width;
+            return new Loc(index % width, index / width);
+        }
+
         public static bool operator ==(Loc a, Loc b)
         {
             return a.X == b.X && a.Y == b.Y;
@@ -57,6 +74,11 @@ namespace FF2.Core
         public override int GetHashCode()
         {
             return base.GetHashCode();
+        }
+
+        public override string ToString()
+        {
+            return $"(Loc {X} {Y})";
         }
     }
 }
