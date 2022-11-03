@@ -27,7 +27,7 @@ namespace FF2.Core
 
         public int TotalNumGroups => PermissiveCombo.NumVerticalGroups + PermissiveCombo.NumHorizontalGroups;
 
-        internal ComboInfo AfterDestruction(GTickCalculations calculations)
+        internal ComboInfo AfterDestruction(DestructionCalculations calculations)
         {
             var strict2 = StrictCombo.AfterDestruction(calculations.NumVerticalGroupsStrict, calculations.NumHorizontalGroupsStrict);
             var perm2 = PermissiveCombo.AfterDestruction(calculations.NumVerticalGroupsLoose, calculations.NumHorizontalGroupsLoose);

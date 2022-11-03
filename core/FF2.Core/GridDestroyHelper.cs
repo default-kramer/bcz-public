@@ -14,9 +14,9 @@ namespace FF2.Core
     {
         private readonly IReadOnlyGrid grid;
         private readonly Group[] groups;
-        private readonly GTickCalculations calculations;
+        private readonly DestructionCalculations calculations;
 
-        public GridDestroyHelper(IReadOnlyGrid grid, Group[] groupsBuffer, GTickCalculations calculations)
+        public GridDestroyHelper(IReadOnlyGrid grid, Group[] groupsBuffer, DestructionCalculations calculations)
         {
             this.grid = grid;
             this.groups = groupsBuffer;
@@ -95,7 +95,7 @@ namespace FF2.Core
             }
         }
 
-        void FindGroups(int groupCount, GTickCalculations calculations)
+        void FindGroups(int groupCount, DestructionCalculations calculations)
         {
             // For each row, find runs Left-to-Right
             for (int y = 0; y < grid.Height; y++)
@@ -118,7 +118,7 @@ namespace FF2.Core
             }
         }
 
-        private Loc HandleRun(Loc loc, Direction direction, int groupCount, GTickCalculations calculations)
+        private Loc HandleRun(Loc loc, Direction direction, int groupCount, DestructionCalculations calculations)
         {
             var occ = grid.Get(loc);
             var runColor = occ.Color;

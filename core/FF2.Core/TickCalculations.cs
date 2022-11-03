@@ -6,6 +6,10 @@ using System.Threading.Tasks;
 
 namespace FF2.Core
 {
+    /// <summary>
+    /// A read-only view of the <see cref="DestructionCalculations"/>.
+    /// (This should probably be renamed to IDestructionCalculations...)
+    /// </summary>
     public interface ITickCalculations
     {
         /// <summary>
@@ -23,11 +27,10 @@ namespace FF2.Core
         Occupant GetDestroyedOccupant(Loc loc, IReadOnlyGrid grid);
     }
 
-    // TODO rename to "DestructionCalculations" or something like that...
     /// <summary>
-    /// Used to capture information during a call to <see cref="State.Tick(TickCalculations)"/>.
+    /// Used to accumulate information during the <see cref="Grid.Destroy"/> process.
     /// </summary>
-    sealed class GTickCalculations : ITickCalculations
+    sealed class DestructionCalculations : ITickCalculations
     {
         /// <summary>
         /// For the background shader.
@@ -48,7 +51,7 @@ namespace FF2.Core
         public int NumVerticalGroupsStrict;
         public int NumHorizontalGroupsStrict;
 
-        public GTickCalculations(IReadOnlyGrid grid)
+        public DestructionCalculations(IReadOnlyGrid grid)
         {
             destroyedOccupants = new Occupant[grid.Width * grid.Height];
         }

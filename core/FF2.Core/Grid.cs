@@ -319,7 +319,7 @@ namespace FF2.Core
         private readonly bool[] assumeUnblockedBuffer;
         private readonly GridDestroyHelper.Group[] groupsBuffer;
         private GridStats? stats = null; // null when recalculation is needed
-        private readonly GTickCalculations tickCalculations;
+        private readonly DestructionCalculations tickCalculations;
 
         public ITickCalculations TickCalc => tickCalculations;
 
@@ -338,7 +338,7 @@ namespace FF2.Core
             this.blockedFlagBuffer = new GridFallHelper.BlockedFlag[size];
             this.assumeUnblockedBuffer = new bool[size];
             this.groupsBuffer = new GridDestroyHelper.Group[size];
-            this.tickCalculations = new GTickCalculations(this);
+            this.tickCalculations = new DestructionCalculations(this);
         }
 
         public static Grid Create(int width, int height)
