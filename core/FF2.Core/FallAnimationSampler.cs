@@ -6,28 +6,10 @@ using System.Threading.Tasks;
 
 namespace FF2.Core
 {
-    sealed class FallTracker : FallAnimationSampler
-    {
-        private readonly int[] swapBuffer;
-
-        public FallTracker(IReadOnlyGrid grid) : base(grid)
-        {
-            this.swapBuffer = new int[fallCountBuffer.Length];
-        }
-
-        public void Combine(FallAnimationSampler sample2)
-        {
-            var temp = swapBuffer.AsSpan();
-            temp.Fill(0);
-            Combine(this, sample2, temp);
-            temp.CopyTo(fallCountBuffer);
-        }
-    }
-
-    public class FallAnimationSampler
+    public sealed class FallAnimationSampler
     {
         private readonly IReadOnlyGrid grid;
-        protected readonly int[] fallCountBuffer;
+        private readonly int[] fallCountBuffer;
         private int? maxFall;
 
         public FallAnimationSampler(IReadOnlyGrid grid)
@@ -35,20 +17,6 @@ namespace FF2.Core
             this.grid = grid;
             this.fallCountBuffer = new int[grid.Width * grid.Height];
             ResetFallCountBuffer();
-        }
-
-        protected static void Combine(FallAnimationSampler sample1, FallAnimationSampler sample2, Span<int> newBuffer)
-        {
-            var grid = sample1.grid;
-
-            for (int i = 0; i < sample1.fallCountBuffer.Length; i++)
-            {
-                var loc = Loc.FromIndex(i, grid);
-                var drop2 = sample2.GetFall(loc);
-                var loc1 = new Loc(loc.X, loc.Y + drop2);
-                var drop1 = sample1.GetFall(loc1);
-                newBuffer[i] = drop1 + drop2;
-            }
         }
 
         internal Span<int> ResetFallCountBuffer()
@@ -69,12 +37,6 @@ namespace FF2.Core
         {
             var index = loc.ToIndex(grid);
             return fallCountBuffer[index];
-        }
-
-        public Loc GetOriginalLoc(Loc loc)
-        {
-            int drop = GetFall(loc);
-            return new Loc(loc.X, loc.Y + drop);
         }
 
         /// <summary>

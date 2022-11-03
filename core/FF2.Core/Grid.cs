@@ -56,7 +56,7 @@ namespace FF2.Core
         /// Just for tests. Returns "ok" if everything matches.
         /// Otherwise returns a diff that should print well in test output.
         /// Note: If <paramref name="rows"/> is exactly one string which contains any newlines,
-        /// we assume that caller is passing multiple rows separated by newlines.
+        /// we assume the caller is passing multiple rows separated by newlines.
         /// </summary>
         string DiffGridString(params string[] rows);
 #endif

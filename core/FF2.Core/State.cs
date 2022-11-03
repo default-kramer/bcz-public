@@ -60,10 +60,10 @@ namespace FF2.Core
 
         public delegate void EventHandler<T>(State sender, T args);
 
-        // TODO remove these where possible:
+        // Not sure how I feel about using events here...
+        // Be careful to avoid subscribing to something that will live longer than you expect.
         public event EventHandler<ComboInfo>? OnComboCompleted;
         public event EventHandler<SpawnItem>? OnCatalystSpawned;
-        public event EventHandler<FallAnimationSampler>? OnFall;
 
         public State(Grid grid, ISpawnDeck spawnDeck)
         {
@@ -193,14 +193,14 @@ namespace FF2.Core
             }
             else
             {
-                var TODO = currentCombo.PermissiveCombo;
-                if (TODO.AdjustedGroupCount > 0)
+                if (currentCombo.TotalNumGroups > 0)
                 {
+                    var rewardCombo = currentCombo.ComboToReward;
                     var scorePayout = GetHypotheticalScore(currentCombo);
                     score += scorePayout;
                     //Console.WriteLine($"Score: {score} (+{scorePayout})");
-                    corruption = corruption.OnComboCompleted(TODO);
-                    penalties.OnComboCompleted(TODO);
+                    corruption = corruption.OnComboCompleted(rewardCombo);
+                    penalties.OnComboCompleted(rewardCombo);
                     OnComboCompleted?.Invoke(this, currentCombo);
                 }
                 currentCombo = ComboInfo.Empty;
@@ -214,7 +214,7 @@ namespace FF2.Core
         /// </summary>
         public int GetHypotheticalScore(ComboInfo combo)
         {
-            return scorePayoutTable.GetPayout(combo.PermissiveCombo.AdjustedGroupCount);
+            return scorePayoutTable.GetPayout(combo.ComboToReward.AdjustedGroupCount);
         }
 
         /// <summary>
@@ -278,10 +278,6 @@ namespace FF2.Core
                 keepGoing = grid.Fall(fallCountBuffer);
             }
             Slowmo = Slowmo || result;
-            if (result)
-            {
-                OnFall?.Invoke(this, fallSampler);
-            }
             return result;
         }
 

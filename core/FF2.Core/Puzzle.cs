@@ -89,16 +89,17 @@ namespace FF2.Core
 
             ShiftDown(grid, ref winner);
 
-            // TODO everything we've done might have left floating occupants.
+            // Everything we've done might have left floating occupants.
             // This fact is (usually / always ?) irrelevant because they fall
-            // when the first move is played.
-            // WARNING! Grid is not reverted here.
+            // when the first move is played. I think...?
+            // This step may be questionable but it seems good enough for now.
             if (grid.FallCompletely(Lists.DummyBuffer)
                 && Try(grid, winner, out var candidate)
                 && candidate.IsNotWorseThan(winner))
             {
                 winner = candidate;
             }
+            // else: WARNING! Grid is not reverted here, which is OK because this is the last step.
 
             return winner.RemoveUselessMoves(0);
         }

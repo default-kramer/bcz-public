@@ -17,13 +17,21 @@ namespace FF2.Core
             this.PermissiveCombo = permissive;
         }
 
+        /// <summary>
+        /// Still TBD if I want to use the Permissive combo for all rewards.
+        /// If I ever change my mind, remove this property and review all broken call sites.
+        /// </summary>
+        public Combo ComboToReward => PermissiveCombo;
+
         public static readonly ComboInfo Empty = new ComboInfo(Combo.Empty, Combo.Empty);
+
+        public int TotalNumGroups => PermissiveCombo.NumVerticalGroups + PermissiveCombo.NumHorizontalGroups;
 
         internal ComboInfo AfterDestruction(GTickCalculations calculations)
         {
-            var s2 = StrictCombo.AfterDestruction(calculations.NumVerticalGroupsStrict, calculations.NumHorizontalGroupsStrict);
-            var p2 = PermissiveCombo.AfterDestruction(calculations.NumVerticalGroupsLoose, calculations.NumHorizontalGroupsLoose);
-            return new ComboInfo(s2, p2);
+            var strict2 = StrictCombo.AfterDestruction(calculations.NumVerticalGroupsStrict, calculations.NumHorizontalGroupsStrict);
+            var perm2 = PermissiveCombo.AfterDestruction(calculations.NumVerticalGroupsLoose, calculations.NumHorizontalGroupsLoose);
+            return new ComboInfo(strict2, perm2);
         }
 
         /// <summary>
