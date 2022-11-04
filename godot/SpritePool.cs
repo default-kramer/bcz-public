@@ -9,7 +9,7 @@ using Godot;
 
 namespace FF2.Godot
 {
-    enum SpriteKind
+    public enum SpriteKind
     {
         None,
         Single,
@@ -17,6 +17,7 @@ namespace FF2.Godot
         BlankJoined,
         BlankSingle,
         Enemy,
+        Heart,
     }
 
     readonly struct TrackedSprite
@@ -97,7 +98,11 @@ namespace FF2.Godot
                     var clone = (Sprite)template.Duplicate();
                     // Until Godot 4.0 gives us per-instance uniforms, we need to duplicate the shader also.
                     // https://godotengine.org/article/godot-40-gets-global-and-instance-shader-uniforms
-                    clone.Material = (ShaderMaterial)template.Material.Duplicate();
+                    var sm = template.Material as ShaderMaterial;
+                    if (sm != null)
+                    {
+                        clone.Material = sm.Duplicate() as ShaderMaterial;
+                    }
                     clone.Visible = true;
                     owner.AddChild(clone);
                     clone.Owner = owner;

@@ -18,6 +18,12 @@ namespace FF2.Core
             this.Height = grid.Height;
         }
 
+        public GridSize(int w, int h)
+        {
+            this.Width = w;
+            this.Height = h;
+        }
+
         public int LocIndex(Loc loc)
         {
             return loc.Y * Width + loc.X;

@@ -93,6 +93,57 @@
 (blank 10)
 (backdrop (enemy) "blue")
 
+(define (heart)
+  (cc-superimpose
+   (rectangle size size #:border-color "red" #:border-width (* 1 thickness))
+   (dc (lambda (dc dx dy)
+         (define old-brush (send dc get-brush))
+         (define old-pen (send dc get-pen))
+         (send dc set-brush
+               (new brush% [style 'solid]
+                    [color "red"]))
+         (send dc set-pen
+               (new pen% [width 20] [color "white"]))
+         (define path (new dc-path%))
+         (define steps '((180 100) ; starting point, will be handled specially
+                         ; curve 1
+                         (195 30)
+                         (360 20)
+                         (300 180)
+                         ; curve 2
+                         (295 190)
+                         (290 205)
+                         (260 239)
+                         ; curve 3
+                         ;(290 205)
+                         (260 239)
+                         (180 320)
+                         (180 320)))
+         ; Left half should be a mirror image of the right half, so flip the x-coordinate
+         ; and reverse the steps so the path continues seamlessly.
+         ; (Do bezier curves work the way I hope they do? To my eye, it seems so...)
+         (define steps2 (map (lambda (xy) (match xy [(cons x y)
+                                                     (cons (- 180 (- x 180)) y)]))
+                             (reverse steps)))
+         (define (go steps)
+           (match steps
+             [(list (list a b) (list c d) (list e f) more ...)
+              (begin
+                (send path curve-to a b c d e f)
+                (go more))]
+             [(list) #t]))
+         ; Move to the first step, then skip it when creating the curves:
+         (send path move-to (car (first steps)) (cadr (first steps)))
+         (go (cdr steps))
+         (go (cdr steps2))
+         (send path close)
+         (send dc draw-path path dx dy)
+         (send dc set-brush old-brush)
+         (send dc set-pen old-pen))
+       size size)))
+
+(scale (backdrop (heart) "black") 0.1)
+
 (define (save-images)
   (define results '())
   (define directory (current-directory))
@@ -114,5 +165,7 @@
     (save-bitmap (single-catalyst) "blank-single.bmp"))
   ; enemy
   (save-bitmap (enemy) "enemy.bmp")
+  ; heart
+  (save-bitmap (heart) "heart.bmp")
   ; return value
   (reverse results))

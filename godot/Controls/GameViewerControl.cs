@@ -61,6 +61,7 @@ public class GameViewerControl : Control
         public readonly PenaltyViewerControl PenaltyViewer;
         public readonly GridViewerControl GridViewer;
         public readonly QueueViewerControl QueueViewer;
+        public readonly GridViewerControl HealthGridViewer;
         public readonly GameOverMenu GameOverMenu;
 
         public Members(Control me)
@@ -68,6 +69,7 @@ public class GameViewerControl : Control
             me.FindNode(out PenaltyViewer, nameof(PenaltyViewer));
             me.FindNode(out GridViewer, nameof(GridViewer));
             me.FindNode(out QueueViewer, nameof(QueueViewer));
+            me.FindNode(out HealthGridViewer, nameof(HealthGridViewer));
             me.FindNode(out GameOverMenu, nameof(GameOverMenu));
 
             QueueViewer.GridViewer = GridViewer;
@@ -99,6 +101,7 @@ public class GameViewerControl : Control
     {
         const float pvWidth = 100;
         const float queueWidth = 140;
+        const float queuePadding = 20;
 
         float availWidth = RectSize.x;
         if (ShowPenalties)
@@ -108,6 +111,7 @@ public class GameViewerControl : Control
         if (ShowQueue)
         {
             availWidth -= queueWidth;
+            availWidth -= queuePadding;
         }
 
         // Divide by 2 for both gridviewers
@@ -139,8 +143,17 @@ public class GameViewerControl : Control
 
         if (ShowQueue)
         {
-            members.QueueViewer.RectSize = new Vector2(queueWidth, RectSize.y);
+            left += queuePadding;
+
+            var queueBottom = RectSize.y / 2f;// * 2f;
+            members.QueueViewer.RectSize = new Vector2(queueWidth, queueBottom);
             members.QueueViewer.RectPosition = new Vector2(left, 0);
+
+            // For now, just show the health when the queue is visible
+            members.HealthGridViewer.RectSize = new Vector2(queueWidth, RectSize.y - queueBottom);
+            members.HealthGridViewer.RectPosition = new Vector2(left, queueBottom);
+            members.HealthGridViewer.Visible = true;
+
             left += queueWidth;
         }
     }
@@ -166,6 +179,7 @@ public class GameViewerControl : Control
         members.GridViewer.Update();
         members.PenaltyViewer.Update();
         members.QueueViewer.Update();
+        members.HealthGridViewer.Update();
 
         this.logic.CheckGameOver();
     }
@@ -216,6 +230,9 @@ public class GameViewerControl : Control
         members.GridViewer.Visible = true;
         members.PenaltyViewer.Visible = true;
         members.QueueViewer.Visible = true;
+
+        members.HealthGridViewer.SetLogicForhealth(ticker);
+        members.HealthGridViewer.Visible = true;
     }
 
     internal abstract class LogicBase : ILogic

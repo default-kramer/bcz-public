@@ -41,6 +41,7 @@ namespace FF2.Core
         private Moment lastMoment = new Moment(0); // TODO should see about enforcing "cannot change Kind without providing a Moment"
         private int score = 0;
         private readonly PayoutTable scorePayoutTable = PayoutTable.DefaultScorePayoutTable;
+        public readonly BLAH healthGrid; // TODO
 
         public int Score => score;
 
@@ -76,6 +77,7 @@ namespace FF2.Core
             currentCombo = ComboInfo.Empty;
             penalties = new PenaltyManager();
             penaltySchedule = PenaltySchedule.BasicSchedule(10 * 1000);
+            healthGrid = new BLAH(this);
         }
 
         public IReadOnlyGrid Grid { get { return grid; } }
@@ -367,6 +369,103 @@ namespace FF2.Core
         public int HashGrid()
         {
             return grid.HashGrid();
+        }
+    }
+
+    public sealed class BLAH : IReadOnlyGrid
+    {
+        private const int W = 4;
+        private const int H = 12;
+
+        // A heart should be shown at this index when the corruption is less than the threshold.
+        // If there are 6 hearts, the values should be 1/6, 2/6, ... 6/6.
+        // For cells that never show a heart, use a negative value.
+        private static readonly decimal[] heartData;
+
+        static BLAH()
+        {
+            heartData = new decimal[W * H];
+            heartData.AsSpan().Fill(-999);
+
+            var size = new GridSize(W, H);
+
+            const int numHealth = 6;
+            const int healthPerRow = 2;
+
+            decimal healthPerStep = 1m / numHealth;
+            for (int row = 0; row < numHealth / healthPerRow; row++)
+            {
+                for (int col = 0; col < healthPerRow; col++)
+                {
+                    var x = col * W / healthPerRow + row % 2;
+                    var y = row * 2 + 1;
+                    var loc = new Loc(x, y);
+                    heartData[size.LocIndex(loc)] = healthPerStep * (row * healthPerRow + col + 1);
+                }
+            }
+        }
+
+        private readonly State state;
+
+        public BLAH(State state)
+        {
+            this.state = state;
+        }
+
+        public int Width => W;
+
+        public int Height => H;
+
+        public GridSize Size => new GridSize(W, H);
+
+        public string PrintGrid => throw new NotImplementedException();
+
+        public string DiffGridString(params string[] rows)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Occupant Get(Loc loc)
+        {
+            var index = loc.ToIndex(this);
+            if (state.CorruptionProgress < heartData[index])
+            {
+                return Occupant.MakeEnemy(Color.Blank);
+            }
+            return Occupant.None;
+        }
+
+        public int HashGrid()
+        {
+            throw new NotImplementedException();
+        }
+
+        // TODO extension method:
+        public bool InBounds(Loc loc)
+        {
+            return loc.X >= 0 && loc.X < W && loc.Y >= 0 && loc.Y < H;
+        }
+
+        // TODO extension method:
+        public bool IsVacant(Loc loc)
+        {
+            return Get(loc) == Occupant.None;
+        }
+
+        // TODO extension method:
+        public IImmutableGrid MakeImmutable()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Mover NewMover(SpawnItem item)
+        {
+            throw new NotImplementedException();
+        }
+
+        public ReadOnlySpan<Occupant> ToSpan()
+        {
+            throw new NotImplementedException();
         }
     }
 }

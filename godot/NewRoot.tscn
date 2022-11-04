@@ -1,4 +1,4 @@
-[gd_scene load_steps=21 format=2]
+[gd_scene load_steps=22 format=2]
 
 [ext_resource path="res://Controls/GameViewerControl.tscn" type="PackedScene" id=1]
 [ext_resource path="res://NewRoot.cs" type="Script" id=2]
@@ -10,6 +10,7 @@
 [ext_resource path="res://Controls/MainMenu.tscn" type="PackedScene" id=8]
 [ext_resource path="res://Controls/MainMenu.cs" type="Script" id=9]
 [ext_resource path="res://Controls/PuzzleControl.tscn" type="PackedScene" id=10]
+[ext_resource path="res://Sprites/heart.bmp" type="Texture" id=11]
 
 [sub_resource type="Shader" id=9]
 code = "shader_type canvas_item;
@@ -347,3 +348,7 @@ visible = false
 material = SubResource( 2 )
 position = Vector2( 1112, 441 )
 texture = ExtResource( 7 )
+
+[node name="Heart" type="Sprite" parent="."]
+visible = false
+texture = ExtResource( 11 )

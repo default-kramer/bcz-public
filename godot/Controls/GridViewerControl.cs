@@ -21,6 +21,11 @@ public class GridViewerControl : Control
         this.Logic = new StandardLogic(ticker);
     }
 
+    public void SetLogicForhealth(Ticker ticker)
+    {
+        this.Logic = new HealthLogic(ticker.state.healthGrid);
+    }
+
     private TrackedSprite[] activeSprites = new TrackedSprite[400]; // should be way more than we need
 
     private SpritePool spritePool = null!;
@@ -124,12 +129,15 @@ public class GridViewerControl : Control
                 if (flicker.ShowGrid && !previewOcc.HasValue)
                 {
                     var YY = canvasY;
-                    DrawRect(new Rect2(x * screenCellSize, YY * screenCellSize, screenCellSize + 2, screenCellSize + 2), borderDark);
-                    DrawRect(new Rect2(x * screenCellSize + 1, YY * screenCellSize + 1, screenCellSize, screenCellSize), borderLight);
-                    DrawRect(new Rect2(x * screenCellSize + 2, YY * screenCellSize + 2, screenCellSize - 2, screenCellSize - 2), bgColor);
+                    DrawRect(new Rect2(screenX - 1, YY * screenCellSize, screenCellSize + 2, screenCellSize + 2), borderDark);
+                    DrawRect(new Rect2(screenX, YY * screenCellSize + 1, screenCellSize, screenCellSize), borderLight);
+                    DrawRect(new Rect2(screenX + 1, YY * screenCellSize + 2, screenCellSize - 2, screenCellSize - 2), bgColor);
                 }
 
-                SpriteKind kind = GetSpriteKind(occ);
+                if (!Logic.OverrideSpriteKind(occ, out var kind))
+                {
+                    kind = GetSpriteKind(occ);
+                }
 
                 var index = loc.ToIndex(grid);
                 TrackedSprite previousSprite = activeSprites[index];
@@ -178,19 +186,22 @@ public class GridViewerControl : Control
                         };
                     }
 
-                    var shader = (ShaderMaterial)sprite.Material;
-                    shader.SetShaderParam("my_color", GameColors.ToVector(occ.Color));
-                    shader.SetShaderParam("my_alpha", previewOcc.HasValue ? 0.75f : 1.0f);
-                    shader.SetShaderParam("destructionProgress", Logic.DestructionProgress(loc));
-
-                    if (currentSprite.Kind == SpriteKind.Enemy)
+                    var shader = sprite.Material as ShaderMaterial;
+                    if (shader != null)
                     {
-                        shader.SetShaderParam("is_corrupt", y < 7 ? 1.0f : 0.0f);
-                    }
+                        shader.SetShaderParam("my_color", GameColors.ToVector(occ.Color));
+                        shader.SetShaderParam("my_alpha", previewOcc.HasValue ? 0.75f : 1.0f);
+                        shader.SetShaderParam("destructionProgress", Logic.DestructionProgress(loc));
 
-                    if (currentSprite.Kind == SpriteKind.BlankSingle || currentSprite.Kind == SpriteKind.BlankJoined)
-                    {
-                        shader.SetShaderParam("destructionProgress", burstProgress);
+                        if (currentSprite.Kind == SpriteKind.Enemy)
+                        {
+                            shader.SetShaderParam("is_corrupt", y < 7 ? 1.0f : 0.0f);
+                        }
+
+                        if (currentSprite.Kind == SpriteKind.BlankSingle || currentSprite.Kind == SpriteKind.BlankJoined)
+                        {
+                            shader.SetShaderParam("destructionProgress", burstProgress);
+                        }
                     }
                 }
             }
@@ -292,6 +303,8 @@ public class GridViewerControl : Control
         Occupant GetDestroyedOccupant(Loc loc);
 
         FallSample? GetFallSample();
+
+        bool OverrideSpriteKind(Occupant occ, out SpriteKind spriteKind);
     }
 
     public sealed class NullLogic : ILogic
@@ -331,6 +344,12 @@ public class GridViewerControl : Control
         public Mover? PreviewPlummet()
         {
             return null;
+        }
+
+        public bool OverrideSpriteKind(Occupant occ, out SpriteKind spriteKind)
+        {
+            spriteKind = default(SpriteKind);
+            return false;
         }
     }
 
@@ -389,6 +408,65 @@ public class GridViewerControl : Control
             {
                 return 0;
             }
+        }
+
+        public bool OverrideSpriteKind(Occupant occ, out SpriteKind spriteKind)
+        {
+            spriteKind = default(SpriteKind);
+            return false;
+        }
+    }
+
+    public sealed class HealthLogic : ILogic
+    {
+        private readonly IReadOnlyGrid grid;
+
+        public HealthLogic(IReadOnlyGrid grid)
+        {
+            this.grid = grid;
+        }
+
+        public IReadOnlyGrid Grid => grid;
+
+        public bool ShouldFlicker => false;
+
+        public float LastChanceProgress => 0f;
+
+        public float BurstProgress()
+        {
+            return 0f;
+        }
+
+        public float DestructionProgress(Loc loc)
+        {
+            return 0f;
+            throw new NotImplementedException();
+        }
+
+        public Occupant GetDestroyedOccupant(Loc loc)
+        {
+            return Occupant.None;
+        }
+
+        public FallSample? GetFallSample()
+        {
+            return null;
+        }
+
+        public Mover? PreviewPlummet()
+        {
+            return null;
+        }
+
+        public bool OverrideSpriteKind(Occupant occ, out SpriteKind spriteKind)
+        {
+            if (occ.Kind == OccupantKind.Enemy)
+            {
+                spriteKind = SpriteKind.Heart;
+                return true;
+            }
+            spriteKind = default(SpriteKind);
+            return false;
         }
     }
 }
