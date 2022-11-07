@@ -23,7 +23,7 @@ public class GridViewerControl : Control
 
     public void SetLogicForhealth(Ticker ticker)
     {
-        this.Logic = new HealthLogic(ticker.state.healthGrid);
+        this.Logic = new HealthLogic(ticker.state.HealthGrid);
     }
 
     private TrackedSprite[] activeSprites = new TrackedSprite[400]; // should be way more than we need
@@ -368,7 +368,6 @@ public class GridViewerControl : Control
 
         public IReadOnlyGrid Grid { get { return state.Grid; } }
 
-        public decimal CorruptionProgress { get { return state.CorruptionProgress; } }
 
         const int LastChanceMillis = 5000;
 

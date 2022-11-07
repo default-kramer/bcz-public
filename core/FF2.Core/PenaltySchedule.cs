@@ -57,5 +57,25 @@ namespace FF2.Core
 
             return new PenaltySchedule(new Penalty(PenaltyKind.Levelled, 2), millis, next);
         }
+
+        private static readonly int[] indexSchedule = new int[] { 0, 0, 1, 0, 1, 2, 0, 1, 2, 3 };
+
+        public static PenaltySchedule BasicIndexedSchedule(int millis)
+        {
+            int counter = 0;
+
+            Func<PenaltySchedule, PenaltySchedule> next = ps =>
+            {
+                counter = (counter + 1) % indexSchedule.Length;
+
+                var p = new Penalty(PenaltyKind.Levelled, indexSchedule[counter]);
+                // TODO the next line "ps.neededMillis + millis" is tricky. Can this be cleaner?
+                // Why am I using such a functional approach anyway?
+                var nextPs = new PenaltySchedule(p, ps.neededMillis + millis, ps.nextFunc);
+                return nextPs;
+            };
+
+            return new PenaltySchedule(new Penalty(PenaltyKind.Levelled, indexSchedule[0]), millis, next);
+        }
     }
 }

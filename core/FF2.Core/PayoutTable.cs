@@ -42,6 +42,9 @@ namespace FF2.Core
         public static readonly PayoutTable DefaultCorruptionPayoutTable
             = new PayoutTable(2000 * 1000, 0m, 0m, 1m, 3m, 6m, 10m, 15m);
 
+        public static readonly PayoutTable DefaultHealthPayoutTable
+            = new PayoutTable(0, 0, 1, 3, 6, 10, 15);
+
         public static readonly PayoutTable DefaultCorruptionAccelerationPayoutTable
             = new PayoutTable(CorruptionManager.CorruptionAccelerationDenominator, 1m, 1.2m, 1.4m, 1.7m, 2m, 2.5m);
 

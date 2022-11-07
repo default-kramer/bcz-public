@@ -29,7 +29,7 @@ namespace FF2.Core.Viewmodels
         {
             const float maxChangePerSecond = 0.25f; // max refill rate is 25% / second
 
-            var progress = Convert.ToSingle(state.CorruptionProgress);
+            var progress = 0f; // TODO Convert.ToSingle(state.CorruptionProgress);
             var now = state.Moment;
             if (previous.HasValue)
             {

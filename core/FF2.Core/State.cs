@@ -33,15 +33,14 @@ namespace FF2.Core
         private readonly FallAnimationSampler fallSampler;
         private readonly ISpawnDeck spawnDeck;
         private Mover? mover;
-        private CorruptionManager corruption;
         private ComboInfo currentCombo;
-        private readonly PenaltyManager penalties;
-        private PenaltySchedule penaltySchedule;
         private int waitingMillis = 0;
         private Moment lastMoment = new Moment(0); // TODO should see about enforcing "cannot change Kind without providing a Moment"
         private int score = 0;
         private readonly PayoutTable scorePayoutTable = PayoutTable.DefaultScorePayoutTable;
-        public readonly BLAH healthGrid; // TODO
+        private readonly TODO todo;
+
+        public IReadOnlyGrid HealthGrid => todo.HealthGrid;
 
         public int Score => score;
 
@@ -73,11 +72,9 @@ namespace FF2.Core
             this.spawnDeck = spawnDeck;
             mover = null;
             Kind = StateKind.Spawning;
-            corruption = new CorruptionManager();
             currentCombo = ComboInfo.Empty;
-            penalties = new PenaltyManager();
-            penaltySchedule = PenaltySchedule.BasicSchedule(10 * 1000);
-            healthGrid = new BLAH(this);
+            var ps = PenaltySchedule.BasicIndexedSchedule(2000);
+            todo = new TODO(PayoutTable.DefaultHealthPayoutTable, ps);
         }
 
         public IReadOnlyGrid Grid { get { return grid; } }
@@ -99,6 +96,7 @@ namespace FF2.Core
 
         public Viewmodels.PenaltyModel MakePenaltyModel(Ticker ticker)
         {
+            var penalties = new PenaltyManager(10); // TODO
             return new Viewmodels.PenaltyModel(penalties, this, ticker);
         }
 
@@ -119,20 +117,11 @@ namespace FF2.Core
             {
                 waitingMillis += millis;
 
-                corruption = corruption.Elapse(millis);
-
-                if (corruption.Progress >= 1m)
+                todo.OnWaitingFrame(millis);
+                if (todo.GameOver)
                 {
                     ChangeKind(true, StateKind.GameOver, StateKind.GameOver);
                     return;
-                }
-
-                if (penaltySchedule.TryAdvance(waitingMillis, out var nextPS))
-                {
-                    penalties.Add(penaltySchedule.Penalty);
-                    penaltySchedule = nextPS;
-
-                    corruption = corruption.OnPenaltiesChanged(penalties);
                 }
             }
         }
@@ -152,9 +141,7 @@ namespace FF2.Core
             };
         }
 
-        public decimal CorruptionProgress { get { return corruption.Progress; } }
-
-        public int RemainingMillis { get { return corruption.RemainingMillis; } }
+        public int RemainingMillis { get { return int.MaxValue; } } // TODO
 
         private bool Spawn()
         {
@@ -197,12 +184,10 @@ namespace FF2.Core
             {
                 if (currentCombo.TotalNumGroups > 0)
                 {
-                    var rewardCombo = currentCombo.ComboToReward;
                     var scorePayout = GetHypotheticalScore(currentCombo);
                     score += scorePayout;
                     //Console.WriteLine($"Score: {score} (+{scorePayout})");
-                    corruption = corruption.OnComboCompleted(rewardCombo);
-                    penalties.OnComboCompleted(rewardCombo);
+                    todo.OnComboCompleted(currentCombo);
                     OnComboCompleted?.Invoke(this, currentCombo);
                 }
                 currentCombo = ComboInfo.Empty;
@@ -372,100 +357,209 @@ namespace FF2.Core
         }
     }
 
-    public sealed class BLAH : IReadOnlyGrid
+    class TODO
     {
-        private const int W = 4;
-        private const int H = 12;
+        const int W = 4;
+        const int H = 16;
+        const int MaxPartialHealth = 8;
+        const int MaxHealth = 16;
+        const int MaxPenaltiesPerColumn = 8;
+        const int MaxAttackProgress = 5000; // millis, for now
 
-        // A heart should be shown at this index when the corruption is less than the threshold.
-        // If there are 6 hearts, the values should be 1/6, 2/6, ... 6/6.
-        // For cells that never show a heart, use a negative value.
-        private static readonly decimal[] heartData;
+        private int CurrentAttackProgress; // 1000 per remaining block or something
+        private int Health;
+        private int PartialHealth;
+        private readonly int[] penaltyLevels = new int[W];
+        private readonly int[] penaltyCounts = new int[W];
+        private readonly PayoutTable healthPayoutTable;
+        private PenaltySchedule penaltySchedule;
+        private readonly IReadOnlyGrid healthGrid;
+        private int totalWaitingMillis = 0;
 
-        static BLAH()
+        public TODO(PayoutTable healthPayoutTable, PenaltySchedule penaltySchedule)
         {
-            heartData = new decimal[W * H];
-            heartData.AsSpan().Fill(-999);
+            this.healthPayoutTable = healthPayoutTable;
+            this.penaltySchedule = penaltySchedule;
 
-            var size = new GridSize(W, H);
+            penaltyLevels[0] = 2;
+            penaltyLevels[1] = 3;
+            penaltyLevels[2] = 4;
+            penaltyLevels[3] = 5;
+            penaltyCounts.AsSpan().Fill(0);
 
-            const int numHealth = 6;
-            const int healthPerRow = 2;
+            CurrentAttackProgress = MaxAttackProgress;
+            Health = MaxHealth;
+            PartialHealth = 0;
 
-            decimal healthPerStep = 1m / numHealth;
-            for (int row = 0; row < numHealth / healthPerRow; row++)
+            this.healthGrid = new GridRep(this);
+        }
+
+        public IReadOnlyGrid HealthGrid => healthGrid;
+
+        public void OnComboCompleted(ComboInfo combo)
+        {
+            RestoreHealth(combo.ComboToReward);
+            RemovePenalties(combo.ComboToReward.AdjustedGroupCount);
+        }
+
+        private void RestoreHealth(Combo combo)
+        {
+            int payout = healthPayoutTable.GetPayout(combo.AdjustedGroupCount);
+            PartialHealth = PartialHealth + payout;
+            Health += PartialHealth / MaxPartialHealth;
+            PartialHealth = PartialHealth % MaxPartialHealth;
+
+            if (Health >= MaxHealth)
             {
-                for (int col = 0; col < healthPerRow; col++)
+                PartialHealth = 0; // No room to accumulate lost health while at full health
+            }
+        }
+
+        private void RemovePenalties(int N)
+        {
+            int index = W - 1;
+            while (index >= 0)
+            {
+                if (penaltyLevels[index] <= N)
                 {
-                    var x = col * W / healthPerRow + row % 2;
-                    var y = row * 2 + 1;
-                    var loc = new Loc(x, y);
-                    heartData[size.LocIndex(loc)] = healthPerStep * (row * healthPerRow + col + 1);
+                    Remove2(index);
+                    return;
                 }
+                index--;
             }
         }
 
-        private readonly State state;
-
-        public BLAH(State state)
+        private void Remove2(int index)
         {
-            this.state = state;
-        }
+            int minCount = penaltyCounts[index];
 
-        public int Width => W;
-
-        public int Height => H;
-
-        public GridSize Size => new GridSize(W, H);
-
-        public string PrintGrid => throw new NotImplementedException();
-
-        public string DiffGridString(params string[] rows)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Occupant Get(Loc loc)
-        {
-            var index = loc.ToIndex(this);
-            if (state.CorruptionProgress < heartData[index])
+            while (index >= 0)
             {
-                return Occupant.MakeEnemy(Color.Blank);
+                int count = penaltyCounts[index];
+                if (count > 0 && count >= minCount)
+                {
+                    penaltyCounts[index] = count - 1;
+                }
+                index--;
             }
-            return Occupant.None;
         }
 
-        public int HashGrid()
+        public void OnWaitingFrame(int millis)
         {
-            throw new NotImplementedException();
+            // TODO should be a data type that holds "elapsed" and "total"
+            totalWaitingMillis += millis;
+
+            CurrentAttackProgress -= millis;
+            if (CurrentAttackProgress <= 0)
+            {
+                Health--;
+                CurrentAttackProgress += MaxAttackProgress;
+            }
+
+            if (penaltySchedule.TryAdvance(totalWaitingMillis, out var nextPS))
+            {
+                int level = penaltySchedule.Penalty.Level;
+                // TODO Rework the penalty schedule so that it returns indexes, not levels!
+                // Then you can make the same penalty schedule more or less difficult!
+                int index = level;
+                if (index >= W)
+                {
+                    index = W - 1;
+                }
+                AddPenalty(index);
+                penaltySchedule = nextPS;
+            }
         }
 
-        // TODO extension method:
-        public bool InBounds(Loc loc)
+        private void AddPenalty(int index)
         {
-            return loc.X >= 0 && loc.X < W && loc.Y >= 0 && loc.Y < H;
+            int next = penaltyCounts[index] + 1;
+            if (next <= MaxPenaltiesPerColumn)
+            {
+                penaltyCounts[index] = next;
+            }
         }
 
-        // TODO extension method:
-        public bool IsVacant(Loc loc)
-        {
-            return Get(loc) == Occupant.None;
-        }
+        public bool GameOver => Health <= 0;
 
-        // TODO extension method:
-        public IImmutableGrid MakeImmutable()
+        class GridRep : IReadOnlyGrid
         {
-            throw new NotImplementedException();
-        }
+            private readonly TODO todo;
 
-        public Mover NewMover(SpawnItem item)
-        {
-            throw new NotImplementedException();
-        }
+            public GridRep(TODO todo)
+            {
+                this.todo = todo;
+            }
 
-        public ReadOnlySpan<Occupant> ToSpan()
-        {
-            throw new NotImplementedException();
+            public int Width => W;
+
+            public int Height => H;
+
+            public GridSize Size => new GridSize(W, H);
+
+            public string PrintGrid => throw new NotImplementedException();
+
+            public string DiffGridString(params string[] rows)
+            {
+                throw new NotImplementedException();
+            }
+
+            public Occupant Get(Loc loc)
+            {
+                var penaltyHeight = todo.penaltyCounts[loc.X];
+                if (loc.Y < penaltyHeight)
+                {
+                    var occ = loc.X switch
+                    {
+                        0 => Occupant.MakeCatalyst(Color.Red, Direction.None),
+                        1 => Occupant.MakeCatalyst(Color.Blue, Direction.None),
+                        2 => Occupant.MakeCatalyst(Color.Yellow, Direction.None),
+                        3 => Occupant.IndestructibleEnemy,
+                        _ => throw new Exception("Unexpected X: " + loc.X),
+                    };
+                    return occ;
+                }
+
+                int neededHealth = (loc.Y - H / 2) * W + loc.X + 1;
+                if (neededHealth > 0 && todo.Health >= neededHealth)
+                {
+                    return Occupant.IndestructibleEnemy;
+                }
+
+                return Occupant.None;
+            }
+
+            public int HashGrid()
+            {
+                throw new NotImplementedException();
+            }
+
+            // TODO extension method:
+            public bool InBounds(Loc loc)
+            {
+                return loc.X >= 0 && loc.X < W && loc.Y >= 0 && loc.Y < H;
+            }
+
+            // TODO extension method:
+            public bool IsVacant(Loc loc)
+            {
+                return Get(loc) == Occupant.None;
+            }
+
+            public IImmutableGrid MakeImmutable()
+            {
+                throw new NotImplementedException();
+            }
+
+            public Mover NewMover(SpawnItem item)
+            {
+                throw new NotImplementedException();
+            }
+
+            public ReadOnlySpan<Occupant> ToSpan()
+            {
+                throw new NotImplementedException();
+            }
         }
     }
 }

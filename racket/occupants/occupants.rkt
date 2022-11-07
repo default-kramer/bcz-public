@@ -7,6 +7,7 @@
 
 (define size 360)
 (define size/2 180)
+(define size/10 36)
 (define thickness 36)
 (define thickness/2 18)
 (define body-color (make-parameter (make-color 255 255 255)))
@@ -93,56 +94,101 @@
 (blank 10)
 (backdrop (enemy) "blue")
 
-(define (heart)
-  (cc-superimpose
-   (rectangle size size #:border-color "red" #:border-width (* 1 thickness))
-   (dc (lambda (dc dx dy)
-         (define old-brush (send dc get-brush))
-         (define old-pen (send dc get-pen))
-         (send dc set-brush
-               (new brush% [style 'solid]
-                    [color "red"]))
-         (send dc set-pen
-               (new pen% [width 20] [color "white"]))
-         (define path (new dc-path%))
-         (define steps '((180 100) ; starting point, will be handled specially
-                         ; curve 1
-                         (195 30)
-                         (360 20)
-                         (300 180)
-                         ; curve 2
-                         (295 190)
-                         (290 205)
-                         (260 239)
-                         ; curve 3
-                         ;(290 205)
-                         (260 239)
-                         (180 320)
-                         (180 320)))
-         ; Left half should be a mirror image of the right half, so flip the x-coordinate
-         ; and reverse the steps so the path continues seamlessly.
-         ; (Do bezier curves work the way I hope they do? To my eye, it seems so...)
-         (define steps2 (map (lambda (xy) (match xy [(cons x y)
-                                                     (cons (- 180 (- x 180)) y)]))
-                             (reverse steps)))
-         (define (go steps)
-           (match steps
-             [(list (list a b) (list c d) (list e f) more ...)
-              (begin
-                (send path curve-to a b c d e f)
-                (go more))]
-             [(list) #t]))
-         ; Move to the first step, then skip it when creating the curves:
-         (send path move-to (car (first steps)) (cadr (first steps)))
-         (go (cdr steps))
-         (go (cdr steps2))
-         (send path close)
-         (send dc draw-path path dx dy)
-         (send dc set-brush old-brush)
-         (send dc set-pen old-pen))
-       size size)))
+(define (checkerboard size count light dark)
+  (define one-row
+    (build-list count
+                (lambda (i) (filled-rectangle size size
+                                              #:color (if (even? i) light dark)
+                                              #:draw-border? #f))))
+  (define even-row (apply hc-append one-row))
+  (define odd-row (apply hc-append (append (cdr one-row) (list (car one-row)))))
+  (define all-rows (take (flatten (make-list count (list even-row odd-row))) count))
+  (apply vc-append all-rows))
 
-(scale (backdrop (heart) "black") 0.1)
+(define (heart #:brush brush #:border-color border-color)
+  (define outline
+    (dc (lambda (dc dx dy)
+          (define old-brush (send dc get-brush))
+          (define old-pen (send dc get-pen))
+          (send dc set-brush brush)
+          (send dc set-pen
+                (new pen% [width 20] [color "white"]))
+          (define path (new dc-path%))
+          (define steps '((180 100) ; starting point, will be handled specially
+                          ; curve 1
+                          (195 30)
+                          (360 20)
+                          (300 180)
+                          ; curve 2
+                          (295 190)
+                          (290 205)
+                          (260 239)
+                          ; curve 3
+                          ;(290 205)
+                          (260 239)
+                          (180 320)
+                          (180 320)))
+          ; Left half should be a mirror image of the right half, so flip the x-coordinate
+          ; and reverse the steps so the path continues seamlessly.
+          ; (Do bezier curves work the way I hope they do? To my eye, it seems so...)
+          (define steps2 (map (lambda (xy) (match xy [(cons x y)
+                                                      (cons (- 180 (- x 180)) y)]))
+                              (reverse steps)))
+          (define (go steps)
+            (match steps
+              [(list (list a b) (list c d) (list e f) more ...)
+               (begin
+                 (send path curve-to a b c d e f)
+                 (go more))]
+              [(list) #t]))
+          ; Move to the first step, then skip it when creating the curves:
+          (send path move-to (car (first steps)) (cadr (first steps)))
+          (go (cdr steps))
+          (go (cdr steps2))
+          (send path close)
+          (send dc draw-path path dx dy)
+          (send dc set-brush old-brush)
+          (send dc set-pen old-pen))
+        size size))
+  (cc-superimpose
+   (rectangle size size #:border-color border-color #:border-width (* 1 thickness))
+   outline))
+
+(define partial-heart-brush
+  (let ([stip (checkerboard size/10 10
+                            (make-color 255 180 180 0.5)
+                            (make-color 255 180 180 0.7))])
+    (new brush% [stipple (pict->bitmap stip)])))
+
+(define (partial-heart percent)
+  (define outline (heart #:brush (new brush% [style 'transparent]) #:border-color "white"))
+  (define filled (heart #:brush partial-heart-brush #:border-color "white"))
+  (define clip (- size/2))
+  (define (left-half)
+    (inset/clip filled 0 0 clip 0))
+  (define (left-quarter)
+    (inset/clip filled 0 0 clip clip))
+  (define (right-quarter)
+    (inset/clip filled clip 0 0 clip))
+  (lt-superimpose (case percent
+                    [(0) (blank 0 0)]
+                    [(25) (left-quarter)]
+                    [(50) (left-half)]
+                    [(75) (ht-append (left-half) (right-quarter))]
+                    [(100) filled])
+                  outline))
+
+(define red-brush (new brush% [style 'solid] [color "red"]))
+
+(define (complete-heart)
+  (heart #:brush red-brush #:border-color "red"))
+
+(scale (backdrop (complete-heart) "black") 0.1)
+(scale (backdrop (partial-heart 0) "black") 0.1)
+(scale (backdrop (partial-heart 25) "black") 0.1)
+(scale (backdrop (partial-heart 50) "black") 0.1)
+(scale (backdrop (partial-heart 75) "black") 0.1)
+(scale (backdrop (partial-heart 100) "black") 0.1)
 
 (define (save-images)
   (define results '())
@@ -165,7 +211,9 @@
     (save-bitmap (single-catalyst) "blank-single.bmp"))
   ; enemy
   (save-bitmap (enemy) "enemy.bmp")
-  ; heart
-  (save-bitmap (heart) "heart.bmp")
+  ; hearts
+  (save-bitmap (complete-heart) "heart.bmp")
+  (for ([i '(0 25 50 75 100)])
+    (save-bitmap (partial-heart i) (format "heart~a.bmp" i)))
   ; return value
   (reverse results))
