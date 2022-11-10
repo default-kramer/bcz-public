@@ -121,10 +121,14 @@ public class GridViewerControl : Control
                 var canvasY = grid.Height - (y + 1);
                 var screenY = canvasY * screenCellSize + extraY / 2;
                 var screenX = x * screenCellSize + extraX / 2 + 1f;
+
+                float adder = 0f;
                 if (fallSampler.HasValue)
                 {
-                    screenY -= fallSampler.Value.GetAdder(loc) * screenCellSize;
+                    adder += fallSampler.Value.GetAdder(loc);
                 }
+                adder += Logic.FallSampleOverride(loc);
+                screenY -= adder * screenCellSize;
 
                 if (flicker.ShowGrid && !previewOcc.HasValue)
                 {
@@ -304,6 +308,8 @@ public class GridViewerControl : Control
 
         FallSample? GetFallSample();
 
+        float FallSampleOverride(Loc loc);
+
         bool OverrideSpriteKind(Occupant occ, out SpriteKind spriteKind);
     }
 
@@ -340,6 +346,8 @@ public class GridViewerControl : Control
         {
             return null;
         }
+
+        public float FallSampleOverride(Loc loc) { return 0; }
 
         public Mover? PreviewPlummet()
         {
@@ -392,6 +400,8 @@ public class GridViewerControl : Control
             return ticker.GetFallSample();
         }
 
+        public float FallSampleOverride(Loc loc) { return 0; }
+
         public Occupant GetDestroyedOccupant(Loc loc)
         {
             return tickCalculations.GetDestroyedOccupant(loc, state.Grid);
@@ -419,10 +429,12 @@ public class GridViewerControl : Control
     public sealed class HealthLogic : ILogic
     {
         private readonly IReadOnlyGrid grid;
+        private readonly IHealthGrid test;
 
-        public HealthLogic(IReadOnlyGrid grid)
+        public HealthLogic(IHealthGrid grid)
         {
             this.grid = grid;
+            this.test = grid;
         }
 
         public IReadOnlyGrid Grid => grid;
@@ -451,6 +463,8 @@ public class GridViewerControl : Control
         {
             return null;
         }
+
+        public float FallSampleOverride(Loc loc) { return test.GetAdder(loc); }
 
         public Mover? PreviewPlummet()
         {

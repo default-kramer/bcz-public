@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 
 namespace FF2.Core
 {
+    // WHY IS THIS NECESSARY? Insulating the caller from animationProgress I suppose...
     public readonly struct FallSample
     {
         private readonly FallAnimationSampler sampler;

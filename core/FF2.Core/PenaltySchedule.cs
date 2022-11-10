@@ -6,76 +6,54 @@ using System.Threading.Tasks;
 
 namespace FF2.Core
 {
-    readonly struct PenaltySchedule
+    sealed class PenaltySchedule
     {
-        /// <summary>
-        /// The penalty to be applied when <see cref="TryAdvance(int, out PenaltySchedule)"/> returns true.
-        /// </summary>
-        public readonly Penalty Penalty;
+        private readonly Penalty[] penalties;
+        private readonly int millisPerPenalty;
+
+        private int nextPenaltyTime;
+        private int index;
+
+        private PenaltySchedule(Penalty[] penalties, int millisPerPenalty)
+        {
+            this.penalties = penalties;
+            this.millisPerPenalty = millisPerPenalty;
+            nextPenaltyTime = millisPerPenalty;
+            index = 0;
+        }
 
         /// <summary>
-        /// The time at which this penalty should be applied.
-        /// </summary>
-        private readonly int neededMillis;
-
-        private readonly Func<PenaltySchedule, PenaltySchedule> nextFunc;
-
-        /// <summary>
-        /// If enough time has elapsed, return true and the next item.
+        /// If enough time has elapsed, return true and the Penalty to be applied.
         /// Otherwise return false.
         /// </summary>
-        /// <param name="millis">Total number of milliseconds that have elapsed this game</param>
-        public bool TryAdvance(int millis, out PenaltySchedule next)
+        /// <param name="totalMillis">Total number of milliseconds that have elapsed this game</param>
+        public bool TryAdvance(int totalMillis, out Penalty penalty)
         {
-            if (millis >= neededMillis)
+            if (totalMillis < nextPenaltyTime)
             {
-                next = nextFunc(this);
-                return true;
-            }
-            else
-            {
-                next = this;
+                penalty = default(Penalty);
                 return false;
             }
+
+            nextPenaltyTime = nextPenaltyTime + millisPerPenalty;
+            penalty = penalties[index];
+            index = (index + 1) % penalties.Length;
+            return true;
         }
 
-        private PenaltySchedule(Penalty penalty, int neededMillis, Func<PenaltySchedule, PenaltySchedule> nextFunc)
+        private static readonly Penalty[] todo = new Penalty[]
         {
-            this.Penalty = penalty;
-            this.neededMillis = neededMillis;
-            this.nextFunc = nextFunc;
-        }
+            new Penalty(PenaltyKind.Levelled, 0),
+            new Penalty(PenaltyKind.Levelled, 1),
+            new Penalty(PenaltyKind.Levelled, 2),
+            new Penalty(PenaltyKind.Levelled, 0),
+            new Penalty(PenaltyKind.Levelled, 1),
+            new Penalty(PenaltyKind.Levelled, 3),
+        };
 
-        public static PenaltySchedule BasicSchedule(int millis)
+        public static PenaltySchedule BasicIndexedSchedule(int millisPerPenalty)
         {
-            Func<PenaltySchedule, PenaltySchedule> next = ps =>
-            {
-                int level = Math.Min(9, ps.Penalty.Level + 1);
-                var penalty = new Penalty(PenaltyKind.Levelled, level);
-                return new PenaltySchedule(penalty, ps.neededMillis + millis, ps.nextFunc);
-            };
-
-            return new PenaltySchedule(new Penalty(PenaltyKind.Levelled, 2), millis, next);
-        }
-
-        private static readonly int[] indexSchedule = new int[] { 0, 0, 1, 0, 1, 2, 0, 1, 2, 3 };
-
-        public static PenaltySchedule BasicIndexedSchedule(int millis)
-        {
-            int counter = 0;
-
-            Func<PenaltySchedule, PenaltySchedule> next = ps =>
-            {
-                counter = (counter + 1) % indexSchedule.Length;
-
-                var p = new Penalty(PenaltyKind.Levelled, indexSchedule[counter]);
-                // TODO the next line "ps.neededMillis + millis" is tricky. Can this be cleaner?
-                // Why am I using such a functional approach anyway?
-                var nextPs = new PenaltySchedule(p, ps.neededMillis + millis, ps.nextFunc);
-                return nextPs;
-            };
-
-            return new PenaltySchedule(new Penalty(PenaltyKind.Levelled, indexSchedule[0]), millis, next);
+            return new PenaltySchedule(todo, millisPerPenalty);
         }
     }
 }

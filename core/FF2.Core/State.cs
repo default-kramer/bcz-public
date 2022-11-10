@@ -40,7 +40,7 @@ namespace FF2.Core
         private readonly PayoutTable scorePayoutTable = PayoutTable.DefaultScorePayoutTable;
         private readonly TODO todo;
 
-        public IReadOnlyGrid HealthGrid => todo.HealthGrid;
+        public IHealthGrid HealthGrid => todo.HealthGrid;
 
         public int Score => score;
 
@@ -362,18 +362,43 @@ namespace FF2.Core
         const int W = 4;
         const int H = 16;
         const int MaxPartialHealth = 8;
+        const int HealthY = 8;
+        const int MaxPenaltyY = HealthY - 1;
         const int MaxHealth = 16;
-        const int MaxPenaltiesPerColumn = 8;
-        const int MaxAttackProgress = 5000; // millis, for now
+        const int AttackPerCell = 1000 * 1000;
+        const float AttackPerBlockFloat = AttackPerCell;
 
-        private int CurrentAttackProgress; // 1000 per remaining block or something
+        // Could be a variable:
+        const int AttackPerMillis = AttackPerCell / 1000;
+
+        readonly struct AttackShape
+        {
+            public readonly Loc HealthStartLoc;
+            public readonly int AttackColumn;
+
+            public AttackShape(Loc a, int b) { this.HealthStartLoc = a; this.AttackColumn = b; }
+        }
+
+        private static readonly AttackShape[] Shapes = new[]
+        {
+            new AttackShape(new Loc(1, HealthY), 0),
+            new AttackShape(new Loc(3, HealthY), 2),
+            new AttackShape(new Loc(0, HealthY), 1),
+            new AttackShape(new Loc(2, HealthY), 3),
+        };
+
+        private int shapeIndex = 0;
+
+        // Progress counts down to zero
+        private (int Progress, Loc position, float subposition) CurrentAttack;
+
         private int Health;
         private int PartialHealth;
         private readonly int[] penaltyLevels = new int[W];
         private readonly int[] penaltyCounts = new int[W];
         private readonly PayoutTable healthPayoutTable;
         private PenaltySchedule penaltySchedule;
-        private readonly IReadOnlyGrid healthGrid;
+        private readonly IHealthGrid healthGrid;
         private int totalWaitingMillis = 0;
 
         public TODO(PayoutTable healthPayoutTable, PenaltySchedule penaltySchedule)
@@ -387,14 +412,22 @@ namespace FF2.Core
             penaltyLevels[3] = 5;
             penaltyCounts.AsSpan().Fill(0);
 
-            CurrentAttackProgress = MaxAttackProgress;
+            CurrentAttack = RebuildAttack(HealthY * AttackPerCell, Shapes[shapeIndex]);
             Health = MaxHealth;
             PartialHealth = 0;
 
             this.healthGrid = new GridRep(this);
         }
 
-        public IReadOnlyGrid HealthGrid => healthGrid;
+        private static (int, Loc, float) RebuildAttack(int attackProgress, AttackShape shape)
+        {
+            int blocksAway = attackProgress / AttackPerCell;
+            float subposition = (attackProgress % AttackPerCell) / AttackPerBlockFloat;
+            var loc = new Loc(shape.AttackColumn, shape.HealthStartLoc.Y - blocksAway);
+            return (attackProgress, loc, -subposition);
+        }
+
+        public IHealthGrid HealthGrid => healthGrid;
 
         public void OnComboCompleted(ComboInfo combo)
         {
@@ -449,32 +482,26 @@ namespace FF2.Core
             // TODO should be a data type that holds "elapsed" and "total"
             totalWaitingMillis += millis;
 
-            CurrentAttackProgress -= millis;
-            if (CurrentAttackProgress <= 0)
+            var attackProgress = CurrentAttack.Progress - millis * AttackPerMillis;
+            if (attackProgress <= 0)
             {
                 Health--;
-                CurrentAttackProgress += MaxAttackProgress;
+                shapeIndex = (shapeIndex + 1) % Shapes.Length;
+                var penaltyHeight = penaltyCounts.Max();
+                attackProgress = (HealthY - penaltyHeight) * AttackPerCell;
             }
+            CurrentAttack = RebuildAttack(attackProgress, Shapes[shapeIndex]);
 
-            if (penaltySchedule.TryAdvance(totalWaitingMillis, out var nextPS))
+            if (penaltySchedule.TryAdvance(totalWaitingMillis, out var penalty))
             {
-                int level = penaltySchedule.Penalty.Level;
-                // TODO Rework the penalty schedule so that it returns indexes, not levels!
-                // Then you can make the same penalty schedule more or less difficult!
-                int index = level;
-                if (index >= W)
-                {
-                    index = W - 1;
-                }
-                AddPenalty(index);
-                penaltySchedule = nextPS;
+                AddPenalty(penalty.Level);
             }
         }
 
         private void AddPenalty(int index)
         {
             int next = penaltyCounts[index] + 1;
-            if (next <= MaxPenaltiesPerColumn)
+            if (next <= MaxPenaltyY)
             {
                 penaltyCounts[index] = next;
             }
@@ -482,7 +509,7 @@ namespace FF2.Core
 
         public bool GameOver => Health <= 0;
 
-        class GridRep : IReadOnlyGrid
+        class GridRep : IHealthGrid, IReadOnlyGrid
         {
             private readonly TODO todo;
 
@@ -504,29 +531,55 @@ namespace FF2.Core
                 throw new NotImplementedException();
             }
 
+            private static readonly Occupant penaltyOcc = Occupant.MakeCatalyst(Color.Blue, Direction.Up);
+
             public Occupant Get(Loc loc)
             {
+                // Check for an attack
+                if (todo.CurrentAttack.position == loc)
+                {
+                    return Occupant.MakeCatalyst(Color.Blank, Direction.None);
+                }
+
+                // Check for a penalty
                 var penaltyHeight = todo.penaltyCounts[loc.X];
                 if (loc.Y < penaltyHeight)
                 {
-                    var occ = loc.X switch
-                    {
-                        0 => Occupant.MakeCatalyst(Color.Red, Direction.None),
-                        1 => Occupant.MakeCatalyst(Color.Blue, Direction.None),
-                        2 => Occupant.MakeCatalyst(Color.Yellow, Direction.None),
-                        3 => Occupant.IndestructibleEnemy,
-                        _ => throw new Exception("Unexpected X: " + loc.X),
-                    };
-                    return occ;
+                    return penaltyOcc;
                 }
 
-                int neededHealth = (loc.Y - H / 2) * W + loc.X + 1;
-                if (neededHealth > 0 && todo.Health >= neededHealth)
+                // Check for a heart
+                if (todo.Health <= 0)
+                {
+                    return Occupant.None;
+                }
+                var healthStartLoc = TODO.Shapes[todo.shapeIndex].HealthStartLoc;
+                if (loc == healthStartLoc.Add(-2, 0))
+                {
+                    return Occupant.MakeCatalyst(Color.Red, Direction.Left); // Debugging, should just be a regular heart
+                }
+                int xOffset = loc.X - healthStartLoc.X;
+                int yOffset = loc.Y - healthStartLoc.Y;
+                int totalOffset = xOffset + yOffset * W + yOffset % 2;
+                if (totalOffset < 0 || totalOffset % 2 != 0)
+                {
+                    return Occupant.None;
+                }
+                if (todo.Health >= totalOffset / 2)
                 {
                     return Occupant.IndestructibleEnemy;
                 }
-
                 return Occupant.None;
+            }
+
+            public float GetAdder(Loc loc)
+            {
+                var attack = todo.CurrentAttack;
+                if (loc == attack.position)
+                {
+                    return attack.subposition;
+                }
+                return 0f;
             }
 
             public int HashGrid()
