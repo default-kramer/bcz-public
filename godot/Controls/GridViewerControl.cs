@@ -1,4 +1,5 @@
 using FF2.Core;
+using FF2.Core.Viewmodels;
 using FF2.Godot;
 using Godot;
 using System;
@@ -23,7 +24,7 @@ public class GridViewerControl : Control
 
     public void SetLogicForhealth(Ticker ticker)
     {
-        this.Logic = new HealthLogic(ticker.state.HealthGrid);
+        this.Logic = new HealthLogic(ticker.state.HealthModel);
     }
 
     private TrackedSprite[] activeSprites = new TrackedSprite[400]; // should be way more than we need
@@ -376,12 +377,9 @@ public class GridViewerControl : Control
 
         public IReadOnlyGrid Grid { get { return state.Grid; } }
 
+        public bool ShouldFlicker { get { return state.LastGaspProgress() > 0; } }
 
-        const int LastChanceMillis = 5000;
-
-        public bool ShouldFlicker { get { return state.RemainingMillis < LastChanceMillis; } }
-
-        public float LastChanceProgress { get { return Convert.ToSingle(LastChanceMillis - state.RemainingMillis) / LastChanceMillis; } }
+        public float LastChanceProgress => state.LastGaspProgress();
 
         public Mover? PreviewPlummet() { return state.PreviewPlummet(); }
 
@@ -429,19 +427,19 @@ public class GridViewerControl : Control
     public sealed class HealthLogic : ILogic
     {
         private readonly IReadOnlyGrid grid;
-        private readonly IHealthGrid test;
+        private readonly IHealthModel health;
 
-        public HealthLogic(IHealthGrid grid)
+        public HealthLogic(IHealthModel health)
         {
-            this.grid = grid;
-            this.test = grid;
+            this.grid = health.Grid;
+            this.health = health;
         }
 
         public IReadOnlyGrid Grid => grid;
 
-        public bool ShouldFlicker => false;
+        public bool ShouldFlicker => health.LastGaspProgress() > 0;
 
-        public float LastChanceProgress => 0f;
+        public float LastChanceProgress => health.LastGaspProgress();
 
         public float BurstProgress()
         {
@@ -464,7 +462,7 @@ public class GridViewerControl : Control
             return null;
         }
 
-        public float FallSampleOverride(Loc loc) { return test.GetAdder(loc); }
+        public float FallSampleOverride(Loc loc) { return health.GetAdder(loc); }
 
         public Mover? PreviewPlummet()
         {

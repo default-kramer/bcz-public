@@ -30,11 +30,6 @@ namespace FF2.Core
         }
     }
 
-    public interface IHealthGrid : IReadOnlyGrid
-    {
-        float GetAdder(Loc loc); // formerly handled by FallSample, rethink this?
-    }
-
     /// <summary>
     /// A read-only reference to a grid which might be mutated by someone else.
     /// </summary>
