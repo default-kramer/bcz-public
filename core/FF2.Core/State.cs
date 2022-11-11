@@ -38,9 +38,9 @@ namespace FF2.Core
         private Moment lastMoment = new Moment(0); // TODO should see about enforcing "cannot change Kind without providing a Moment"
         private int score = 0;
         private readonly PayoutTable scorePayoutTable = PayoutTable.DefaultScorePayoutTable;
-        private readonly TODO todo;
+        private readonly HealthManager todo;
 
-        public IHealthGrid HealthGrid => todo.HealthGrid;
+        public IHealthGrid HealthGrid => todo.Grid;
 
         public int Score => score;
 
@@ -73,8 +73,8 @@ namespace FF2.Core
             mover = null;
             Kind = StateKind.Spawning;
             currentCombo = ComboInfo.Empty;
-            var ps = PenaltySchedule.BasicIndexedSchedule(2000);
-            todo = new TODO(PayoutTable.DefaultHealthPayoutTable, ps);
+            var ps = PenaltySchedule.BasicIndexedSchedule(5 * 1000);
+            todo = new HealthManager(PayoutTable.DefaultHealthPayoutTable, ps);
         }
 
         public IReadOnlyGrid Grid { get { return grid; } }
@@ -357,14 +357,22 @@ namespace FF2.Core
         }
     }
 
-    class TODO
+    class HealthManager
     {
+        const int PenaltyAreaStart = 0;
+        const int PenaltyAreaEnd = 4;
+        // 5-6 is a "DMZ" of sorts, which each attack always has to cross regardless of penalties
+        const int HealthStart = 7;
+        const int HealthEnd = 14;
+        const int PartialHealthRow = 15;
+
         const int W = 4;
-        const int H = 16;
-        const int MaxPartialHealth = 8;
-        const int HealthY = 8;
-        const int MaxPenaltyY = HealthY - 1;
-        const int MaxHealth = 16;
+        const int H = PartialHealthRow + 1;
+
+        const int HealthPerRow = 2;
+        const int MaxPenaltiesPerColumn = PenaltyAreaEnd - PenaltyAreaStart + 1;
+        const int MaxHealth = (HealthEnd - HealthStart + 1) * HealthPerRow;
+        const int MaxPartialHealth = 8; // 2 hearts * 4 fragments/heart
         const int AttackPerCell = 1000 * 1000;
         const float AttackPerBlockFloat = AttackPerCell;
 
@@ -381,10 +389,10 @@ namespace FF2.Core
 
         private static readonly AttackShape[] Shapes = new[]
         {
-            new AttackShape(new Loc(1, HealthY), 0),
-            new AttackShape(new Loc(3, HealthY), 2),
-            new AttackShape(new Loc(0, HealthY), 1),
-            new AttackShape(new Loc(2, HealthY), 3),
+            new AttackShape(new Loc(1, HealthStart), 0),
+            new AttackShape(new Loc(3, HealthStart), 2),
+            new AttackShape(new Loc(0, HealthStart), 1),
+            new AttackShape(new Loc(2, HealthStart), 3),
         };
 
         private int shapeIndex = 0;
@@ -398,25 +406,26 @@ namespace FF2.Core
         private readonly int[] penaltyCounts = new int[W];
         private readonly PayoutTable healthPayoutTable;
         private PenaltySchedule penaltySchedule;
-        private readonly IHealthGrid healthGrid;
+        private readonly HealthGrid healthGrid;
         private int totalWaitingMillis = 0;
 
-        public TODO(PayoutTable healthPayoutTable, PenaltySchedule penaltySchedule)
+        public HealthManager(PayoutTable healthPayoutTable, PenaltySchedule penaltySchedule)
         {
             this.healthPayoutTable = healthPayoutTable;
             this.penaltySchedule = penaltySchedule;
 
-            penaltyLevels[0] = 2;
-            penaltyLevels[1] = 3;
-            penaltyLevels[2] = 4;
-            penaltyLevels[3] = 5;
+            penaltyLevels[0] = 3;
+            penaltyLevels[1] = 4;
+            penaltyLevels[2] = 6;
+            penaltyLevels[3] = 8;
             penaltyCounts.AsSpan().Fill(0);
 
-            CurrentAttack = RebuildAttack(HealthY * AttackPerCell, Shapes[shapeIndex]);
+            CurrentAttack = RebuildAttack(HealthStart * AttackPerCell, Shapes[shapeIndex]);
             Health = MaxHealth;
             PartialHealth = 0;
 
-            this.healthGrid = new GridRep(this);
+            this.healthGrid = new HealthGrid(this);
+            healthGrid.Redraw();
         }
 
         private static (int, Loc, float) RebuildAttack(int attackProgress, AttackShape shape)
@@ -427,20 +436,24 @@ namespace FF2.Core
             return (attackProgress, loc, -subposition);
         }
 
-        public IHealthGrid HealthGrid => healthGrid;
+        public IHealthGrid Grid => healthGrid;
 
         public void OnComboCompleted(ComboInfo combo)
         {
             RestoreHealth(combo.ComboToReward);
             RemovePenalties(combo.ComboToReward.AdjustedGroupCount);
+            healthGrid.Redraw();
         }
 
         private void RestoreHealth(Combo combo)
         {
             int payout = healthPayoutTable.GetPayout(combo.AdjustedGroupCount);
             PartialHealth = PartialHealth + payout;
-            Health += PartialHealth / MaxPartialHealth;
-            PartialHealth = PartialHealth % MaxPartialHealth;
+            while (PartialHealth >= MaxPartialHealth)
+            {
+                Health += 2;
+                PartialHealth -= MaxPartialHealth;
+            }
 
             if (Health >= MaxHealth)
             {
@@ -488,7 +501,7 @@ namespace FF2.Core
                 Health--;
                 shapeIndex = (shapeIndex + 1) % Shapes.Length;
                 var penaltyHeight = penaltyCounts.Max();
-                attackProgress = (HealthY - penaltyHeight) * AttackPerCell;
+                attackProgress = (HealthStart - penaltyHeight) * AttackPerCell;
             }
             CurrentAttack = RebuildAttack(attackProgress, Shapes[shapeIndex]);
 
@@ -496,12 +509,14 @@ namespace FF2.Core
             {
                 AddPenalty(penalty.Level);
             }
+
+            healthGrid.Redraw();
         }
 
         private void AddPenalty(int index)
         {
             int next = penaltyCounts[index] + 1;
-            if (next <= MaxPenaltyY)
+            if (next <= MaxPenaltiesPerColumn)
             {
                 penaltyCounts[index] = next;
             }
@@ -509,72 +524,75 @@ namespace FF2.Core
 
         public bool GameOver => Health <= 0;
 
-        class GridRep : IHealthGrid, IReadOnlyGrid
+        class HealthGrid : GridBase, IHealthGrid
         {
-            private readonly TODO todo;
+            private readonly HealthManager manager;
 
-            public GridRep(TODO todo)
+            public HealthGrid(HealthManager manager) : base(W, H)
             {
-                this.todo = todo;
+                this.manager = manager;
             }
 
-            public int Width => W;
-
-            public int Height => H;
-
-            public GridSize Size => new GridSize(W, H);
-
-            public string PrintGrid => throw new NotImplementedException();
-
-            public string DiffGridString(params string[] rows)
+            public void Redraw()
             {
-                throw new NotImplementedException();
+                this.Clear();
+
+                // Place penalties
+                for (int x = 0; x < W; x++)
+                {
+                    int yLimit = manager.penaltyCounts[x];
+                    for (int y = 0; y < yLimit; y++)
+                    {
+                        Put(new Loc(x, y), HealthOccupants.Penalty);
+                    }
+                }
+
+                // Place hearts
+                var shape = Shapes[manager.shapeIndex];
+                var loc = shape.HealthStartLoc;
+                int partialHealthOffset = 0;
+                if (shape.AttackColumn > 1)
+                {
+                    // The health is gone, but we keep showing the heart until the row is destroyed:
+                    Put(loc.Add(-2, 0), HealthOccupants.Heart);
+                    // And show the attack that already landed
+                    Put(new Loc(shape.AttackColumn - 2, HealthStart), HealthOccupants.Attack);
+                }
+                for (int i = 0; i < manager.Health && loc.Y < H; i++)
+                {
+                    Put(loc, HealthOccupants.Heart);
+                    partialHealthOffset = (loc.X + 1) % 2;
+                    loc = loc.X switch
+                    {
+                        0 => loc.Add(2, 0),
+                        1 => loc.Add(2, 0),
+                        2 => loc.Add(-1, 1),
+                        3 => loc.Add(-3, 1),
+                        _ => throw new Exception("X should never exceed " + W),
+                    };
+                }
+
+                // Place partial hearts
+                var partialLoc = new Loc(partialHealthOffset, PartialHealthRow);
+                Put(partialLoc, GetPartialHeart(manager.PartialHealth));
+                Put(partialLoc.Add(2, 0), GetPartialHeart(manager.PartialHealth - 4));
+
+                // Place current attack
+                Put(manager.CurrentAttack.position, HealthOccupants.Attack);
             }
 
-            private static readonly Occupant penaltyOcc = Occupant.MakeCatalyst(Color.Blue, Direction.Up);
-
-            public Occupant Get(Loc loc)
+            private static Occupant GetPartialHeart(int partialHealth)
             {
-                // Check for an attack
-                if (todo.CurrentAttack.position == loc)
-                {
-                    return Occupant.MakeCatalyst(Color.Blank, Direction.None);
-                }
-
-                // Check for a penalty
-                var penaltyHeight = todo.penaltyCounts[loc.X];
-                if (loc.Y < penaltyHeight)
-                {
-                    return penaltyOcc;
-                }
-
-                // Check for a heart
-                if (todo.Health <= 0)
-                {
-                    return Occupant.None;
-                }
-                var healthStartLoc = TODO.Shapes[todo.shapeIndex].HealthStartLoc;
-                if (loc == healthStartLoc.Add(-2, 0))
-                {
-                    return Occupant.MakeCatalyst(Color.Red, Direction.Left); // Debugging, should just be a regular heart
-                }
-                int xOffset = loc.X - healthStartLoc.X;
-                int yOffset = loc.Y - healthStartLoc.Y;
-                int totalOffset = xOffset + yOffset * W + yOffset % 2;
-                if (totalOffset < 0 || totalOffset % 2 != 0)
-                {
-                    return Occupant.None;
-                }
-                if (todo.Health >= totalOffset / 2)
-                {
-                    return Occupant.IndestructibleEnemy;
-                }
-                return Occupant.None;
+                if (partialHealth == 1) { return HealthOccupants.Heart25; }
+                else if (partialHealth == 2) { return HealthOccupants.Heart50; }
+                else if (partialHealth == 3) { return HealthOccupants.Heart75; }
+                else if (partialHealth >= 4) { return HealthOccupants.Heart100; }
+                return HealthOccupants.Heart0;
             }
 
             public float GetAdder(Loc loc)
             {
-                var attack = todo.CurrentAttack;
+                var attack = manager.CurrentAttack;
                 if (loc == attack.position)
                 {
                     return attack.subposition;
@@ -582,34 +600,7 @@ namespace FF2.Core
                 return 0f;
             }
 
-            public int HashGrid()
-            {
-                throw new NotImplementedException();
-            }
-
-            // TODO extension method:
-            public bool InBounds(Loc loc)
-            {
-                return loc.X >= 0 && loc.X < W && loc.Y >= 0 && loc.Y < H;
-            }
-
-            // TODO extension method:
-            public bool IsVacant(Loc loc)
-            {
-                return Get(loc) == Occupant.None;
-            }
-
-            public IImmutableGrid MakeImmutable()
-            {
-                throw new NotImplementedException();
-            }
-
-            public Mover NewMover(SpawnItem item)
-            {
-                throw new NotImplementedException();
-            }
-
-            public ReadOnlySpan<Occupant> ToSpan()
+            public override IImmutableGrid MakeImmutable()
             {
                 throw new NotImplementedException();
             }

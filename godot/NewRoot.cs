@@ -17,7 +17,8 @@ public class NewRoot : Control
         public Members(Control me)
         {
             SpritePool = new SpritePool(me, SpriteKind.Single, SpriteKind.Joined,
-                SpriteKind.Enemy, SpriteKind.BlankJoined, SpriteKind.BlankSingle, SpriteKind.Heart);
+                SpriteKind.Enemy, SpriteKind.BlankJoined, SpriteKind.BlankSingle, SpriteKind.Heart,
+                SpriteKind.Heart0, SpriteKind.Heart25, SpriteKind.Heart50, SpriteKind.Heart75, SpriteKind.Heart100, SpriteKind.HeartAttack);
 
             me.FindNode(out GameViewer, nameof(GameViewer));
             me.FindNode(out PuzzleControl, nameof(PuzzleControl));

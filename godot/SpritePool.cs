@@ -3,23 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using FF2.Core;
 using Godot;
 
 #nullable enable
 
 namespace FF2.Godot
 {
-    public enum SpriteKind
-    {
-        None,
-        Single,
-        Joined,
-        BlankJoined,
-        BlankSingle,
-        Enemy,
-        Heart,
-    }
-
     readonly struct TrackedSprite
     {
         public readonly SpriteKind Kind;

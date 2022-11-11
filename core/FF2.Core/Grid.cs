@@ -30,7 +30,7 @@ namespace FF2.Core
         }
     }
 
-    public interface IHealthGrid : IReadOnlyGrid // TODO better name?
+    public interface IHealthGrid : IReadOnlyGrid
     {
         float GetAdder(Loc loc); // formerly handled by FallSample, rethink this?
     }
@@ -144,6 +144,11 @@ namespace FF2.Core
         public Occupant Get(Loc loc)
         {
             return cells[Index(loc)];
+        }
+
+        protected virtual void Put(Loc loc, Occupant occupant)
+        {
+            cells[Index(loc)] = occupant;
         }
 
         public bool InBounds(Loc loc)
@@ -387,7 +392,7 @@ namespace FF2.Core
         public void Set(Loc loc, Occupant occ)
         {
             stats = null;
-            cells[Index(loc)] = occ;
+            Put(loc, occ);
         }
 
         /// <summary>
@@ -571,6 +576,11 @@ namespace FF2.Core
         public override IImmutableGrid MakeImmutable()
         {
             return this;
+        }
+
+        protected override void Put(Loc loc, Occupant occupant)
+        {
+            throw new InvalidOperationException("This method should be uncallable (without reflection)");
         }
     }
 }

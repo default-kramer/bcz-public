@@ -10,8 +10,11 @@
 (define size/10 36)
 (define thickness 36)
 (define thickness/2 18)
+(define enemy-border-color (make-color 220 220 220))
+(define red-brush (new brush% [style 'solid] [color "red"]))
+(define black-brush (new brush% [style 'solid] [color "black"]))
 (define body-color (make-parameter (make-color 255 255 255)))
-(define border-color (make-parameter (make-color 220 220 220)))
+(define border-color (make-parameter enemy-border-color))
 
 (define (single-catalyst [border-color (border-color)]
                          [body-color (body-color)])
@@ -105,14 +108,14 @@
   (define all-rows (take (flatten (make-list count (list even-row odd-row))) count))
   (apply vc-append all-rows))
 
-(define (heart #:brush brush #:border-color border-color)
-  (define outline
+(define (heart #:brush brush #:border-color border-color
+               #:outline-color [outline-color "white"])
+  (define the-dc
     (dc (lambda (dc dx dy)
           (define old-brush (send dc get-brush))
           (define old-pen (send dc get-pen))
           (send dc set-brush brush)
-          (send dc set-pen
-                (new pen% [width 20] [color "white"]))
+          (send dc set-pen (new pen% [width 20] [color outline-color]))
           (define path (new dc-path%))
           (define steps '((180 100) ; starting point, will be handled specially
                           ; curve 1
@@ -151,8 +154,10 @@
           (send dc set-pen old-pen))
         size size))
   (cc-superimpose
-   (rectangle size size #:border-color border-color #:border-width (* 1 thickness))
-   outline))
+   (or (and border-color
+            (rectangle size size #:border-color border-color #:border-width thickness))
+       (blank size size))
+   the-dc))
 
 (define partial-heart-brush
   (let ([stip (checkerboard size/10 10
@@ -178,10 +183,12 @@
                     [(100) filled])
                   outline))
 
-(define red-brush (new brush% [style 'solid] [color "red"]))
-
 (define (complete-heart)
   (heart #:brush red-brush #:border-color "red"))
+
+(define (heart-attack)
+  ; Use black so I can reuse some enemy shader code (which looks for black)
+  (heart #:brush black-brush #:border-color #f #:outline-color enemy-border-color))
 
 (scale (backdrop (complete-heart) "black") 0.1)
 (scale (backdrop (partial-heart 0) "black") 0.1)
@@ -215,5 +222,6 @@
   (save-bitmap (complete-heart) "heart.bmp")
   (for ([i '(0 25 50 75 100)])
     (save-bitmap (partial-heart i) (format "heart~a.bmp" i)))
+  (save-bitmap (heart-attack) "heart-attack.bmp")
   ; return value
   (reverse results))

@@ -473,13 +473,8 @@ public class GridViewerControl : Control
 
         public bool OverrideSpriteKind(Occupant occ, out SpriteKind spriteKind)
         {
-            if (occ.Kind == OccupantKind.Enemy)
-            {
-                spriteKind = SpriteKind.Heart;
-                return true;
-            }
-            spriteKind = default(SpriteKind);
-            return false;
+            spriteKind = HealthOccupants.Translate(occ, SpriteKind.None);
+            return spriteKind != SpriteKind.None;
         }
     }
 }

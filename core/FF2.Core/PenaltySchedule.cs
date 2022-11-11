@@ -46,8 +46,6 @@ namespace FF2.Core
             new Penalty(PenaltyKind.Levelled, 0),
             new Penalty(PenaltyKind.Levelled, 1),
             new Penalty(PenaltyKind.Levelled, 2),
-            new Penalty(PenaltyKind.Levelled, 0),
-            new Penalty(PenaltyKind.Levelled, 1),
             new Penalty(PenaltyKind.Levelled, 3),
         };
 
