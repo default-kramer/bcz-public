@@ -8,25 +8,24 @@ namespace FF2.Core
 {
     class HealthManager : Viewmodels.IHealthModel
     {
-        const int PenaltyAreaStart = 0;
-        const int PenaltyAreaEnd = 4;
-        // 5-6 is a "DMZ" of sorts, which each attack always has to cross regardless of penalties
-        const int HealthStart = 7;
-        const int HealthEnd = 14;
+        const int PenaltyAreaStartRow = 0;
+        const int PenaltyAreaEndRow = 4;
+        // Rows 5-6 will never have penalties or health.
+        // So even when penalties are maxed, the attack will have to traverse these rows.
+        const int HealthStartRow = 7;
+        const int HealthEndRow = 14;
         const int PartialHealthRow = 15;
 
         const int W = 4;
         const int H = PartialHealthRow + 1;
 
-        const int HealthPerRow = 2;
-        const int MaxPenaltiesPerColumn = PenaltyAreaEnd - PenaltyAreaStart + 1;
-        const int MaxHealth = (HealthEnd - HealthStart + 1) * HealthPerRow;
-        const int MaxPartialHealth = 8; // 2 hearts * 4 fragments/heart
-        const int AttackPerCell = 1000 * 1000;
-        const float AttackPerBlockFloat = AttackPerCell;
+        const int AttackStartRow = 1; // If no penalties, the Y coordinate where the attack starts
+        const int AttackEndRow = HealthStartRow; // The Y coordinate where each attack ends
 
-        // Could be a variable:
-        const int AttackPerMillis = AttackPerCell / 1000;
+        const int HealthPerRow = 2;
+        const int MaxPenaltiesPerColumn = PenaltyAreaEndRow - PenaltyAreaStartRow + 1;
+        const int MaxHealth = (HealthEndRow - HealthStartRow + 1) * HealthPerRow;
+        const int MaxPartialHealth = HealthPerRow * 4; // 4 fragments/heart
 
         readonly struct AttackShape
         {
@@ -38,30 +37,30 @@ namespace FF2.Core
 
         private static readonly AttackShape[] Shapes = new[]
         {
-            new AttackShape(new Loc(1, HealthStart), 0),
-            new AttackShape(new Loc(3, HealthStart), 2),
-            new AttackShape(new Loc(0, HealthStart), 1),
-            new AttackShape(new Loc(2, HealthStart), 3),
+            new AttackShape(new Loc(1, HealthStartRow), 0),
+            new AttackShape(new Loc(3, HealthStartRow), 2),
+            new AttackShape(new Loc(0, HealthStartRow), 1),
+            new AttackShape(new Loc(2, HealthStartRow), 3),
         };
 
         private int shapeIndex = 0;
 
-        // Progress counts down to zero
-        private (int Progress, Loc position, float subposition) CurrentAttack;
+        // On the grid, the attack will be placed at the target loc immediately.
+        // Animation will make it slide up into that loc as the appointment arrives.
+        private (Loc target, Appointment arrival) CurrentAttack;
 
         private int Health;
         private int PartialHealth;
         private readonly int[] penaltyLevels = new int[W];
         private readonly int[] penaltyCounts = new int[W];
         private readonly PayoutTable healthPayoutTable;
-        private PenaltySchedule penaltySchedule;
         private readonly HealthGrid healthGrid;
-        private int totalWaitingMillis = 0;
+        private int penaltyIndex = 0;
+        private Appointment penaltyAppointment;
 
-        public HealthManager(PayoutTable healthPayoutTable, PenaltySchedule penaltySchedule)
+        public HealthManager(PayoutTable healthPayoutTable, IScheduler scheduler)
         {
             this.healthPayoutTable = healthPayoutTable;
-            this.penaltySchedule = penaltySchedule;
 
             penaltyLevels[0] = 3;
             penaltyLevels[1] = 4;
@@ -69,21 +68,19 @@ namespace FF2.Core
             penaltyLevels[3] = 8;
             penaltyCounts.AsSpan().Fill(0);
 
-            CurrentAttack = RebuildAttack(HealthStart * AttackPerCell, Shapes[shapeIndex]);
+            CurrentAttack = (new Loc(Shapes[shapeIndex].AttackColumn, AttackStartRow), scheduler.CreateWaitingAppointment(AttackMillisPerCell));
+
             Health = MaxHealth;
             PartialHealth = 0;
 
             this.healthGrid = new HealthGrid(this);
             healthGrid.Redraw();
+
+            penaltyAppointment = scheduler.CreateAppointment(MillisPerPenalty);
         }
 
-        private static (int, Loc, float) RebuildAttack(int attackProgress, AttackShape shape)
-        {
-            int blocksAway = attackProgress / AttackPerCell;
-            float subposition = (attackProgress % AttackPerCell) / AttackPerBlockFloat;
-            var loc = new Loc(shape.AttackColumn, shape.HealthStartLoc.Y - blocksAway);
-            return (attackProgress, loc, -subposition);
-        }
+        const int AttackMillisPerCell = 1000; // millis for the attack to travel 1 cell
+        const int MillisPerPenalty = 5000; // millis between penalties
 
         public IReadOnlyGrid Grid => healthGrid;
 
@@ -139,32 +136,57 @@ namespace FF2.Core
             }
         }
 
-        public void OnWaitingFrame(int millis)
+        public void Elapse(IScheduler scheduler)
         {
-            // TODO should be a data type that holds "elapsed" and "total"
-            totalWaitingMillis += millis;
-
-            var attackProgress = CurrentAttack.Progress - millis * AttackPerMillis;
-            if (attackProgress <= 0)
-            {
-                Health--;
-                shapeIndex = (shapeIndex + 1) % Shapes.Length;
-                attackProgress += StartingAttackProgress();
-            }
-            CurrentAttack = RebuildAttack(attackProgress, Shapes[shapeIndex]);
-
-            if (penaltySchedule.TryAdvance(totalWaitingMillis, out var penalty))
-            {
-                AddPenalty(penalty.Level);
-            }
-
+            UpdateAttack(scheduler);
+            UpdatePenalties(scheduler);
             healthGrid.Redraw();
         }
 
-        private int StartingAttackProgress()
+        private int NextShapeIndex => (shapeIndex + 1) % Shapes.Length;
+
+        private static Loc GetAttackStart(int shapeIndex, ReadOnlySpan<int> penaltyCounts)
         {
-            var penaltyHeight = penaltyCounts.Max();
-            return (HealthStart - penaltyHeight) * AttackPerCell;
+            var shape = Shapes[shapeIndex];
+            return new Loc(shape.AttackColumn, penaltyCounts[shape.AttackColumn] + AttackStartRow);
+        }
+
+        private void UpdateAttack(IScheduler scheduler)
+        {
+            var (target, appt) = CurrentAttack;
+            if (appt.HasArrived())
+            {
+                if (target.Y < AttackEndRow)
+                {
+                    CurrentAttack = (target.Add(0, 1), scheduler.CreateWaitingAppointment(AttackMillisPerCell));
+                }
+                else
+                {
+                    Health--;
+                    shapeIndex = NextShapeIndex;
+                    target = GetAttackStart(shapeIndex, penaltyCounts);
+                    CurrentAttack = (target, scheduler.CreateWaitingAppointment(AttackMillisPerCell));
+                }
+            }
+        }
+
+        // TODO this should get pulled out into a separate class
+        private static readonly Penalty[] penaltySchedule = new Penalty[]
+        {
+            new Penalty(PenaltyKind.Levelled, 0),
+            new Penalty(PenaltyKind.Levelled, 1),
+            new Penalty(PenaltyKind.Levelled, 2),
+            new Penalty(PenaltyKind.Levelled, 3),
+        };
+
+        private void UpdatePenalties(IScheduler scheduler)
+        {
+            if (penaltyAppointment.HasArrived())
+            {
+                AddPenalty(penaltySchedule[penaltyIndex].Level);
+                penaltyIndex = (penaltyIndex + 1) % penaltySchedule.Length;
+                penaltyAppointment = scheduler.CreateAppointment(MillisPerPenalty);
+            }
         }
 
         private void AddPenalty(int index)
@@ -189,22 +211,24 @@ namespace FF2.Core
                 return 1f;
             }
 
-            int attackProgressRemaining = CurrentAttack.Progress;
+            int cellsUntilDeath = 1 + AttackEndRow - CurrentAttack.target.Y;
             if (Health > 1)
             {
-                attackProgressRemaining += StartingAttackProgress();
+                var next = GetAttackStart(NextShapeIndex, penaltyCounts);
+                cellsUntilDeath += 1 + AttackEndRow - next.Y;
             }
-            var millisUntilDeath = attackProgressRemaining / AttackPerMillis;
-            const float range = 5000f;
-            return (range - millisUntilDeath) / range;
+
+            var millisRemaining = cellsUntilDeath * AttackMillisPerCell - CurrentAttack.arrival.Progress() * AttackMillisPerCell;
+            const float WarningRange = 5000f; // 5 seconds of warning
+            return (WarningRange - millisRemaining) / WarningRange;
         }
 
         public float GetAdder(Loc loc)
         {
-            var attack = CurrentAttack;
-            if (loc == attack.position)
+            var (target, appt) = CurrentAttack;
+            if (loc == target)
             {
-                return attack.subposition;
+                return appt.Progress() - 1;
             }
             return 0f;
         }
@@ -241,7 +265,7 @@ namespace FF2.Core
                     // The health is gone, but we keep showing the heart until the row is destroyed:
                     Put(loc.Add(-2, 0), HealthOccupants.Heart);
                     // And show the attack that already landed
-                    Put(new Loc(shape.AttackColumn - 2, HealthStart), HealthOccupants.Attack);
+                    Put(new Loc(shape.AttackColumn - 2, HealthStartRow), HealthOccupants.Attack);
                 }
                 for (int i = 0; i < manager.Health && loc.Y < H; i++)
                 {
@@ -265,7 +289,7 @@ namespace FF2.Core
                 // Place current attack
                 if (manager.Health > 0)
                 {
-                    Put(manager.CurrentAttack.position, HealthOccupants.Attack);
+                    Put(manager.CurrentAttack.target, HealthOccupants.Attack);
                 }
             }
 

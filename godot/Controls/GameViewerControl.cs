@@ -58,7 +58,6 @@ public class GameViewerControl : Control
 
     internal readonly struct Members
     {
-        public readonly PenaltyViewerControl PenaltyViewer;
         public readonly GridViewerControl GridViewer;
         public readonly QueueViewerControl QueueViewer;
         public readonly GridViewerControl HealthGridViewer;
@@ -66,7 +65,6 @@ public class GameViewerControl : Control
 
         public Members(Control me)
         {
-            me.FindNode(out PenaltyViewer, nameof(PenaltyViewer));
             me.FindNode(out GridViewer, nameof(GridViewer));
             me.FindNode(out QueueViewer, nameof(QueueViewer));
             me.FindNode(out HealthGridViewer, nameof(HealthGridViewer));
@@ -77,12 +75,6 @@ public class GameViewerControl : Control
     }
 
     private Members members;
-
-    public bool ShowPenalties
-    {
-        get { return members.PenaltyViewer.Visible; }
-        set { members.PenaltyViewer.Visible = value; }
-    }
 
     public bool ShowQueue
     {
@@ -99,15 +91,10 @@ public class GameViewerControl : Control
 
     public void OnSizeChanged()
     {
-        const float pvWidth = 100;
         const float queueWidth = 140;
         const float queuePadding = 20;
 
         float availWidth = RectSize.x;
-        if (ShowPenalties)
-        {
-            availWidth -= pvWidth;
-        }
         if (ShowQueue)
         {
             availWidth -= queueWidth;
@@ -118,10 +105,6 @@ public class GameViewerControl : Control
         var gvSize = members.GridViewer.DesiredSize(new Vector2(availWidth / 2, RectSize.y));
 
         float totalWidth = gvSize.x;
-        if (ShowPenalties)
-        {
-            totalWidth += pvWidth;
-        }
         if (ShowQueue)
         {
             totalWidth += queueWidth;
@@ -129,13 +112,6 @@ public class GameViewerControl : Control
 
         float meCenter = RectSize.x / 2f;
         float left = meCenter - totalWidth / 2f;
-
-        if (ShowPenalties)
-        {
-            members.PenaltyViewer.RectSize = new Vector2(pvWidth, RectSize.y);
-            members.PenaltyViewer.RectPosition = new Vector2(left, 0);
-            left += pvWidth;
-        }
 
         members.GridViewer.RectSize = gvSize;
         members.GridViewer.RectPosition = new Vector2(left, 0);
@@ -177,7 +153,6 @@ public class GameViewerControl : Control
         this.logic.HandleInput();
 
         members.GridViewer.Update();
-        members.PenaltyViewer.Update();
         members.QueueViewer.Update();
         members.HealthGridViewer.Update();
 
@@ -215,7 +190,6 @@ public class GameViewerControl : Control
             members.GridViewer.SetLogic(GridViewerControl.NullLogic.Instance);
             members.GridViewer.Visible = true;
             // TODO should set a null model here... but we'll just make them invisible for now
-            members.PenaltyViewer.Visible = false;
             members.QueueViewer.Visible = false;
         }
     }
@@ -224,11 +198,9 @@ public class GameViewerControl : Control
     {
         members.GridViewer.SetLogic(ticker);
         var state = ticker.state;
-        members.PenaltyViewer.Model = state.MakePenaltyModel(ticker);
         members.QueueViewer.Model = state.MakeQueueModel();
 
         members.GridViewer.Visible = true;
-        members.PenaltyViewer.Visible = true;
         members.QueueViewer.Visible = true;
 
         members.HealthGridViewer.SetLogicForhealth(ticker);

@@ -35,8 +35,6 @@ namespace FF2.Core
         private readonly ISpawnDeck spawnDeck;
         private Mover? mover;
         private ComboInfo currentCombo;
-        private int waitingMillis = 0;
-        private Moment lastMoment = new Moment(0); // TODO should see about enforcing "cannot change Kind without providing a Moment"
         private int score = 0;
         private readonly PayoutTable scorePayoutTable = PayoutTable.DefaultScorePayoutTable;
         private readonly HealthManager health;
@@ -49,11 +47,6 @@ namespace FF2.Core
         /// Holds the action that will be attempted on the next <see cref="Tick"/>.
         /// </summary>
         public StateKind Kind { get; private set; }
-
-        /// <summary>
-        /// TODO try not to use this? Or think about it more ...
-        /// </summary>
-        internal Moment Moment { get { return lastMoment; } }
 
         internal FallAnimationSampler FallSampler => fallSampler;
 
@@ -74,8 +67,7 @@ namespace FF2.Core
             mover = null;
             Kind = StateKind.Spawning;
             currentCombo = ComboInfo.Empty;
-            var ps = PenaltySchedule.BasicIndexedSchedule(5 * 1000);
-            health = new HealthManager(PayoutTable.DefaultHealthPayoutTable, ps);
+            health = new HealthManager(PayoutTable.DefaultHealthPayoutTable, timekeeper);
         }
 
         public IReadOnlyGrid Grid { get { return grid; } }
@@ -95,37 +87,24 @@ namespace FF2.Core
             return new Viewmodels.QueueModel(this.spawnDeck);
         }
 
-        public Viewmodels.PenaltyModel MakePenaltyModel(Ticker ticker)
-        {
-            var penalties = new PenaltyManager(10); // TODO
-            return new Viewmodels.PenaltyModel(penalties, this, ticker);
-        }
-
+        // TODO this should probably go away ...
         public void Elapse(Moment now)
         {
-            Elapse(now.Millis - lastMoment.Millis);
-            lastMoment = now;
+            timekeeper.Elapse(now, this);
         }
 
-        private void Elapse(int millis)
+        // ... and this should become non-TEMP code.
+        internal void TEMP_TimekeeperHook(IScheduler scheduler)
         {
-            if (millis <= 0)
-            {
-                return;
-            }
+            health.Elapse(scheduler);
 
-            if (Kind == StateKind.Waiting)
+            if (health.GameOver)
             {
-                waitingMillis += millis;
-
-                health.OnWaitingFrame(millis);
-                if (health.GameOver)
-                {
-                    ChangeKind(true, StateKind.GameOver, StateKind.GameOver);
-                    return;
-                }
+                ChangeKind(true, StateKind.GameOver, StateKind.GameOver);
             }
         }
+
+        private readonly Timekeeper timekeeper = new Timekeeper();
 
         public bool HandleCommand(Command command, Moment now)
         {
