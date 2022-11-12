@@ -167,7 +167,7 @@ namespace FF2.Core
                     var scorePayout = GetHypotheticalScore(currentCombo);
                     score += scorePayout;
                     //Console.WriteLine($"Score: {score} (+{scorePayout})");
-                    health.OnComboCompleted(currentCombo);
+                    health.OnComboCompleted(currentCombo, timekeeper); // TODO should be passed into Destroy() here
                     OnComboCompleted?.Invoke(this, currentCombo);
                 }
                 currentCombo = ComboInfo.Empty;

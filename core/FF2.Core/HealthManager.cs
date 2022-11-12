@@ -57,6 +57,8 @@ namespace FF2.Core
         private readonly HealthGrid healthGrid;
         private int penaltyIndex = 0;
         private Appointment penaltyAppointment;
+        private (int numRows, Appointment appt)? earnedHealthDrop;
+        private Appointment? lostHealthDrop;
 
         public HealthManager(PayoutTable healthPayoutTable, IScheduler scheduler)
         {
@@ -84,21 +86,28 @@ namespace FF2.Core
 
         public IReadOnlyGrid Grid => healthGrid;
 
-        public void OnComboCompleted(ComboInfo combo)
+        public void OnComboCompleted(ComboInfo combo, IScheduler scheduler)
         {
-            RestoreHealth(combo.ComboToReward);
+            RestoreHealth(combo.ComboToReward, scheduler);
             RemovePenalties(combo.ComboToReward.AdjustedGroupCount);
             healthGrid.Redraw();
         }
 
-        private void RestoreHealth(Combo combo)
+        private void RestoreHealth(Combo combo, IScheduler scheduler)
         {
             int payout = healthPayoutTable.GetPayout(combo.AdjustedGroupCount);
             PartialHealth = PartialHealth + payout;
+            int newRows = 0;
             while (PartialHealth >= MaxPartialHealth)
             {
-                Health += 2;
+                newRows++;
                 PartialHealth -= MaxPartialHealth;
+            }
+
+            if (newRows > 0)
+            {
+                Health += newRows * HealthPerRow;
+                this.earnedHealthDrop = (newRows, scheduler.CreateAppointment(800));
             }
 
             if (Health >= MaxHealth)
@@ -138,6 +147,15 @@ namespace FF2.Core
 
         public void Elapse(IScheduler scheduler)
         {
+            if (earnedHealthDrop.HasValue && earnedHealthDrop.Value.appt.HasArrived())
+            {
+                earnedHealthDrop = null;
+            }
+            if (lostHealthDrop.HasValue && lostHealthDrop.Value.HasArrived())
+            {
+                lostHealthDrop = null;
+            }
+
             UpdateAttack(scheduler);
             UpdatePenalties(scheduler);
             healthGrid.Redraw();
@@ -163,6 +181,10 @@ namespace FF2.Core
                 else
                 {
                     Health--;
+                    if (Health % HealthPerRow == 0)
+                    {
+                        lostHealthDrop = scheduler.CreateAppointment(400);
+                    }
                     shapeIndex = NextShapeIndex;
                     target = GetAttackStart(shapeIndex, penaltyCounts);
                     CurrentAttack = (target, scheduler.CreateWaitingAppointment(AttackMillisPerCell));
@@ -225,11 +247,36 @@ namespace FF2.Core
 
         public float GetAdder(Loc loc)
         {
-            var (target, appt) = CurrentAttack;
-            if (loc == target)
+            var (attackTarget, attackProgress) = CurrentAttack;
+            if (loc == attackTarget)
             {
-                return appt.Progress() - 1;
+                return attackProgress.Progress() - 1;
             }
+
+            if (healthGrid.Get(loc) == HealthOccupants.Heart)
+            {
+                float adder = 0; // adds up "drop due to earned health" and "drop due to lost health"
+
+                if (lostHealthDrop.HasValue)
+                {
+                    adder = 1 - lostHealthDrop.Value.Progress();
+                }
+
+                if (earnedHealthDrop.HasValue)
+                {
+                    var (numFallingRows, appt) = earnedHealthDrop.Value;
+                    int totalHealthRows = (Health + 1) / HealthPerRow;
+                    int earnedRowStart = HealthStartRow + totalHealthRows - numFallingRows;
+                    if (loc.Y >= earnedRowStart)
+                    {
+                        var distance = H - numFallingRows - loc.Y;
+                        adder += distance * (1 - appt.Progress());
+                    }
+                }
+
+                return adder;
+            }
+
             return 0f;
         }
 
