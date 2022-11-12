@@ -74,7 +74,7 @@ namespace FF2.Core
 
             appointments.Remove(this.cursor.Millis);
             waitingAppointments.Remove(this.waitingCursor.Millis);
-            Console.WriteLine($"Elapsing to {cursor} (waiting: {waitingCursor})");
+            //Console.WriteLine($"Elapsing to {cursor} (waiting: {waitingCursor})");
             state.TEMP_TimekeeperHook(this);
             return true;
         }

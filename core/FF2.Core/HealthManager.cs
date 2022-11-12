@@ -6,6 +6,19 @@ using System.Threading.Tasks;
 
 namespace FF2.Core
 {
+    static class Mask
+    {
+        public static int Set(int mask, int bit)
+        {
+            return mask | (1 << bit);
+        }
+
+        public static bool Test(int mask, int bit)
+        {
+            return (mask & (1 << bit)) != 0;
+        }
+    }
+
     class HealthManager : Viewmodels.IHealthModel
     {
         const int PenaltyAreaStartRow = 0;
@@ -59,6 +72,8 @@ namespace FF2.Core
         private Appointment penaltyAppointment;
         private (int numRows, Appointment appt)? earnedHealthDrop;
         private Appointment? lostHealthDrop;
+        private (int columnMask, Appointment)? destoyedPenalties;
+        private (int columnMask, Appointment)? fallingPenalties;
 
         public HealthManager(PayoutTable healthPayoutTable, IScheduler scheduler)
         {
@@ -89,7 +104,7 @@ namespace FF2.Core
         public void OnComboCompleted(ComboInfo combo, IScheduler scheduler)
         {
             RestoreHealth(combo.ComboToReward, scheduler);
-            RemovePenalties(combo.ComboToReward.AdjustedGroupCount);
+            RemovePenalties(combo.ComboToReward.AdjustedGroupCount, scheduler);
             healthGrid.Redraw();
         }
 
@@ -116,32 +131,25 @@ namespace FF2.Core
             }
         }
 
-        private void RemovePenalties(int N)
+        private void RemovePenalties(int AGC, IScheduler scheduler)
         {
-            int index = W - 1;
-            while (index >= 0)
+            int mask = 0;
+            for (int x = 0; x < W; x++)
             {
-                if (penaltyLevels[index] <= N)
+                if (penaltyLevels[x] <= AGC)
                 {
-                    Remove2(index);
-                    return;
+                    int count = penaltyCounts[x];
+                    if (count > 0)
+                    {
+                        penaltyCounts[x]--;
+                        mask = Mask.Set(mask, x);
+                    }
                 }
-                index--;
             }
-        }
 
-        private void Remove2(int index)
-        {
-            int minCount = penaltyCounts[index];
-
-            while (index >= 0)
+            if (mask != 0)
             {
-                int count = penaltyCounts[index];
-                if (count > 0 && count >= minCount)
-                {
-                    penaltyCounts[index] = count - 1;
-                }
-                index--;
+                destoyedPenalties = (mask, scheduler.CreateAppointment(500));
             }
         }
 
@@ -155,10 +163,31 @@ namespace FF2.Core
             {
                 lostHealthDrop = null;
             }
+            if (fallingPenalties.HasValue && fallingPenalties.Value.Item2.HasArrived())
+            {
+                fallingPenalties = null;
+            }
 
+            CompletePenaltyDestruction(scheduler);
             UpdateAttack(scheduler);
             UpdatePenalties(scheduler);
             healthGrid.Redraw();
+        }
+
+        private void CompletePenaltyDestruction(IScheduler scheduler)
+        {
+            if (!destoyedPenalties.HasValue)
+            {
+                return;
+            }
+            var (mask, appt) = destoyedPenalties.Value;
+            if (!appt.HasArrived())
+            {
+                return;
+            }
+
+            destoyedPenalties = null;
+            fallingPenalties = (mask, scheduler.CreateAppointment(500));
         }
 
         private int NextShapeIndex => (shapeIndex + 1) % Shapes.Length;
@@ -245,6 +274,22 @@ namespace FF2.Core
             return (WarningRange - millisRemaining) / WarningRange;
         }
 
+        public float DestructionProgress(Loc loc)
+        {
+            // Penalties are always destroyed from the bottom row.
+            // Each column never loses more than one penalty per combo.
+            if (loc.Y == 0 && destoyedPenalties.HasValue)
+            {
+                var (mask, appt) = destoyedPenalties.Value;
+                if (Mask.Test(mask, loc.X))
+                {
+                    return appt.Progress();
+                }
+            }
+
+            return 0;
+        }
+
         public float GetAdder(Loc loc)
         {
             var (attackTarget, attackProgress) = CurrentAttack;
@@ -253,7 +298,9 @@ namespace FF2.Core
                 return attackProgress.Progress() - 1;
             }
 
-            if (healthGrid.Get(loc) == HealthOccupants.Heart)
+            var occ = healthGrid.Get(loc);
+
+            if (occ == HealthOccupants.Heart)
             {
                 float adder = 0; // adds up "drop due to earned health" and "drop due to lost health"
 
@@ -277,6 +324,15 @@ namespace FF2.Core
                 return adder;
             }
 
+            if (occ == HealthOccupants.Penalty && fallingPenalties.HasValue)
+            {
+                var (mask, appt) = fallingPenalties.Value;
+                if (Mask.Test(mask, loc.X))
+                {
+                    return 1 - appt.Progress();
+                }
+            }
+
             return 0f;
         }
 
@@ -294,9 +350,20 @@ namespace FF2.Core
                 this.Clear();
 
                 // Place penalties
+                int mask = 0;
+                if (manager.destoyedPenalties.HasValue)
+                {
+                    mask = manager.destoyedPenalties.Value.columnMask;
+                }
                 for (int x = 0; x < W; x++)
                 {
                     int yLimit = manager.penaltyCounts[x];
+                    if (Mask.Test(mask, x))
+                    {
+                        // While destruction is in progress, we draw one extra penalty
+                        // so that we can animate its destruction.
+                        yLimit++;
+                    }
                     for (int y = 0; y < yLimit; y++)
                     {
                         Put(new Loc(x, y), HealthOccupants.Penalty);

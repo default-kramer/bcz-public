@@ -448,8 +448,7 @@ public class GridViewerControl : Control
 
         public float DestructionProgress(Loc loc)
         {
-            return 0f;
-            throw new NotImplementedException();
+            return health.DestructionProgress(loc);
         }
 
         public Occupant GetDestroyedOccupant(Loc loc)

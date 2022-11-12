@@ -17,5 +17,7 @@ namespace FF2.Core.Viewmodels
         /// Values may range from 0.0 (no cause for alarm) to 1.0 (failure).
         /// </summary>
         float LastGaspProgress();
+
+        float DestructionProgress(Loc loc);
     }
 }
