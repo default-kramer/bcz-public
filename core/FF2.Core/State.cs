@@ -37,9 +37,10 @@ namespace FF2.Core
         private ComboInfo currentCombo;
         private int score = 0;
         private readonly PayoutTable scorePayoutTable = PayoutTable.DefaultScorePayoutTable;
-        private readonly HealthManager health;
+        private readonly IStateHook hook;
+        private readonly Viewmodels.IHealthGridViewmodel healthVM;
 
-        public IHealthModel HealthModel => health;
+        public IHealthGridViewmodel HealthModel => healthVM;
 
         public int Score => score;
 
@@ -67,7 +68,9 @@ namespace FF2.Core
             mover = null;
             Kind = StateKind.Spawning;
             currentCombo = ComboInfo.Empty;
-            health = new HealthManager(PayoutTable.DefaultHealthPayoutTable, timekeeper);
+            var healthMgr = new HealthManager(PayoutTable.DefaultHealthPayoutTable, timekeeper);
+            hook = healthMgr;
+            healthVM = healthMgr;
         }
 
         public IReadOnlyGrid Grid { get { return grid; } }
@@ -96,9 +99,9 @@ namespace FF2.Core
         // ... and this should become non-TEMP code.
         internal void TEMP_TimekeeperHook(IScheduler scheduler)
         {
-            health.Elapse(scheduler);
+            hook.Elapse(scheduler);
 
-            if (health.GameOver)
+            if (hook.GameOver)
             {
                 ChangeKind(true, StateKind.GameOver, StateKind.GameOver);
             }
@@ -121,7 +124,7 @@ namespace FF2.Core
             };
         }
 
-        public float LastGaspProgress() { return health.LastGaspProgress(); }
+        public float LastGaspProgress() { return HealthModel.LastGaspProgress(); }
 
         private bool Spawn()
         {
@@ -167,7 +170,7 @@ namespace FF2.Core
                     var scorePayout = GetHypotheticalScore(currentCombo);
                     score += scorePayout;
                     //Console.WriteLine($"Score: {score} (+{scorePayout})");
-                    health.OnComboCompleted(currentCombo, timekeeper); // TODO should be passed into Destroy() here
+                    hook.OnComboCompleted(currentCombo, timekeeper); // TODO should be passed into Destroy() here
                     OnComboCompleted?.Invoke(this, currentCombo);
                 }
                 currentCombo = ComboInfo.Empty;

@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace FF2.Core.Viewmodels
 {
-    public interface IHealthModel
+    public interface IHealthGridViewmodel
     {
         IReadOnlyGrid Grid { get; }
 

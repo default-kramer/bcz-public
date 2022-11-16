@@ -19,7 +19,16 @@ namespace FF2.Core
         }
     }
 
-    class HealthManager : Viewmodels.IHealthModel
+    interface IStateHook
+    {
+        void Elapse(IScheduler scheduler);
+
+        void OnComboCompleted(ComboInfo combo, IScheduler scheduler);
+
+        bool GameOver { get; }
+    }
+
+    class HealthManager : IStateHook, Viewmodels.IHealthGridViewmodel
     {
         const int PenaltyAreaStartRow = 0;
         const int PenaltyAreaEndRow = 4;

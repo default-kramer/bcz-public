@@ -427,9 +427,9 @@ public class GridViewerControl : Control
     public sealed class HealthLogic : ILogic
     {
         private readonly IReadOnlyGrid grid;
-        private readonly IHealthModel health;
+        private readonly IHealthGridViewmodel health;
 
-        public HealthLogic(IHealthModel health)
+        public HealthLogic(IHealthGridViewmodel health)
         {
             this.grid = health.Grid;
             this.health = health;
