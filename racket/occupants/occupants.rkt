@@ -186,7 +186,7 @@
 (define (complete-heart)
   (heart #:brush red-brush #:border-color "red"))
 
-(define (heart-attack)
+(define (heartbreaker)
   ; Use black so I can reuse some enemy shader code (which looks for black)
   (heart #:brush black-brush #:border-color #f #:outline-color enemy-border-color))
 
@@ -222,6 +222,6 @@
   (save-bitmap (complete-heart) "heart.bmp")
   (for ([i '(0 25 50 75 100)])
     (save-bitmap (partial-heart i) (format "heart~a.bmp" i)))
-  (save-bitmap (heart-attack) "heart-attack.bmp")
+  (save-bitmap (heartbreaker) "heartbreaker.bmp")
   ; return value
   (reverse results))

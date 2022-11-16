@@ -20,6 +20,6 @@ namespace FF2.Core
         Heart50,
         Heart75,
         Heart100,
-        HeartAttack,
+        Heartbreaker,
     }
 }

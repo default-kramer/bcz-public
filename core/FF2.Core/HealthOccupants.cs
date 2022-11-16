@@ -22,7 +22,7 @@ namespace FF2.Core
 
         public static SpriteKind Translate(Occupant occ, SpriteKind elseValue)
         {
-            if (occ == Attack) { return SpriteKind.HeartAttack; }
+            if (occ == Attack) { return SpriteKind.Heartbreaker; }
             if (occ == Heart) { return SpriteKind.Heart; }
             if (occ == Heart0) { return SpriteKind.Heart0; }
             if (occ == Heart25) { return SpriteKind.Heart25; }
