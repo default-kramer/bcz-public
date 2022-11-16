@@ -21,13 +21,13 @@ namespace FF2.Core
         private readonly SortedSet<int> waitingAppointments = new SortedSet<int>();
         private Moment cursor;
         private Moment waitingCursor;
-        private readonly Func<Moment> normalTodo;
-        private readonly Func<Moment> waitingTodo;
+        private readonly Func<Moment> cursorProvider;
+        private readonly Func<Moment> waitingCursorProvider;
 
         public Timekeeper()
         {
-            this.normalTodo = () => cursor;
-            this.waitingTodo = () => waitingCursor;
+            this.cursorProvider = () => cursor;
+            this.waitingCursorProvider = () => waitingCursor;
         }
 
         public void Elapse(Moment now, State state)
@@ -83,14 +83,14 @@ namespace FF2.Core
         {
             var when = cursor.AddMillis(millisFromNow);
             appointments.Add(when.Millis);
-            return new Appointment(when, normalTodo, cursor);
+            return new Appointment(when, cursorProvider, cursor);
         }
 
         public Appointment CreateWaitingAppointment(int millisFromNow)
         {
             var when = waitingCursor.AddMillis(millisFromNow);
             waitingAppointments.Add(when.Millis);
-            return new Appointment(when, waitingTodo, waitingCursor);
+            return new Appointment(when, waitingCursorProvider, waitingCursor);
         }
     }
 
