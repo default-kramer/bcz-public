@@ -1,4 +1,5 @@
 using FF2.Core;
+using FF2.Core.Viewmodels;
 using FF2.Godot;
 using Godot;
 using System;
@@ -19,6 +20,11 @@ public class GridViewerControl : Control
     public void SetLogic(Ticker ticker)
     {
         this.Logic = new StandardLogic(ticker);
+    }
+
+    public void SetLogicForhealth(Ticker ticker)
+    {
+        this.Logic = new HealthLogic(ticker.state.HealthModel);
     }
 
     private TrackedSprite[] activeSprites = new TrackedSprite[400]; // should be way more than we need
@@ -116,20 +122,27 @@ public class GridViewerControl : Control
                 var canvasY = grid.Height - (y + 1);
                 var screenY = canvasY * screenCellSize + extraY / 2;
                 var screenX = x * screenCellSize + extraX / 2 + 1f;
+
+                float adder = 0f;
                 if (fallSampler.HasValue)
                 {
-                    screenY -= fallSampler.Value.GetAdder(loc) * screenCellSize;
+                    adder += fallSampler.Value.GetAdder(loc);
                 }
+                adder += Logic.FallSampleOverride(loc);
+                screenY -= adder * screenCellSize;
 
                 if (flicker.ShowGrid && !previewOcc.HasValue)
                 {
                     var YY = canvasY;
-                    DrawRect(new Rect2(x * screenCellSize, YY * screenCellSize, screenCellSize + 2, screenCellSize + 2), borderDark);
-                    DrawRect(new Rect2(x * screenCellSize + 1, YY * screenCellSize + 1, screenCellSize, screenCellSize), borderLight);
-                    DrawRect(new Rect2(x * screenCellSize + 2, YY * screenCellSize + 2, screenCellSize - 2, screenCellSize - 2), bgColor);
+                    DrawRect(new Rect2(screenX - 1, YY * screenCellSize, screenCellSize + 2, screenCellSize + 2), borderDark);
+                    DrawRect(new Rect2(screenX, YY * screenCellSize + 1, screenCellSize, screenCellSize), borderLight);
+                    DrawRect(new Rect2(screenX + 1, YY * screenCellSize + 2, screenCellSize - 2, screenCellSize - 2), bgColor);
                 }
 
-                SpriteKind kind = GetSpriteKind(occ);
+                if (!Logic.OverrideSpriteKind(occ, out var kind))
+                {
+                    kind = GetSpriteKind(occ);
+                }
 
                 var index = loc.ToIndex(grid);
                 TrackedSprite previousSprite = activeSprites[index];
@@ -178,19 +191,22 @@ public class GridViewerControl : Control
                         };
                     }
 
-                    var shader = (ShaderMaterial)sprite.Material;
-                    shader.SetShaderParam("my_color", GameColors.ToVector(occ.Color));
-                    shader.SetShaderParam("my_alpha", previewOcc.HasValue ? 0.75f : 1.0f);
-                    shader.SetShaderParam("destructionProgress", Logic.DestructionProgress(loc));
-
-                    if (currentSprite.Kind == SpriteKind.Enemy)
+                    var shader = sprite.Material as ShaderMaterial;
+                    if (shader != null)
                     {
-                        shader.SetShaderParam("is_corrupt", y < 7 ? 1.0f : 0.0f);
-                    }
+                        shader.SetShaderParam("my_color", GameColors.ToVector(occ.Color));
+                        shader.SetShaderParam("my_alpha", previewOcc.HasValue ? 0.75f : 1.0f);
+                        shader.SetShaderParam("destructionProgress", Logic.DestructionProgress(loc));
 
-                    if (currentSprite.Kind == SpriteKind.BlankSingle || currentSprite.Kind == SpriteKind.BlankJoined)
-                    {
-                        shader.SetShaderParam("destructionProgress", burstProgress);
+                        if (currentSprite.Kind == SpriteKind.Enemy)
+                        {
+                            shader.SetShaderParam("is_corrupt", y < 7 ? 1.0f : 0.0f);
+                        }
+
+                        if (currentSprite.Kind == SpriteKind.BlankSingle || currentSprite.Kind == SpriteKind.BlankJoined)
+                        {
+                            shader.SetShaderParam("destructionProgress", burstProgress);
+                        }
                     }
                 }
             }
@@ -292,6 +308,10 @@ public class GridViewerControl : Control
         Occupant GetDestroyedOccupant(Loc loc);
 
         FallSample? GetFallSample();
+
+        float FallSampleOverride(Loc loc);
+
+        bool OverrideSpriteKind(Occupant occ, out SpriteKind spriteKind);
     }
 
     public sealed class NullLogic : ILogic
@@ -328,9 +348,17 @@ public class GridViewerControl : Control
             return null;
         }
 
+        public float FallSampleOverride(Loc loc) { return 0; }
+
         public Mover? PreviewPlummet()
         {
             return null;
+        }
+
+        public bool OverrideSpriteKind(Occupant occ, out SpriteKind spriteKind)
+        {
+            spriteKind = default(SpriteKind);
+            return false;
         }
     }
 
@@ -349,13 +377,9 @@ public class GridViewerControl : Control
 
         public IReadOnlyGrid Grid { get { return state.Grid; } }
 
-        public decimal CorruptionProgress { get { return state.CorruptionProgress; } }
+        public bool ShouldFlicker { get { return state.LastGaspProgress() > 0; } }
 
-        const int LastChanceMillis = 5000;
-
-        public bool ShouldFlicker { get { return state.RemainingMillis < LastChanceMillis; } }
-
-        public float LastChanceProgress { get { return Convert.ToSingle(LastChanceMillis - state.RemainingMillis) / LastChanceMillis; } }
+        public float LastChanceProgress => state.LastGaspProgress();
 
         public Mover? PreviewPlummet() { return state.PreviewPlummet(); }
 
@@ -374,6 +398,8 @@ public class GridViewerControl : Control
             return ticker.GetFallSample();
         }
 
+        public float FallSampleOverride(Loc loc) { return 0; }
+
         public Occupant GetDestroyedOccupant(Loc loc)
         {
             return tickCalculations.GetDestroyedOccupant(loc, state.Grid);
@@ -389,6 +415,63 @@ public class GridViewerControl : Control
             {
                 return 0;
             }
+        }
+
+        public bool OverrideSpriteKind(Occupant occ, out SpriteKind spriteKind)
+        {
+            spriteKind = default(SpriteKind);
+            return false;
+        }
+    }
+
+    public sealed class HealthLogic : ILogic
+    {
+        private readonly IReadOnlyGrid grid;
+        private readonly IHealthGridViewmodel health;
+
+        public HealthLogic(IHealthGridViewmodel health)
+        {
+            this.grid = health.Grid;
+            this.health = health;
+        }
+
+        public IReadOnlyGrid Grid => grid;
+
+        public bool ShouldFlicker => health.LastGaspProgress() > 0;
+
+        public float LastChanceProgress => health.LastGaspProgress();
+
+        public float BurstProgress()
+        {
+            return 0f;
+        }
+
+        public float DestructionProgress(Loc loc)
+        {
+            return health.DestructionProgress(loc);
+        }
+
+        public Occupant GetDestroyedOccupant(Loc loc)
+        {
+            return Occupant.None;
+        }
+
+        public FallSample? GetFallSample()
+        {
+            return null;
+        }
+
+        public float FallSampleOverride(Loc loc) { return health.GetAdder(loc); }
+
+        public Mover? PreviewPlummet()
+        {
+            return null;
+        }
+
+        public bool OverrideSpriteKind(Occupant occ, out SpriteKind spriteKind)
+        {
+            spriteKind = HealthOccupants.Translate(occ, SpriteKind.None);
+            return spriteKind != SpriteKind.None;
         }
     }
 }

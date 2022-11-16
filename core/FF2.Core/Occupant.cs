@@ -21,6 +21,7 @@ namespace FF2.Core
         None = 0,
         Enemy = 1,
         Catalyst = 2,
+        Health = 3,
         // reserve up to F for the future
         All = Enemy | Catalyst,
     }

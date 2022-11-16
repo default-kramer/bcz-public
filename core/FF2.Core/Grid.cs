@@ -18,6 +18,12 @@ namespace FF2.Core
             this.Height = grid.Height;
         }
 
+        public GridSize(int w, int h)
+        {
+            this.Width = w;
+            this.Height = h;
+        }
+
         public int LocIndex(Loc loc)
         {
             return loc.Y * Width + loc.X;
@@ -133,6 +139,11 @@ namespace FF2.Core
         public Occupant Get(Loc loc)
         {
             return cells[Index(loc)];
+        }
+
+        protected virtual void Put(Loc loc, Occupant occupant)
+        {
+            cells[Index(loc)] = occupant;
         }
 
         public bool InBounds(Loc loc)
@@ -376,7 +387,7 @@ namespace FF2.Core
         public void Set(Loc loc, Occupant occ)
         {
             stats = null;
-            cells[Index(loc)] = occ;
+            Put(loc, occ);
         }
 
         /// <summary>
@@ -560,6 +571,11 @@ namespace FF2.Core
         public override IImmutableGrid MakeImmutable()
         {
             return this;
+        }
+
+        protected override void Put(Loc loc, Occupant occupant)
+        {
+            throw new InvalidOperationException("This method should be uncallable (without reflection)");
         }
     }
 }

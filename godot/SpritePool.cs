@@ -3,22 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using FF2.Core;
 using Godot;
 
 #nullable enable
 
 namespace FF2.Godot
 {
-    enum SpriteKind
-    {
-        None,
-        Single,
-        Joined,
-        BlankJoined,
-        BlankSingle,
-        Enemy,
-    }
-
     readonly struct TrackedSprite
     {
         public readonly SpriteKind Kind;
@@ -97,7 +88,11 @@ namespace FF2.Godot
                     var clone = (Sprite)template.Duplicate();
                     // Until Godot 4.0 gives us per-instance uniforms, we need to duplicate the shader also.
                     // https://godotengine.org/article/godot-40-gets-global-and-instance-shader-uniforms
-                    clone.Material = (ShaderMaterial)template.Material.Duplicate();
+                    var sm = template.Material as ShaderMaterial;
+                    if (sm != null)
+                    {
+                        clone.Material = sm.Duplicate() as ShaderMaterial;
+                    }
                     clone.Visible = true;
                     owner.AddChild(clone);
                     clone.Owner = owner;

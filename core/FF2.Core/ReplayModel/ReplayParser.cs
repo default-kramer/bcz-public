@@ -132,7 +132,7 @@ namespace FF2.Core.ReplayModel
         {
             if (!Game.Ticker.HandleCommand(command.Command, command.Moment))
             {
-                throw new InvalidReplayException($"HandleCommand failed: {command}");
+                throw new InvalidReplayException($"HandleCommand failed: {command.Command} at {command.Moment}");
             }
         }
 

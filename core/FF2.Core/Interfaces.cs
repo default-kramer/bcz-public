@@ -42,4 +42,13 @@ namespace FF2.Core
 
         Ticker Ticker { get; }
     }
+
+    interface IStateHook
+    {
+        void Elapse(IScheduler scheduler);
+
+        void OnComboCompleted(ComboInfo combo, IScheduler scheduler);
+
+        bool GameOver { get; }
+    }
 }

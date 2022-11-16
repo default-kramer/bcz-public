@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using FF2.Core.Viewmodels;
 
 namespace FF2.Core
 {
@@ -33,14 +34,13 @@ namespace FF2.Core
         private readonly FallAnimationSampler fallSampler;
         private readonly ISpawnDeck spawnDeck;
         private Mover? mover;
-        private CorruptionManager corruption;
         private ComboInfo currentCombo;
-        private readonly PenaltyManager penalties;
-        private PenaltySchedule penaltySchedule;
-        private int waitingMillis = 0;
-        private Moment lastMoment = new Moment(0); // TODO should see about enforcing "cannot change Kind without providing a Moment"
         private int score = 0;
         private readonly PayoutTable scorePayoutTable = PayoutTable.DefaultScorePayoutTable;
+        private readonly IStateHook hook;
+        private readonly Viewmodels.IHealthGridViewmodel healthVM;
+
+        public IHealthGridViewmodel HealthModel => healthVM;
 
         public int Score => score;
 
@@ -48,11 +48,6 @@ namespace FF2.Core
         /// Holds the action that will be attempted on the next <see cref="Tick"/>.
         /// </summary>
         public StateKind Kind { get; private set; }
-
-        /// <summary>
-        /// TODO try not to use this? Or think about it more ...
-        /// </summary>
-        internal Moment Moment { get { return lastMoment; } }
 
         internal FallAnimationSampler FallSampler => fallSampler;
 
@@ -72,10 +67,10 @@ namespace FF2.Core
             this.spawnDeck = spawnDeck;
             mover = null;
             Kind = StateKind.Spawning;
-            corruption = new CorruptionManager();
             currentCombo = ComboInfo.Empty;
-            penalties = new PenaltyManager();
-            penaltySchedule = PenaltySchedule.BasicSchedule(10 * 1000);
+            var healthMgr = new HealthManager(PayoutTable.DefaultHealthPayoutTable, timekeeper);
+            hook = healthMgr;
+            healthVM = healthMgr;
         }
 
         public IReadOnlyGrid Grid { get { return grid; } }
@@ -95,45 +90,24 @@ namespace FF2.Core
             return new Viewmodels.QueueModel(this.spawnDeck);
         }
 
-        public Viewmodels.PenaltyModel MakePenaltyModel(Ticker ticker)
-        {
-            return new Viewmodels.PenaltyModel(penalties, this, ticker);
-        }
-
+        // TODO this should probably go away ...
         public void Elapse(Moment now)
         {
-            Elapse(now.Millis - lastMoment.Millis);
-            lastMoment = now;
+            timekeeper.Elapse(now, this);
         }
 
-        private void Elapse(int millis)
+        // ... and this should become non-TEMP code.
+        internal void TEMP_TimekeeperHook(IScheduler scheduler)
         {
-            if (millis <= 0)
+            hook.Elapse(scheduler);
+
+            if (hook.GameOver)
             {
-                return;
-            }
-
-            if (Kind == StateKind.Waiting)
-            {
-                waitingMillis += millis;
-
-                corruption = corruption.Elapse(millis);
-
-                if (corruption.Progress >= 1m)
-                {
-                    ChangeKind(true, StateKind.GameOver, StateKind.GameOver);
-                    return;
-                }
-
-                if (penaltySchedule.TryAdvance(waitingMillis, out var nextPS))
-                {
-                    penalties.Add(penaltySchedule.Penalty);
-                    penaltySchedule = nextPS;
-
-                    corruption = corruption.OnPenaltiesChanged(penalties);
-                }
+                ChangeKind(true, StateKind.GameOver, StateKind.GameOver);
             }
         }
+
+        private readonly Timekeeper timekeeper = new Timekeeper();
 
         public bool HandleCommand(Command command, Moment now)
         {
@@ -150,9 +124,7 @@ namespace FF2.Core
             };
         }
 
-        public decimal CorruptionProgress { get { return corruption.Progress; } }
-
-        public int RemainingMillis { get { return corruption.RemainingMillis; } }
+        public float LastGaspProgress() { return HealthModel.LastGaspProgress(); }
 
         private bool Spawn()
         {
@@ -195,12 +167,10 @@ namespace FF2.Core
             {
                 if (currentCombo.TotalNumGroups > 0)
                 {
-                    var rewardCombo = currentCombo.ComboToReward;
                     var scorePayout = GetHypotheticalScore(currentCombo);
                     score += scorePayout;
                     //Console.WriteLine($"Score: {score} (+{scorePayout})");
-                    corruption = corruption.OnComboCompleted(rewardCombo);
-                    penalties.OnComboCompleted(rewardCombo);
+                    hook.OnComboCompleted(currentCombo, timekeeper); // TODO should be passed into Destroy() here
                     OnComboCompleted?.Invoke(this, currentCombo);
                 }
                 currentCombo = ComboInfo.Empty;

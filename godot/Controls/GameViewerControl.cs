@@ -58,16 +58,16 @@ public class GameViewerControl : Control
 
     internal readonly struct Members
     {
-        public readonly PenaltyViewerControl PenaltyViewer;
         public readonly GridViewerControl GridViewer;
         public readonly QueueViewerControl QueueViewer;
+        public readonly GridViewerControl HealthGridViewer;
         public readonly GameOverMenu GameOverMenu;
 
         public Members(Control me)
         {
-            me.FindNode(out PenaltyViewer, nameof(PenaltyViewer));
             me.FindNode(out GridViewer, nameof(GridViewer));
             me.FindNode(out QueueViewer, nameof(QueueViewer));
+            me.FindNode(out HealthGridViewer, nameof(HealthGridViewer));
             me.FindNode(out GameOverMenu, nameof(GameOverMenu));
 
             QueueViewer.GridViewer = GridViewer;
@@ -75,12 +75,6 @@ public class GameViewerControl : Control
     }
 
     private Members members;
-
-    public bool ShowPenalties
-    {
-        get { return members.PenaltyViewer.Visible; }
-        set { members.PenaltyViewer.Visible = value; }
-    }
 
     public bool ShowQueue
     {
@@ -97,27 +91,20 @@ public class GameViewerControl : Control
 
     public void OnSizeChanged()
     {
-        const float pvWidth = 100;
         const float queueWidth = 140;
+        const float queuePadding = 20;
 
         float availWidth = RectSize.x;
-        if (ShowPenalties)
-        {
-            availWidth -= pvWidth;
-        }
         if (ShowQueue)
         {
             availWidth -= queueWidth;
+            availWidth -= queuePadding;
         }
 
         // Divide by 2 for both gridviewers
         var gvSize = members.GridViewer.DesiredSize(new Vector2(availWidth / 2, RectSize.y));
 
         float totalWidth = gvSize.x;
-        if (ShowPenalties)
-        {
-            totalWidth += pvWidth;
-        }
         if (ShowQueue)
         {
             totalWidth += queueWidth;
@@ -126,21 +113,23 @@ public class GameViewerControl : Control
         float meCenter = RectSize.x / 2f;
         float left = meCenter - totalWidth / 2f;
 
-        if (ShowPenalties)
-        {
-            members.PenaltyViewer.RectSize = new Vector2(pvWidth, RectSize.y);
-            members.PenaltyViewer.RectPosition = new Vector2(left, 0);
-            left += pvWidth;
-        }
-
         members.GridViewer.RectSize = gvSize;
         members.GridViewer.RectPosition = new Vector2(left, 0);
         left += gvSize.x;
 
         if (ShowQueue)
         {
-            members.QueueViewer.RectSize = new Vector2(queueWidth, RectSize.y);
+            left += queuePadding;
+
+            var queueBottom = RectSize.y / 2f;// * 2f;
+            members.QueueViewer.RectSize = new Vector2(queueWidth, queueBottom);
             members.QueueViewer.RectPosition = new Vector2(left, 0);
+
+            // For now, just show the health when the queue is visible
+            members.HealthGridViewer.RectSize = new Vector2(queueWidth, RectSize.y - queueBottom);
+            members.HealthGridViewer.RectPosition = new Vector2(left, queueBottom);
+            members.HealthGridViewer.Visible = true;
+
             left += queueWidth;
         }
     }
@@ -164,8 +153,8 @@ public class GameViewerControl : Control
         this.logic.HandleInput();
 
         members.GridViewer.Update();
-        members.PenaltyViewer.Update();
         members.QueueViewer.Update();
+        members.HealthGridViewer.Update();
 
         this.logic.CheckGameOver();
     }
@@ -201,7 +190,6 @@ public class GameViewerControl : Control
             members.GridViewer.SetLogic(GridViewerControl.NullLogic.Instance);
             members.GridViewer.Visible = true;
             // TODO should set a null model here... but we'll just make them invisible for now
-            members.PenaltyViewer.Visible = false;
             members.QueueViewer.Visible = false;
         }
     }
@@ -210,12 +198,13 @@ public class GameViewerControl : Control
     {
         members.GridViewer.SetLogic(ticker);
         var state = ticker.state;
-        members.PenaltyViewer.Model = state.MakePenaltyModel(ticker);
         members.QueueViewer.Model = state.MakeQueueModel();
 
         members.GridViewer.Visible = true;
-        members.PenaltyViewer.Visible = true;
         members.QueueViewer.Visible = true;
+
+        members.HealthGridViewer.SetLogicForhealth(ticker);
+        members.HealthGridViewer.Visible = true;
     }
 
     internal abstract class LogicBase : ILogic

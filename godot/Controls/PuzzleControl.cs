@@ -125,7 +125,7 @@ public class PuzzleControl : Control, PuzzleMenu.ILogic
 
         members.GameViewer1.SetLogic(logic);
         members.GameViewer1.Visible = true;
-        members.GameViewer1.ShowPenalties = false;
+        // I had "ShowPenalties=false" which should probably become "ShowHealthGrid=false" or something
         members.GameViewer1.ShowQueue = true;
 
         // TODO show hints on 2nd game viewer
