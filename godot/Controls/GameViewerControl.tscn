@@ -1,8 +1,7 @@
-[gd_scene load_steps=6 format=2]
+[gd_scene load_steps=5 format=2]
 
 [ext_resource path="res://Controls/GameViewerControl.cs" type="Script" id=1]
 [ext_resource path="res://Controls/GridViewerControl.tscn" type="PackedScene" id=2]
-[ext_resource path="res://Controls/PenaltyViewerControl.tscn" type="PackedScene" id=3]
 [ext_resource path="res://Controls/QueueViewerControl.tscn" type="PackedScene" id=4]
 [ext_resource path="res://Controls/GameOverMenu.tscn" type="PackedScene" id=5]
 
@@ -10,8 +9,6 @@
 anchor_right = 1.0
 anchor_bottom = 1.0
 script = ExtResource( 1 )
-
-[node name="PenaltyViewer" parent="." instance=ExtResource( 3 )]
 
 [node name="GridViewer" parent="." instance=ExtResource( 2 )]
 
