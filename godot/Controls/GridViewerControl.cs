@@ -27,6 +27,11 @@ public class GridViewerControl : Control
         this.Logic = new HealthLogic(ticker.state.HealthModel);
     }
 
+    public void SetLogicForMover(Ticker ticker)
+    {
+        this.Logic = new MoverLogic(ticker.state);
+    }
+
     private TrackedSprite[] activeSprites = new TrackedSprite[400]; // should be way more than we need
 
     private SpritePool spritePool = null!;
@@ -48,18 +53,24 @@ public class GridViewerControl : Control
         return Math.Min(maxSize.x / gridSize.Width, maxSize.y / gridSize.Height);
     }
 
-    public Vector2 DesiredSize(Vector2 maxSize)
+    public (Vector2 mainSize, Vector2 moverSize) DesiredSize(Vector2 maxSize)
     {
         var gridSize = Logic.Grid.Size;
+
+        // reserve 2 rows for mover
+        maxSize = new Vector2(maxSize.x, maxSize.y * gridSize.Height / (gridSize.Height + MoverLogic.GridHeight));
+
         float cellSize = GetCellSize(maxSize, gridSize);
-        return new Vector2(cellSize * gridSize.Width, cellSize * gridSize.Height);
+        var mainSize = new Vector2(cellSize * gridSize.Width, cellSize * gridSize.Height);
+        var moverSize = new Vector2(cellSize * gridSize.Width, cellSize * MoverLogic.GridHeight);
+        return (mainSize, moverSize);
     }
 
     internal Vector2 CurrentSpriteScale { get; set; }
     internal float CurrentCellSize { get; set; }
 
-    private static readonly Godot.Color borderLight = Godot.Color.Color8(24, 130, 110);
-    private static readonly Godot.Color borderDark = borderLight.Darkened(0.3f);
+    private static readonly Godot.Color defaultBorderLight = Godot.Color.Color8(24, 130, 110);
+    private static readonly Godot.Color defaultBorderDark = defaultBorderLight.Darkened(0.3f);
     private static readonly Godot.Color bgColor = Godot.Color.Color8(0, 0, 0);
     private static readonly Godot.Color shroudColor = Godot.Color.Color8(0, 0, 0, 120);
 
@@ -79,6 +90,8 @@ public class GridViewerControl : Control
         {
             flicker = FlickerState.Initial;
         }
+
+        var (borderLight, borderDark) = Logic.BorderColor;
 
         const int padding = 2;
 
@@ -312,6 +325,8 @@ public class GridViewerControl : Control
         float FallSampleOverride(Loc loc);
 
         bool OverrideSpriteKind(Occupant occ, out SpriteKind spriteKind);
+
+        (Godot.Color light, Godot.Color dark) BorderColor { get; }
     }
 
     public sealed class NullLogic : ILogic
@@ -360,6 +375,8 @@ public class GridViewerControl : Control
             spriteKind = default(SpriteKind);
             return false;
         }
+
+        public (Godot.Color light, Godot.Color dark) BorderColor => (defaultBorderLight, defaultBorderDark);
     }
 
     public sealed class StandardLogic : ILogic
@@ -422,6 +439,8 @@ public class GridViewerControl : Control
             spriteKind = default(SpriteKind);
             return false;
         }
+
+        public (Godot.Color light, Godot.Color dark) BorderColor => (defaultBorderLight, defaultBorderDark);
     }
 
     public sealed class HealthLogic : ILogic
@@ -473,5 +492,118 @@ public class GridViewerControl : Control
             spriteKind = HealthOccupants.Translate(occ, SpriteKind.None);
             return spriteKind != SpriteKind.None;
         }
+
+        public (Godot.Color light, Godot.Color dark) BorderColor => (defaultBorderLight, defaultBorderDark);
+    }
+
+    sealed class MoverLogic : ILogic
+    {
+        public IReadOnlyGrid Grid => grid;
+        private readonly MoverGrid grid;
+
+        public const int GridHeight = 2;
+
+        public MoverLogic(State state)
+        {
+            this.grid = new MoverGrid(state);
+        }
+
+        class MoverGrid : IReadOnlyGrid
+        {
+            private readonly State state;
+            public MoverGrid(State state)
+            {
+                this.state = state;
+            }
+
+            public int Width => state.Grid.Width;
+
+            public int Height => GridHeight;
+
+            public GridSize Size => new GridSize(Width, Height);
+
+            public string PrintGrid => throw new NotImplementedException();
+
+            public string DiffGridString(params string[] rows)
+            {
+                throw new NotImplementedException();
+            }
+
+            public Occupant Get(Loc loc)
+            {
+                var x = state.GetMover;
+                if (x == null)
+                {
+                    return Occupant.None;
+                }
+                var mover = x.Value;
+                if (loc == mover.LocA)
+                {
+                    return mover.OccA;
+                }
+                if (loc == mover.LocB)
+                {
+                    return mover.OccB;
+                }
+                return Occupant.None;
+            }
+
+            public int HashGrid()
+            {
+                throw new NotImplementedException();
+            }
+
+            public bool InBounds(Loc loc)
+            {
+                throw new NotImplementedException();
+            }
+
+            public bool IsVacant(Loc loc)
+            {
+                throw new NotImplementedException();
+            }
+
+            public IImmutableGrid MakeImmutable()
+            {
+                throw new NotImplementedException();
+            }
+
+            public Mover NewMover(SpawnItem item)
+            {
+                throw new NotImplementedException();
+            }
+
+            public ReadOnlySpan<Occupant> ToSpan()
+            {
+                throw new NotImplementedException();
+            }
+        }
+
+        public bool ShouldFlicker => false;
+
+        public float LastChanceProgress => 0;
+
+        public float BurstProgress() => 0;
+
+        public float DestructionProgress(Loc loc) => 0;
+
+        public float FallSampleOverride(Loc loc) => 0;
+
+        public Occupant GetDestroyedOccupant(Loc loc) => Occupant.None;
+
+        public FallSample? GetFallSample() => null;
+
+        public bool OverrideSpriteKind(Occupant occ, out SpriteKind spriteKind)
+        {
+            spriteKind = SpriteKind.None;
+            return false;
+        }
+
+        public Mover? PreviewPlummet() => null;
+
+        public (Godot.Color light, Godot.Color dark) BorderColor => (borderLight, borderDark);
+
+        private static readonly Godot.Color borderLight = Godot.Color.Color8(215, 215, 215);
+        private static readonly Godot.Color borderDark = Godot.Color.Color8(160, 160, 160);
     }
 }

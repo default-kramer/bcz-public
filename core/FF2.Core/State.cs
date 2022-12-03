@@ -261,6 +261,8 @@ namespace FF2.Core
             return mover?.PreviewPlummet(grid);
         }
 
+        public Mover? GetMover => mover;
+
         public Move PreviousMove { get; private set; }
 
         private bool Plummet()

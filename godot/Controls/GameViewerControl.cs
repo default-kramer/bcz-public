@@ -61,6 +61,7 @@ public class GameViewerControl : Control
         public readonly GridViewerControl GridViewer;
         public readonly QueueViewerControl QueueViewer;
         public readonly GridViewerControl HealthGridViewer;
+        public readonly GridViewerControl MoverGridViewer;
         public readonly GameOverMenu GameOverMenu;
 
         public Members(Control me)
@@ -68,6 +69,7 @@ public class GameViewerControl : Control
             me.FindNode(out GridViewer, nameof(GridViewer));
             me.FindNode(out QueueViewer, nameof(QueueViewer));
             me.FindNode(out HealthGridViewer, nameof(HealthGridViewer));
+            me.FindNode(out MoverGridViewer, nameof(MoverGridViewer));
             me.FindNode(out GameOverMenu, nameof(GameOverMenu));
 
             QueueViewer.GridViewer = GridViewer;
@@ -102,7 +104,7 @@ public class GameViewerControl : Control
         }
 
         // Divide by 2 for both gridviewers
-        var gvSize = members.GridViewer.DesiredSize(new Vector2(availWidth / 2, RectSize.y));
+        var (gvSize, moverSize) = members.GridViewer.DesiredSize(new Vector2(availWidth / 2, RectSize.y));
 
         float totalWidth = gvSize.x;
         if (ShowQueue)
@@ -113,8 +115,12 @@ public class GameViewerControl : Control
         float meCenter = RectSize.x / 2f;
         float left = meCenter - totalWidth / 2f;
 
+        members.MoverGridViewer.RectSize = moverSize;
+        members.MoverGridViewer.RectPosition = new Vector2(left, 0);
+
         members.GridViewer.RectSize = gvSize;
-        members.GridViewer.RectPosition = new Vector2(left, 0);
+        members.GridViewer.RectPosition = new Vector2(left, moverSize.y);
+
         left += gvSize.x;
 
         if (ShowQueue)
@@ -155,6 +161,7 @@ public class GameViewerControl : Control
         members.GridViewer.Update();
         members.QueueViewer.Update();
         members.HealthGridViewer.Update();
+        members.MoverGridViewer.Update();
 
         this.logic.CheckGameOver();
     }
@@ -202,6 +209,8 @@ public class GameViewerControl : Control
 
         members.GridViewer.Visible = true;
         members.QueueViewer.Visible = true;
+
+        members.MoverGridViewer.SetLogicForMover(ticker);
 
         members.HealthGridViewer.SetLogicForhealth(ticker);
         members.HealthGridViewer.Visible = true;
