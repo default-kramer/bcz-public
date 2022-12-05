@@ -34,7 +34,21 @@ public class QueueViewerControl : Control
 
         for (int i = 0; i < Math.Min(count, Model.LookaheadLimit); i++)
         {
-            var (left, right) = Model[i];
+            var item = Model[i];
+            Occupant left;
+            Occupant right;
+
+            if (item.IsCatalyst(out var pair))
+            {
+                left = pair.left;
+                right = pair.right;
+            }
+            else
+            {
+                left = Occupant.IndestructibleEnemy;
+                right = Occupant.IndestructibleEnemy;
+            }
+
             float y = 40f * i + 100f;
             Draw(left, marginLeft, y, Index1(i));
             Draw(right, marginLeft + cellSize, y, Index2(i));
@@ -71,6 +85,8 @@ public class QueueViewerControl : Control
             ts = spritePool.Rent(kind, this);
             sprites[index] = ts;
         }
+
+        if (ts.Sprite == null) { return; }
 
         var sprite = ts.Sprite;
         sprite.Visible = true;

@@ -62,6 +62,8 @@ public class GameViewerControl : Control
         public readonly QueueViewerControl QueueViewer;
         public readonly GridViewerControl HealthGridViewer;
         public readonly GridViewerControl MoverGridViewer;
+        public readonly GridViewerControl PenaltyGridViewerLeft;
+        public readonly GridViewerControl PenaltyGridViewerRight;
         public readonly GameOverMenu GameOverMenu;
 
         public Members(Control me)
@@ -70,6 +72,8 @@ public class GameViewerControl : Control
             me.FindNode(out QueueViewer, nameof(QueueViewer));
             me.FindNode(out HealthGridViewer, nameof(HealthGridViewer));
             me.FindNode(out MoverGridViewer, nameof(MoverGridViewer));
+            me.FindNode(out PenaltyGridViewerLeft, nameof(PenaltyGridViewerLeft));
+            me.FindNode(out PenaltyGridViewerRight, nameof(PenaltyGridViewerRight));
             me.FindNode(out GameOverMenu, nameof(GameOverMenu));
 
             QueueViewer.GridViewer = GridViewer;
@@ -115,6 +119,12 @@ public class GameViewerControl : Control
         float meCenter = RectSize.x / 2f;
         float left = meCenter - totalWidth / 2f;
 
+        // WARNING this padding assumes H=20 for both penalty grids
+        var penaltySize = new Vector2(RectSize.y / 20f * 2.2f, RectSize.y);
+        members.PenaltyGridViewerLeft.RectSize = penaltySize;
+        members.PenaltyGridViewerLeft.RectPosition = new Vector2(left, 0);
+        left += penaltySize.x;
+
         members.MoverGridViewer.RectSize = moverSize;
         members.MoverGridViewer.RectPosition = new Vector2(left, 0);
 
@@ -122,6 +132,10 @@ public class GameViewerControl : Control
         members.GridViewer.RectPosition = new Vector2(left, moverSize.y);
 
         left += gvSize.x;
+
+        members.PenaltyGridViewerRight.RectSize = penaltySize;
+        members.PenaltyGridViewerRight.RectPosition = new Vector2(left, 0);
+        left += penaltySize.x;
 
         if (ShowQueue)
         {
@@ -131,12 +145,19 @@ public class GameViewerControl : Control
             members.QueueViewer.RectSize = new Vector2(queueWidth, queueBottom);
             members.QueueViewer.RectPosition = new Vector2(left, 0);
 
-            // For now, just show the health when the queue is visible
-            members.HealthGridViewer.RectSize = new Vector2(queueWidth, RectSize.y - queueBottom);
-            members.HealthGridViewer.RectPosition = new Vector2(left, queueBottom);
-            members.HealthGridViewer.Visible = true;
+            if (false)
+            {
+                // For now, just show the health when the queue is visible
+                members.HealthGridViewer.RectSize = new Vector2(queueWidth, RectSize.y - queueBottom);
+                members.HealthGridViewer.RectPosition = new Vector2(left, queueBottom);
+                members.HealthGridViewer.Visible = true;
 
-            left += queueWidth;
+                left += queueWidth;
+            }
+            else
+            {
+                members.HealthGridViewer.Visible = false;
+            }
         }
     }
 
@@ -162,6 +183,8 @@ public class GameViewerControl : Control
         members.QueueViewer.Update();
         members.HealthGridViewer.Update();
         members.MoverGridViewer.Update();
+        members.PenaltyGridViewerLeft.Update();
+        members.PenaltyGridViewerRight.Update();
 
         this.logic.CheckGameOver();
     }
@@ -211,6 +234,8 @@ public class GameViewerControl : Control
         members.QueueViewer.Visible = true;
 
         members.MoverGridViewer.SetLogicForMover(ticker);
+        members.PenaltyGridViewerLeft.SetLogicForPenalty(ticker.state.PENALTY_LEFT);
+        members.PenaltyGridViewerRight.SetLogicForPenalty(ticker.state.PENALTY_RIGHT);
 
         members.HealthGridViewer.SetLogicForhealth(ticker);
         members.HealthGridViewer.Visible = true;

@@ -50,6 +50,7 @@ namespace FF2.Core
         public int NumHorizontalGroupsLoose;
         public int NumVerticalGroupsStrict;
         public int NumHorizontalGroupsStrict;
+        public int NumEnemiesDestroyed;
 
         public DestructionCalculations(IReadOnlyGrid grid)
         {
@@ -68,6 +69,7 @@ namespace FF2.Core
             NumHorizontalGroupsLoose = 0;
             NumVerticalGroupsStrict = 0;
             NumHorizontalGroupsStrict = 0;
+            NumEnemiesDestroyed = 0;
         }
 
         public void AddColumnDestruction(int x, bool hasEnemy)
@@ -100,6 +102,10 @@ namespace FF2.Core
             }
 
             destroyedOccupants[loc.ToIndex(grid)] = occupant;
+            if (occupant.Kind == OccupantKind.Enemy)
+            {
+                NumEnemiesDestroyed++;
+            }
         }
 
         public Occupant GetDestroyedOccupant(Loc loc, IReadOnlyGrid grid)

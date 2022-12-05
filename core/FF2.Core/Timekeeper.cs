@@ -17,8 +17,8 @@ namespace FF2.Core
 
     sealed class Timekeeper : IScheduler
     {
-        private readonly SortedSet<int> appointments = new SortedSet<int>();
-        private readonly SortedSet<int> waitingAppointments = new SortedSet<int>();
+        private readonly SortedSet<int> appointments = new() { 0 };
+        private readonly SortedSet<int> waitingAppointments = new() { 0 };
         private Moment cursor;
         private Moment waitingCursor;
         private readonly Func<Moment> cursorProvider;
@@ -94,7 +94,7 @@ namespace FF2.Core
         }
     }
 
-    readonly struct Appointment
+    public readonly struct Appointment
     {
         private readonly Moment created;
         private readonly Moment occurs;
@@ -118,5 +118,9 @@ namespace FF2.Core
             float completed = now().Millis - created.Millis;
             return completed / total;
         }
+
+        public static readonly Appointment Frame0 = new Appointment(new Moment(0), new Func<Moment>(() => new Moment(0)), new Moment(0));
+
+        public bool IsFrame0 => occurs.Millis == 0;
     }
 }

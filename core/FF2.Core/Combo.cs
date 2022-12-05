@@ -10,11 +10,13 @@ namespace FF2.Core
     {
         public readonly Combo StrictCombo;
         public readonly Combo PermissiveCombo;
+        public readonly int NumEnemiesDestroyed;
 
-        private ComboInfo(Combo strict, Combo permissive)
+        private ComboInfo(Combo strict, Combo permissive, int enemiesDestroyed)
         {
             this.StrictCombo = strict;
             this.PermissiveCombo = permissive;
+            this.NumEnemiesDestroyed = enemiesDestroyed;
         }
 
         /// <summary>
@@ -23,15 +25,18 @@ namespace FF2.Core
         /// </summary>
         public Combo ComboToReward => PermissiveCombo;
 
-        public static readonly ComboInfo Empty = new ComboInfo(Combo.Empty, Combo.Empty);
+        public static readonly ComboInfo Empty = new ComboInfo(Combo.Empty, Combo.Empty, 0);
 
         public int TotalNumGroups => PermissiveCombo.NumVerticalGroups + PermissiveCombo.NumHorizontalGroups;
 
+        /// <summary>
+        /// This can get called multiple times per "destruction cycle"
+        /// </summary>
         internal ComboInfo AfterDestruction(DestructionCalculations calculations)
         {
             var strict2 = StrictCombo.AfterDestruction(calculations.NumVerticalGroupsStrict, calculations.NumHorizontalGroupsStrict);
             var perm2 = PermissiveCombo.AfterDestruction(calculations.NumVerticalGroupsLoose, calculations.NumHorizontalGroupsLoose);
-            return new ComboInfo(strict2, perm2);
+            return new ComboInfo(strict2, perm2, NumEnemiesDestroyed + calculations.NumEnemiesDestroyed);
         }
 
         /// <summary>

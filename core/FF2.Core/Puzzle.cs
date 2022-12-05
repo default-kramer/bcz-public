@@ -258,6 +258,11 @@ namespace FF2.Core
 
             public int PeekLimit => queue.Count - i;
 
+            public void AddPenalty(SpawnItem penalty)
+            {
+                throw new NotImplementedException("Should never be called");
+            }
+
             public SpawnItem Peek(int index)
             {
                 return queue[i + index];

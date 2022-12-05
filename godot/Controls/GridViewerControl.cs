@@ -24,12 +24,17 @@ public class GridViewerControl : Control
 
     public void SetLogicForhealth(Ticker ticker)
     {
-        this.Logic = new HealthLogic(ticker.state.HealthModel);
+        this.Logic = NullLogic.Instance;// new HealthLogic(ticker.state.HealthModel);
     }
 
     public void SetLogicForMover(Ticker ticker)
     {
         this.Logic = new MoverLogic(ticker.state);
+    }
+
+    public void SetLogicForPenalty(IReadOnlyGrid grid)
+    {
+        this.Logic = new PenaltyLogic(grid);
     }
 
     private TrackedSprite[] activeSprites = new TrackedSprite[400]; // should be way more than we need
@@ -152,7 +157,7 @@ public class GridViewerControl : Control
                     DrawRect(new Rect2(screenX + 1, YY * screenCellSize + 2, screenCellSize - 2, screenCellSize - 2), bgColor);
                 }
 
-                if (!Logic.OverrideSpriteKind(occ, out var kind))
+                if (!Logic.OverrideSpriteKind(occ, loc, out var kind))
                 {
                     kind = GetSpriteKind(occ);
                 }
@@ -297,86 +302,51 @@ public class GridViewerControl : Control
         private static readonly float[] Flickers = new float[] { quick, quick, quick, 1.4f, quick, quick * 2, quick, quick, quick, 0.8f, quick, 0.4f, quick, quick, quick, 0.5f, quick * 2, 0.4f };
     }
 
-    public interface ILogic
+    public abstract class ILogic
     {
-        IReadOnlyGrid Grid { get; }
+        public abstract IReadOnlyGrid Grid { get; }
 
         /// <summary>
         /// This is used to make the grid flicker when there is very little time left.
         /// </summary>
-        bool ShouldFlicker { get; }
+        public virtual bool ShouldFlicker => false;
 
         /// <summary>
         /// A value from 0 to 1, where 0 means "plenty of time left" and 0.98 means "you're almost done!"
         /// Note: Current implementation can return negative numbers I think.
         /// </summary>
-        float LastChanceProgress { get; }
+        public virtual float LastChanceProgress => 0;
 
-        Mover? PreviewPlummet();
+        public virtual Mover? PreviewPlummet() => null;
 
-        float BurstProgress();
+        public virtual float BurstProgress() => 0;
 
-        float DestructionProgress(Loc loc);
+        public virtual float DestructionProgress(Loc loc) => 0;
 
-        Occupant GetDestroyedOccupant(Loc loc);
+        public virtual Occupant GetDestroyedOccupant(Loc loc) => Occupant.None;
 
-        FallSample? GetFallSample();
+        public virtual FallSample? GetFallSample() => null;
 
-        float FallSampleOverride(Loc loc);
+        public virtual float FallSampleOverride(Loc loc) => 0;
 
-        bool OverrideSpriteKind(Occupant occ, out SpriteKind spriteKind);
-
-        (Godot.Color light, Godot.Color dark) BorderColor { get; }
-    }
-
-    public sealed class NullLogic : ILogic
-    {
-        private static readonly IReadOnlyGrid defaultGrid = Grid.Create(Grid.DefaultWidth, Grid.DefaultHeight);
-
-        private NullLogic() { }
-
-        public static readonly NullLogic Instance = new NullLogic();
-
-        IReadOnlyGrid ILogic.Grid => defaultGrid;
-
-        public bool ShouldFlicker => false;
-
-        public float LastChanceProgress => 0f;
-
-        public float BurstProgress()
-        {
-            return 0f;
-        }
-
-        public float DestructionProgress(Loc loc)
-        {
-            return 0f;
-        }
-
-        public Occupant GetDestroyedOccupant(Loc loc)
-        {
-            return Occupant.None;
-        }
-
-        public FallSample? GetFallSample()
-        {
-            return null;
-        }
-
-        public float FallSampleOverride(Loc loc) { return 0; }
-
-        public Mover? PreviewPlummet()
-        {
-            return null;
-        }
-
-        public bool OverrideSpriteKind(Occupant occ, out SpriteKind spriteKind)
+        public virtual bool OverrideSpriteKind(Occupant occ, Loc loc, out SpriteKind spriteKind)
         {
             spriteKind = default(SpriteKind);
             return false;
         }
 
-        public (Godot.Color light, Godot.Color dark) BorderColor => (defaultBorderLight, defaultBorderDark);
+        public virtual (Godot.Color light, Godot.Color dark) BorderColor => (defaultBorderLight, defaultBorderDark);
+    }
+
+    public sealed class NullLogic : ILogic
+    {
+        private static readonly IReadOnlyGrid defaultGrid = FF2.Core.Grid.Create(FF2.Core.Grid.DefaultWidth, FF2.Core.Grid.DefaultHeight);
+
+        private NullLogic() { }
+
+        public static readonly NullLogic Instance = new NullLogic();
+
+        public override IReadOnlyGrid Grid => defaultGrid;
     }
 
     public sealed class StandardLogic : ILogic
@@ -392,37 +362,29 @@ public class GridViewerControl : Control
             this.tickCalculations = state.TickCalculations;
         }
 
-        public IReadOnlyGrid Grid { get { return state.Grid; } }
+        public override IReadOnlyGrid Grid => state.Grid;
 
-        public bool ShouldFlicker { get { return state.LastGaspProgress() > 0; } }
+        public override bool ShouldFlicker => state.LastGaspProgress() > 0;
 
-        public float LastChanceProgress => state.LastGaspProgress();
+        public override float LastChanceProgress => state.LastGaspProgress();
 
-        public Mover? PreviewPlummet() { return state.PreviewPlummet(); }
+        public override Mover? PreviewPlummet() => state.PreviewPlummet();
 
         public int ColumnDestructionBitmap => tickCalculations.ColumnDestructionBitmap;
         public int RowDestructionBitmap => tickCalculations.RowDestructionBitmap;
 
-        public float BurstProgress() { return ticker.BurstProgress(); }
+        public override float BurstProgress() => ticker.BurstProgress();
 
-        public float DestructionIntensity()
-        {
-            return ticker.DestructionIntensity();
-        }
+        public override FallSample? GetFallSample() => ticker.GetFallSample();
 
-        public FallSample? GetFallSample()
-        {
-            return ticker.GetFallSample();
-        }
+        public override float FallSampleOverride(Loc loc) => 0;
 
-        public float FallSampleOverride(Loc loc) { return 0; }
-
-        public Occupant GetDestroyedOccupant(Loc loc)
+        public override Occupant GetDestroyedOccupant(Loc loc)
         {
             return tickCalculations.GetDestroyedOccupant(loc, state.Grid);
         }
 
-        public float DestructionProgress(Loc loc)
+        public override float DestructionProgress(Loc loc)
         {
             if (GetDestroyedOccupant(loc) != Occupant.None)
             {
@@ -433,14 +395,6 @@ public class GridViewerControl : Control
                 return 0;
             }
         }
-
-        public bool OverrideSpriteKind(Occupant occ, out SpriteKind spriteKind)
-        {
-            spriteKind = default(SpriteKind);
-            return false;
-        }
-
-        public (Godot.Color light, Godot.Color dark) BorderColor => (defaultBorderLight, defaultBorderDark);
     }
 
     public sealed class HealthLogic : ILogic
@@ -454,59 +408,36 @@ public class GridViewerControl : Control
             this.health = health;
         }
 
-        public IReadOnlyGrid Grid => grid;
+        public override IReadOnlyGrid Grid => grid;
 
-        public bool ShouldFlicker => health.LastGaspProgress() > 0;
+        public override bool ShouldFlicker => health.LastGaspProgress() > 0;
 
-        public float LastChanceProgress => health.LastGaspProgress();
+        public override float LastChanceProgress => health.LastGaspProgress();
 
-        public float BurstProgress()
-        {
-            return 0f;
-        }
+        public override float DestructionProgress(Loc loc) => health.DestructionProgress(loc);
 
-        public float DestructionProgress(Loc loc)
-        {
-            return health.DestructionProgress(loc);
-        }
+        public override float FallSampleOverride(Loc loc) => health.GetAdder(loc);
 
-        public Occupant GetDestroyedOccupant(Loc loc)
-        {
-            return Occupant.None;
-        }
-
-        public FallSample? GetFallSample()
-        {
-            return null;
-        }
-
-        public float FallSampleOverride(Loc loc) { return health.GetAdder(loc); }
-
-        public Mover? PreviewPlummet()
-        {
-            return null;
-        }
-
-        public bool OverrideSpriteKind(Occupant occ, out SpriteKind spriteKind)
+        public override bool OverrideSpriteKind(Occupant occ, Loc loc, out SpriteKind spriteKind)
         {
             spriteKind = HealthOccupants.Translate(occ, SpriteKind.None);
             return spriteKind != SpriteKind.None;
         }
-
-        public (Godot.Color light, Godot.Color dark) BorderColor => (defaultBorderLight, defaultBorderDark);
     }
 
     sealed class MoverLogic : ILogic
     {
-        public IReadOnlyGrid Grid => grid;
         private readonly MoverGrid grid;
 
-        public const int GridHeight = 2;
+        public const int GridHeight = 3; // 2 for mover + 1 for health
+        private static bool IsHealthRow(Loc loc) => loc.Y == GridHeight - 1;
 
         public MoverLogic(State state)
         {
             this.grid = new MoverGrid(state);
         }
+
+        public override IReadOnlyGrid Grid => grid;
 
         class MoverGrid : IReadOnlyGrid
         {
@@ -531,11 +462,17 @@ public class GridViewerControl : Control
 
             public Occupant Get(Loc loc)
             {
+                if (IsHealthRow(loc))
+                {
+                    return GetHeart(loc.X);
+                }
+
                 var x = state.GetMover;
                 if (x == null)
                 {
                     return Occupant.None;
                 }
+
                 var mover = x.Value;
                 if (loc == mover.LocA)
                 {
@@ -545,7 +482,35 @@ public class GridViewerControl : Control
                 {
                     return mover.OccB;
                 }
+
                 return Occupant.None;
+            }
+
+            private Occupant GetHeart(int x)
+            {
+                int healthToShow = state.CurrentHealth;
+                var popIn = state.RestoreHealthAnimation;
+                if (popIn.HealthGained > 0 && !popIn.Appointment.HasArrived())
+                {
+                    int unpopped = Convert.ToInt32(popIn.HealthGained * (1f - popIn.Appointment.Progress()));
+                    healthToShow -= unpopped;
+                }
+
+                const int healthPerCell = 4;
+                int index = x * healthPerCell;
+                int actual = healthToShow - index;
+
+                if (actual >= 4)
+                {
+                    return HealthOccupants.Heart;
+                }
+                return actual switch
+                {
+                    3 => HealthOccupants.Heart75,
+                    2 => HealthOccupants.Heart50,
+                    1 => HealthOccupants.Heart25,
+                    _ => Occupant.None,
+                };
             }
 
             public int HashGrid()
@@ -579,31 +544,32 @@ public class GridViewerControl : Control
             }
         }
 
-        public bool ShouldFlicker => false;
-
-        public float LastChanceProgress => 0;
-
-        public float BurstProgress() => 0;
-
-        public float DestructionProgress(Loc loc) => 0;
-
-        public float FallSampleOverride(Loc loc) => 0;
-
-        public Occupant GetDestroyedOccupant(Loc loc) => Occupant.None;
-
-        public FallSample? GetFallSample() => null;
-
-        public bool OverrideSpriteKind(Occupant occ, out SpriteKind spriteKind)
+        public override bool OverrideSpriteKind(Occupant occ, Loc loc, out SpriteKind spriteKind)
         {
-            spriteKind = SpriteKind.None;
-            return false;
+            spriteKind = HealthOccupants.Translate(occ, SpriteKind.None);
+            return IsHealthRow(loc);
         }
 
-        public Mover? PreviewPlummet() => null;
-
-        public (Godot.Color light, Godot.Color dark) BorderColor => (borderLight, borderDark);
+        public override (Godot.Color light, Godot.Color dark) BorderColor => (borderLight, borderDark);
 
         private static readonly Godot.Color borderLight = Godot.Color.Color8(215, 215, 215);
         private static readonly Godot.Color borderDark = Godot.Color.Color8(160, 160, 160);
+    }
+
+    sealed class PenaltyLogic : ILogic
+    {
+        private readonly IReadOnlyGrid grid;
+        public PenaltyLogic(IReadOnlyGrid grid)
+        {
+            this.grid = grid;
+        }
+
+        public override IReadOnlyGrid Grid => grid;
+
+        public override bool OverrideSpriteKind(Occupant occ, Loc loc, out SpriteKind spriteKind)
+        {
+            spriteKind = HealthOccupants.Translate(occ, SpriteKind.None);
+            return spriteKind != SpriteKind.None;
+        }
     }
 }

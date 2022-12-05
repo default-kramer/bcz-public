@@ -158,11 +158,16 @@ namespace FF2.Core
 
         public Mover NewMover(SpawnItem item)
         {
-            var occA = Occupant.MakeCatalyst(item.LeftColor, Direction.Right);
-            var occB = Occupant.MakeCatalyst(item.RightColor, Direction.Left);
-            var locA = new Loc(Width / 2 - 1, 0);
-            var locB = locA.Neighbor(Direction.Right);
-            return new Mover(locA, occA, locB, occB);
+            if (item.IsCatalyst(out var occs))
+            {
+                var locA = new Loc(Width / 2 - 1, 0);
+                var locB = locA.Neighbor(Direction.Right);
+                return new Mover(locA, occs.left, locB, occs.right);
+            }
+            else
+            {
+                throw new Exception("TODO hmm...");
+            }
         }
 
         public Loc Loc(int index)

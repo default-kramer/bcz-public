@@ -8,20 +8,44 @@ namespace FF2.Core
 {
     public readonly struct SpawnItem
     {
-        public readonly Color LeftColor;
-        public readonly Color RightColor;
+        public static readonly SpawnItem None = default(SpawnItem);
+        public static readonly SpawnItem PENALTY = new SpawnItem(Occupant.IndestructibleEnemy, Occupant.IndestructibleEnemy);
 
-        public SpawnItem(Color left, Color right)
+        private readonly Occupant left;
+        private readonly Occupant right;
+
+        private SpawnItem(Occupant left, Occupant right)
         {
-            this.LeftColor = left;
-            this.RightColor = right;
+            this.left = left;
+            this.right = right;
+        }
+
+        public static SpawnItem MakeCatalystPair(Color left, Color right)
+        {
+            var l = Occupant.MakeCatalyst(left, Direction.Right);
+            var r = Occupant.MakeCatalyst(right, Direction.Left);
+            return new SpawnItem(l, r);
+        }
+
+        public bool IsCatalyst(out (Occupant left, Occupant right) pair)
+        {
+            if (left.Kind == OccupantKind.Catalyst)
+            {
+                pair = (left, right);
+                return true;
+            }
+            pair = (Occupant.None, Occupant.None);
+            return false;
+        }
+
+        public bool IsPenalty()
+        {
+            return this.Equals(PENALTY);
         }
 
         public override string ToString()
         {
-            char l = Grid.GetLowercase(LeftColor);
-            char r = Grid.GetLowercase(RightColor);
-            return $"(SpawnItem {l} {r})";
+            return $"(SpawnItem {left} {right})";
         }
     }
 }

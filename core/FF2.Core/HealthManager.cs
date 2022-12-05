@@ -336,6 +336,11 @@ namespace FF2.Core
             return 0f;
         }
 
+        public void AddPenalty(SpawnItem penalty)
+        {
+            throw new NotImplementedException();
+        }
+
         class HealthGrid : GridBase
         {
             private readonly HealthManager manager;

@@ -18,4 +18,8 @@ script = ExtResource( 1 )
 
 [node name="MoverGridViewer" parent="." instance=ExtResource( 2 )]
 
+[node name="PenaltyGridViewerLeft" parent="." instance=ExtResource( 2 )]
+
+[node name="PenaltyGridViewerRight" parent="." instance=ExtResource( 2 )]
+
 [node name="GameOverMenu" parent="." instance=ExtResource( 5 )]

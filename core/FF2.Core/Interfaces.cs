@@ -34,6 +34,8 @@ namespace FF2.Core
         SpawnItem Peek(int index);
 
         int PeekLimit { get; }
+
+        void AddPenalty(SpawnItem penalty);
     }
 
     public interface IReplayDriver
@@ -50,5 +52,7 @@ namespace FF2.Core
         void OnComboCompleted(ComboInfo combo, IScheduler scheduler);
 
         bool GameOver { get; }
+
+        void AddPenalty(SpawnItem penalty);
     }
 }
