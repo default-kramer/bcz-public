@@ -114,13 +114,21 @@ namespace FF2.Core
 
         public float Progress()
         {
+            if (IsFrame0)
+            {
+                return 1f;
+            }
             float total = occurs.Millis - created.Millis;
             float completed = now().Millis - created.Millis;
             return completed / total;
         }
 
-        public static readonly Appointment Frame0 = new Appointment(new Moment(0), new Func<Moment>(() => new Moment(0)), new Moment(0));
+        private static readonly Func<Moment> AlwaysZero = () => Moment.Zero;
+
+        public static readonly Appointment Frame0 = new Appointment(Moment.Zero, AlwaysZero, Moment.Zero);
 
         public bool IsFrame0 => occurs.Millis == 0;
+
+        public static readonly Appointment Never = new Appointment(Moment.Never, AlwaysZero, Moment.Zero);
     }
 }

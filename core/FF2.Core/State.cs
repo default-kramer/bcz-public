@@ -38,15 +38,34 @@ namespace FF2.Core
         private int score = 0;
         private readonly PayoutTable scorePayoutTable = PayoutTable.DefaultScorePayoutTable;
         private readonly IStateHook hook;
+        private readonly StateEvent.Factory eventFactory;
+        private readonly Timekeeper timekeeper;
+        private readonly IScheduler scheduler;
+        private StateEvent __currentEvent = StateEvent.StateConstructed;
+        public StateEvent CurrentEvent => __currentEvent;
 
         public int Score => score;
 
         /// <summary>
         /// Holds the action that will be attempted on the next <see cref="Tick"/>.
         /// </summary>
-        public StateKind Kind { get; private set; }
-
-        internal FallAnimationSampler FallSampler => fallSampler;
+        public StateKind Kind
+        {
+            get
+            {
+                switch (CurrentEvent.Kind)
+                {
+                    case StateEventKind.StateConstructed: return StateKind.Spawning;
+                    case StateEventKind.Spawned: return StateKind.Waiting;
+                    case StateEventKind.Fell: return StateKind.Destroying;
+                    case StateEventKind.Destroyed:
+                    case StateEventKind.Plummeted:
+                    case StateEventKind.BurstBegan:
+                        return StateKind.Falling;
+                    default: return StateKind.GameOver;
+                }
+            }
+        }
 
         public bool ClearedAllEnemies { get; private set; }
 
@@ -62,8 +81,10 @@ namespace FF2.Core
             this.grid = grid;
             this.fallSampler = new FallAnimationSampler(grid);
             this.spawnDeck = spawnDeck;
+            this.eventFactory = new();
+            this.timekeeper = new();
+            this.scheduler = timekeeper;
             mover = null;
-            Kind = StateKind.Spawning;
             currentCombo = ComboInfo.Empty;
             TEMP = new HealthV2(spawnDeck);
             hook = TEMP;
@@ -106,46 +127,81 @@ namespace FF2.Core
         {
             hook.Elapse(scheduler);
 
+            Transition();
+
             if (hook.GameOver)
             {
-                ChangeKind(true, StateKind.GameOver, StateKind.GameOver);
+                Update(StateEvent.GameEnded);
             }
         }
-
-        private readonly Timekeeper timekeeper = new Timekeeper();
 
         public bool HandleCommand(Command command, Moment now)
         {
             Elapse(now);
 
-            return command switch
+            switch (command)
             {
-                Command.Left => Move(Direction.Left),
-                Command.Right => Move(Direction.Right),
-                Command.RotateCW => Rotate(clockwise: true),
-                Command.RotateCCW => Rotate(clockwise: false),
-                Command.Plummet => Plummet(),
-                _ => throw new Exception($"Bad command: {command}"),
-            };
+                case Command.Left:
+                    return Move(Direction.Left);
+                case Command.Right:
+                    return Move(Direction.Right);
+                case Command.RotateCW:
+                    return Rotate(clockwise: true);
+                case Command.RotateCCW:
+                    return Rotate(clockwise: false);
+                case Command.Plummet:
+                    return MaybeUpdate(Plummet());
+                case Command.BurstBegin:
+                    return MaybeUpdate(BurstBegin());
+                case Command.BurstCancel:
+                    return MaybeUpdate(BurstCancel());
+                default:
+                    throw new Exception($"Bad command: {command}");
+            }
+        }
+
+        private bool MaybeUpdate(StateEvent? result)
+        {
+            if (result == null)
+            {
+                return false;
+            }
+            __currentEvent = result.Value;
+            return true;
+        }
+
+        [Obsolete("Argument is no longer nullable. Call Update() instead.")]
+        private bool MaybeUpdate(StateEvent result)
+        {
+            __currentEvent = result;
+            return true;
+        }
+
+        private bool Update(StateEvent result)
+        {
+            __currentEvent = result;
+            return true;
         }
 
         public float LastGaspProgress() => 0; // TODO
 
-        private bool Spawn()
+        private StateEvent Spawn()
         {
-            if (Kind != StateKind.Spawning)
-            {
-                throw new Exception("State got hosed: " + Kind);
-            }
             if (mover.HasValue)
             {
                 throw new Exception("State got hosed: mover already exists");
             }
 
+            if (ClearedAllEnemies)
+            {
+                // Now that the combo is resolved, we can transition to the GameOver state.
+                return StateEvent.GameEnded;
+            }
+
             if (spawnDeck.PeekLimit < 1)
             {
                 // Puzzle mode can exhaust the spawn deck.
-                return false;
+                return StateEvent.GameEnded;
             }
 
             Slowmo = false;
@@ -154,7 +210,7 @@ namespace FF2.Core
             {
                 mover = grid.NewMover(spawnItem);
                 OnCatalystSpawned?.Invoke(this, spawnItem);
-                return true;
+                return eventFactory.Spawned(spawnItem, scheduler.CreateAppointment(100));
             }
             else if (spawnItem.IsPenalty())
             {
@@ -187,7 +243,7 @@ namespace FF2.Core
                     var scorePayout = GetHypotheticalScore(currentCombo);
                     score += scorePayout;
                     //Console.WriteLine($"Score: {score} (+{scorePayout})");
-                    hook.OnComboCompleted(currentCombo, timekeeper); // TODO should be passed into Destroy() here
+                    hook.OnComboCompleted(currentCombo, scheduler); // TODO should be passed into Destroy() here
                     OnComboCompleted?.Invoke(this, currentCombo);
                 }
                 currentCombo = ComboInfo.Empty;
@@ -210,8 +266,18 @@ namespace FF2.Core
         /// </summary>
         public bool Tick(Moment now)
         {
-            grid.PreTick();
-            var retval = DoTick(now);
+            if (CurrentEvent.Kind == StateEventKind.GameEnded)
+            {
+                return false;
+            }
+            Elapse(now);
+            return Transition();
+        }
+
+        private bool Transition()
+        {
+            bool retval = __SingleTransition();
+            while (__SingleTransition()) { }
             if (retval && grid.Stats.EnemyCount == 0)
             {
                 // Don't change to GameOver immediately. Let the combo resolve.
@@ -220,37 +286,51 @@ namespace FF2.Core
             return retval;
         }
 
-        private bool DoTick(Moment now)
+        private bool __SingleTransition()
         {
-            if (Kind == StateKind.GameOver)
+            if (!CurrentEvent.Completion.HasArrived())
             {
                 return false;
             }
-
-            Elapse(now);
-
-            if (ClearedAllEnemies && Kind == StateKind.Spawning)
+            else if (CurrentEvent.Kind == StateEventKind.Destroyed)
             {
-                // Now that the combo is resolved, we can transition to the GameOver state.
-                return ChangeKind(true, StateKind.GameOver, StateKind.GameOver);
+                grid.ResetDestructionCalculations();
             }
 
-            // Normal flow:
-            switch (Kind)
+            switch (CurrentEvent.Kind)
             {
-                case StateKind.Spawning:
-                    // During a normal game, Spawn() should never fail.
-                    // In puzzle mode, Spawn() will fail when the deck runs out
-                    // and when that happens we transition to GameOver.
-                    return ChangeKind(Spawn(), StateKind.Waiting, StateKind.GameOver);
-                case StateKind.Waiting:
+                case StateEventKind.StateConstructed:
+                    return Update(Spawn());
+                case StateEventKind.Spawned:
                     return false;
-                case StateKind.Falling:
-                    return ChangeKind(Fall(true), StateKind.Falling, StateKind.Destroying);
-                case StateKind.Destroying:
-                    return ChangeKind(Destroy(), StateKind.Falling, StateKind.Spawning);
+                case StateEventKind.Fell:
+                case StateEventKind.Destroyed:
+                case StateEventKind.Plummeted:
+                    return Update(FallOrDestroyOrSpawn());
+                case StateEventKind.GameEnded:
+                    return false;
+                case StateEventKind.BurstBegan:
+                    Burst();
+                    return Update(FallOrDestroyOrSpawn());
                 default:
-                    throw new Exception("Unexpected kind: " + Kind);
+                    throw new Exception("TODO");
+            }
+        }
+
+        private StateEvent FallOrDestroyOrSpawn()
+        {
+            if (Fall(true))
+            {
+                int millis = 150 * fallSampler.MaxFall();
+                return eventFactory.Fell(fallSampler, scheduler.CreateAppointment(millis));
+            }
+            else if (Destroy())
+            {
+                return eventFactory.Destroyed(TickCalculations, scheduler.CreateAppointment(550));
+            }
+            else
+            {
+                return Spawn();
             }
         }
 
@@ -282,7 +362,27 @@ namespace FF2.Core
 
         public Move PreviousMove { get; private set; }
 
-        private bool Plummet()
+        private StateEvent? BurstBegin()
+        {
+            if (!Plummet_NoEvent())
+            {
+                return null;
+            }
+
+            return eventFactory.BurstBegan(scheduler.CreateAppointment(500));
+        }
+
+        private StateEvent? BurstCancel()
+        {
+            if (CurrentEvent.Kind != StateEventKind.BurstBegan)
+            {
+                return null;
+            }
+
+            return eventFactory.Plummeted(scheduler.CreateAppointment(0));
+        }
+
+        private bool Plummet_NoEvent()
         {
             if (Kind != StateKind.Waiting || mover == null)
             {
@@ -297,7 +397,6 @@ namespace FF2.Core
                 grid.Set(m.LocA, m.OccA);
                 grid.Set(m.LocB, m.OccB);
                 mover = null;
-                Kind = StateKind.Falling;
                 return true;
             }
             else
@@ -306,17 +405,19 @@ namespace FF2.Core
             }
         }
 
-        public void Burst(Moment now)
+        private StateEvent? Plummet()
         {
-            Elapse(now);
-            grid.Burst();
-            PreviousMove = new Move(PreviousMove.Orientation, PreviousMove.SpawnItem, didBurst: true);
+            if (Plummet_NoEvent())
+            {
+                return eventFactory.Plummeted(scheduler.CreateAppointment(0));
+            }
+            return null;
         }
 
-        private bool ChangeKind(bool significantChange, StateKind a, StateKind b)
+        private void Burst()
         {
-            Kind = significantChange ? a : b;
-            return significantChange;
+            grid.Burst();
+            PreviousMove = new Move(PreviousMove.Orientation, PreviousMove.SpawnItem, didBurst: true);
         }
 
         private bool Move(Direction dir)

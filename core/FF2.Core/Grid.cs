@@ -466,13 +466,7 @@ namespace FF2.Core
             return GridFallHelper.CanFall(this, blockedFlagBuffer, assumeUnblockedBuffer);
         }
 
-        /// <summary>
-        /// TODO - I refactored the "tick calcluations" stuff and introduced a weird issue that (seemingly) only affects the drawing.
-        /// Probably has to do with GetDestroyedOccupant preserving the recently-destroyed occupants for too long.
-        /// For now I'll just make sure to call Reset() before every tick to preserve the old behavior.
-        /// Better would be for that UI code to check the state to know whether it should call GetDestroyedOccupant or not.
-        /// </summary>
-        internal void PreTick()
+        internal void ResetDestructionCalculations()
         {
             tickCalculations.Reset();
         }
