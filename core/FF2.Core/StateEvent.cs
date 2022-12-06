@@ -14,7 +14,16 @@ namespace FF2.Core
         /// </summary>
         StateConstructed = 1,
 
+        /// <summary>
+        /// Based on personal playtesting, I conclude that it is better to allow the player to input
+        /// commands during the spawn animation.
+        /// A beginner won't care, and an expert will appreciate the quickness.
+        /// So this event should be considered "for animation only" - not for state logic.
+        /// TODO write a test to lock this behavior in.
+        /// TODO should also consider those millis to be "waiting millis"... I think.
+        /// </summary>
         Spawned = 2,
+
         Fell = 3,
         Destroyed = 4,
         GameEnded = 5,

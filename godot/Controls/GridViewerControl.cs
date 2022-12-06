@@ -428,6 +428,7 @@ public class GridViewerControl : Control
     sealed class MoverLogic : ILogic
     {
         private readonly MoverGrid grid;
+        private readonly State state;
 
         public const int GridHeight = 3; // 2 for mover + 1 for health
         private static bool IsHealthRow(Loc loc) => loc.Y == GridHeight - 1;
@@ -435,6 +436,32 @@ public class GridViewerControl : Control
         public MoverLogic(State state)
         {
             this.grid = new MoverGrid(state);
+            this.state = state;
+        }
+
+        public override float DestructionProgress(Loc loc)
+        {
+            var x = state.GetMover;
+            if (x == null)
+            {
+                return 0;
+            }
+
+            var mover = x.Value;
+            if (loc == mover.LocA || loc == mover.LocB)
+            {
+                var ev = state.CurrentEvent;
+                if (ev.Kind == StateEventKind.Spawned)
+                {
+                    var progress = ev.Completion.Progress();
+                    if (progress < 1f)
+                    {
+                        return 1 - progress;
+                    }
+                }
+            }
+
+            return 0;
         }
 
         public override IReadOnlyGrid Grid => grid;

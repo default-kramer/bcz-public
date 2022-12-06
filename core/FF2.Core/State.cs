@@ -210,7 +210,7 @@ namespace FF2.Core
             {
                 mover = grid.NewMover(spawnItem);
                 OnCatalystSpawned?.Invoke(this, spawnItem);
-                return eventFactory.Spawned(spawnItem, scheduler.CreateAppointment(100));
+                return eventFactory.Spawned(spawnItem, scheduler.CreateAppointment(150));
             }
             else if (spawnItem.IsPenalty())
             {
