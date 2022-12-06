@@ -55,14 +55,21 @@ namespace FF2.Core
             {
                 switch (CurrentEvent.Kind)
                 {
-                    case StateEventKind.StateConstructed: return StateKind.Spawning;
-                    case StateEventKind.Spawned: return StateKind.Waiting;
-                    case StateEventKind.Fell: return StateKind.Destroying;
+                    case StateEventKind.StateConstructed:
+                    case StateEventKind.PenaltyAdded:
+                        return StateKind.Spawning;
+                    case StateEventKind.Spawned:
+                        return StateKind.Waiting;
+                    case StateEventKind.Fell:
+                        return StateKind.Destroying;
                     case StateEventKind.Destroyed:
                     case StateEventKind.Plummeted:
                     case StateEventKind.BurstBegan:
                         return StateKind.Falling;
-                    default: return StateKind.GameOver;
+                    case StateEventKind.GameEnded:
+                        return StateKind.GameOver;
+                    default:
+                        throw new Exception($"Unexpected kind: {CurrentEvent.Kind}");
                 }
             }
         }
@@ -214,8 +221,7 @@ namespace FF2.Core
             }
             else if (spawnItem.IsPenalty())
             {
-                hook.AddPenalty(spawnItem);
-                return Spawn(); // TODO gonna want some animation here...
+                return hook.AddPenalty(spawnItem, eventFactory, scheduler);
             }
             else
             {
@@ -300,6 +306,7 @@ namespace FF2.Core
             switch (CurrentEvent.Kind)
             {
                 case StateEventKind.StateConstructed:
+                case StateEventKind.PenaltyAdded:
                     return Update(Spawn());
                 case StateEventKind.Spawned:
                     return false;
@@ -548,7 +555,7 @@ namespace FF2.Core
             PenaltyStatus ps = leftSide ? leftPenalty : rightPenalty;
             int startingHeight = ps.PenaltyCount * ps.HeightPerPenalty;
             int remain = Math.Max(1, GridHeight - startingHeight);
-            attack = new Attack(leftSide, 0, scheduler.CreateWaitingAppointment(remain * 400));
+            attack = new Attack(leftSide, startingHeight, scheduler.CreateWaitingAppointment(remain * 400));
         }
 
         int comboCount = 0;
@@ -578,8 +585,10 @@ namespace FF2.Core
         }
 
         bool addToLeft = true;
-        public void AddPenalty(SpawnItem penalty)
+        public StateEvent AddPenalty(SpawnItem penalty, StateEvent.Factory factory, IScheduler scheduler)
         {
+            var payload = new PenaltyAddedInfo(addToLeft, 2);
+
             if (addToLeft)
             {
                 leftPenalty = leftPenalty.Increment();
@@ -589,6 +598,8 @@ namespace FF2.Core
                 rightPenalty = rightPenalty.Increment();
             }
             addToLeft = !addToLeft;
+
+            return factory.PenaltyAdded(payload, scheduler.CreateAppointment(1000));
         }
 
         sealed class PenaltyGrid : IReadOnlyGrid
@@ -602,7 +613,7 @@ namespace FF2.Core
                 this.left = left;
             }
 
-            public int Width => 1;
+            public int Width => 2;
 
             public int Height => GridHeight;
 
@@ -617,18 +628,16 @@ namespace FF2.Core
 
             public Occupant Get(Loc loc)
             {
-                var ps = left ? health.leftPenalty : health.rightPenalty;
-                if (loc.Y < ps.PenaltyCount * ps.HeightPerPenalty)
+                bool outer = loc.X == (left ? 0 : 1);
+                if (outer)
                 {
-                    return Occupant.IndestructibleEnemy;
+                    var ps = left ? health.leftPenalty : health.rightPenalty;
+                    if (loc.Y < ps.PenaltyCount * ps.HeightPerPenalty)
+                    {
+                        return HealthOccupants.Penalty;
+                    }
                 }
-
-                if (loc.Y < ps.PenaltyCount * ps.HeightPerPenalty)
-                {
-                    return HealthOccupants.Penalty;
-                }
-
-                if (left == health.attack.LeftSide)
+                else if (left == health.attack.LeftSide)
                 {
                     float adder = health.attack.HitTime.Progress() * (Height - health.attack.StartingHeight);
                     if (loc.Y == Convert.ToInt32(health.attack.StartingHeight + adder))
@@ -685,6 +694,18 @@ namespace FF2.Core
         {
             this.HealthGained = healthGained;
             this.Appointment = appointment;
+        }
+    }
+
+    public readonly struct PenaltyAddedInfo
+    {
+        public readonly bool LeftSide;
+        public readonly int Height;
+
+        public PenaltyAddedInfo(bool left, int height)
+        {
+            this.LeftSide = left;
+            this.Height = height;
         }
     }
 }

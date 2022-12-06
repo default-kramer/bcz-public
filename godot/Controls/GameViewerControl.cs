@@ -234,8 +234,8 @@ public class GameViewerControl : Control
         members.QueueViewer.Visible = true;
 
         members.MoverGridViewer.SetLogicForMover(ticker);
-        members.PenaltyGridViewerLeft.SetLogicForPenalty(ticker.state.PENALTY_LEFT);
-        members.PenaltyGridViewerRight.SetLogicForPenalty(ticker.state.PENALTY_RIGHT);
+        members.PenaltyGridViewerLeft.SetLogicForPenalty(state, left: true);
+        members.PenaltyGridViewerRight.SetLogicForPenalty(state, left: false);
 
         members.HealthGridViewer.SetLogicForhealth(ticker);
         members.HealthGridViewer.Visible = true;

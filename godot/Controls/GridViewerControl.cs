@@ -32,9 +32,9 @@ public class GridViewerControl : Control
         this.Logic = new MoverLogic(ticker.state);
     }
 
-    public void SetLogicForPenalty(IReadOnlyGrid grid)
+    public void SetLogicForPenalty(State state, bool left)
     {
-        this.Logic = new PenaltyLogic(grid);
+        this.Logic = new PenaltyLogic(state, left);
     }
 
     private TrackedSprite[] activeSprites = new TrackedSprite[400]; // should be way more than we need
@@ -585,10 +585,18 @@ public class GridViewerControl : Control
 
     sealed class PenaltyLogic : ILogic
     {
+        private readonly State state;
+        private readonly bool left;
+        private readonly int outerX;
         private readonly IReadOnlyGrid grid;
-        public PenaltyLogic(IReadOnlyGrid grid)
+
+        public PenaltyLogic(State state, bool left)
         {
-            this.grid = grid;
+            // TODO terrible coupling here... should pull all UI-specific logic out into this class
+            this.state = state;
+            this.left = left;
+            this.outerX = left ? 0 : 1;
+            this.grid = left ? state.PENALTY_LEFT : state.PENALTY_RIGHT;
         }
 
         public override IReadOnlyGrid Grid => grid;
@@ -597,6 +605,19 @@ public class GridViewerControl : Control
         {
             spriteKind = HealthOccupants.Translate(occ, SpriteKind.None);
             return spriteKind != SpriteKind.None;
+        }
+
+        public override float FallSampleOverride(Loc loc)
+        {
+            if (loc.X == outerX && state.CurrentEvent.Kind == StateEventKind.PenaltyAdded)
+            {
+                var payload = state.CurrentEvent.PenaltyAddedPayload();
+                if (this.left == payload.LeftSide)
+                {
+                    return -payload.Height * (1 - state.CurrentEvent.Completion.Progress());
+                }
+            }
+            return 0;
         }
     }
 }

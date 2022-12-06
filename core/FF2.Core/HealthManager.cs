@@ -336,7 +336,7 @@ namespace FF2.Core
             return 0f;
         }
 
-        public void AddPenalty(SpawnItem penalty)
+        public StateEvent AddPenalty(SpawnItem penalty, StateEvent.Factory x, IScheduler y)
         {
             throw new NotImplementedException();
         }

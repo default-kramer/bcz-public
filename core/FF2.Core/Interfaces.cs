@@ -53,6 +53,6 @@ namespace FF2.Core
 
         bool GameOver { get; }
 
-        void AddPenalty(SpawnItem penalty);
+        StateEvent AddPenalty(SpawnItem penalty, StateEvent.Factory eventFactory, IScheduler scheduler);
     }
 }

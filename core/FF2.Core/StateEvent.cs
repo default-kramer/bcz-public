@@ -27,6 +27,7 @@ namespace FF2.Core
         Fell = 3,
         Destroyed = 4,
         GameEnded = 5,
+        PenaltyAdded = 6,
 
         // Results of user actions
         BurstBegan = 101,
@@ -58,6 +59,7 @@ namespace FF2.Core
         public SpawnItem SpawnedPayload() => sum.SpawnedPayload();
         public FallAnimationSampler FellPayload() => sum.FellPayload();
         public ITickCalculations DestroyedPayload() => sum.DestroyedPayload();
+        public PenaltyAddedInfo PenaltyAddedPayload() => sum.PenaltyAddedPayload();
 
         public float ProgressOr(StateEventKind kind, float elseVal)
         {
@@ -78,6 +80,7 @@ namespace FF2.Core
             private readonly SpawnedType spawned = new SpawnedType();
             private readonly FellType fell = new FellType();
             private readonly DestroyedType destroyed = new DestroyedType();
+            private readonly PenaltyAddedType penaltyAdded = new PenaltyAddedType();
 
             public StateEvent Spawned(SpawnItem payload, Appointment completion)
             {
@@ -103,6 +106,11 @@ namespace FF2.Core
             {
                 return new StateEvent(StateEventKind.BurstBegan, completion, Singletons.BurstBegan);
             }
+
+            public StateEvent PenaltyAdded(PenaltyAddedInfo payload, Appointment completion)
+            {
+                return new StateEvent(StateEventKind.PenaltyAdded, completion, penaltyAdded.Reset(payload));
+            }
         }
 
         abstract class StateTransitionSumType
@@ -116,6 +124,7 @@ namespace FF2.Core
             public virtual SpawnItem SpawnedPayload() => throw WrongType();
             public virtual FallAnimationSampler FellPayload() => throw WrongType();
             public virtual ITickCalculations DestroyedPayload() => throw WrongType();
+            public virtual PenaltyAddedInfo PenaltyAddedPayload() => throw WrongType();
         }
 
         class SpawnedType : StateTransitionSumType
@@ -148,6 +157,18 @@ namespace FF2.Core
             public override ITickCalculations DestroyedPayload() => payload;
 
             public DestroyedType Reset(ITickCalculations payload)
+            {
+                this.payload = payload;
+                return this;
+            }
+        }
+
+        class PenaltyAddedType : StateTransitionSumType
+        {
+            private PenaltyAddedInfo payload;
+            public override PenaltyAddedInfo PenaltyAddedPayload() => payload;
+
+            public PenaltyAddedType Reset(PenaltyAddedInfo payload)
             {
                 this.payload = payload;
                 return this;
