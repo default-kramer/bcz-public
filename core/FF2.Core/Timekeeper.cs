@@ -54,7 +54,7 @@ namespace FF2.Core
             }
 
             // .. and any waiting appointment in that range.
-            bool waiting = state.Kind == StateKind.Waiting;
+            bool waiting = state.IsWaitingOnUser;
             if (waiting && waitingAppointments.Count > 0)
             {
                 var temp = waitingAppointments.Min - waitingCursor.Millis;

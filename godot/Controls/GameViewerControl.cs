@@ -333,7 +333,7 @@ public class GameViewerControl : Control
         public override void CheckGameOver()
         {
             var state = ticker.state;
-            if (state.Kind == StateKind.GameOver && !members.GameOverMenu.Visible)
+            if (state.IsGameOver && !members.GameOverMenu.Visible)
             {
                 members.GameOverMenu.OnGameOver(state);
             }

@@ -184,7 +184,7 @@ public class PuzzleControl : Control, PuzzleMenu.ILogic
         public override void CheckGameOver()
         {
             var state = ticker.state;
-            if (!gameOver && state.Kind == StateKind.GameOver)
+            if (!gameOver && state.IsGameOver)
             {
                 gameOver = true;
                 var targetScore = state.GetHypotheticalScore(puzzle.LastCombo);

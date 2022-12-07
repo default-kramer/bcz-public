@@ -8,26 +8,6 @@ using FF2.Core.Viewmodels;
 
 namespace FF2.Core
 {
-    // State.Kind contains the action we are about to attempt.
-    public enum StateKind : int
-    {
-        Empty = 0,
-        Spawning = 1,
-        Waiting = 2,
-        Falling = 3,
-        Destroying = 4,
-        GameOver = 5,
-
-        // Values larger than 100 are not used by the State class.
-        // It's just convenient to add them to this enum.
-        Bursting = 101,
-
-        // To be used as an "assertion failed" state:
-        Unreachable = int.MaxValue,
-    }
-
-    // Does timing-related stuff belong in the state class? Or at a higher level?
-    // Meh, I don't know, so just start hacking and we can always refactor later
     public sealed class State
     {
         private readonly Grid grid;
@@ -48,33 +28,9 @@ namespace FF2.Core
 
         public int NumCatalystsSpawned = 0; // Try not to use this...
 
-        /// <summary>
-        /// Holds the action that will be attempted on the next <see cref="Tick"/>.
-        /// </summary>
-        public StateKind Kind
-        {
-            get
-            {
-                switch (CurrentEvent.Kind)
-                {
-                    case StateEventKind.StateConstructed:
-                    case StateEventKind.PenaltyAdded:
-                        return StateKind.Spawning;
-                    case StateEventKind.Spawned:
-                        return StateKind.Waiting;
-                    case StateEventKind.Fell:
-                        return StateKind.Destroying;
-                    case StateEventKind.Destroyed:
-                    case StateEventKind.Plummeted:
-                    case StateEventKind.BurstBegan:
-                        return StateKind.Falling;
-                    case StateEventKind.GameEnded:
-                        return StateKind.GameOver;
-                    default:
-                        throw new Exception($"Unexpected kind: {CurrentEvent.Kind}");
-                }
-            }
-        }
+        public bool IsWaitingOnUser => CurrentEvent.Kind == StateEventKind.Spawned;
+
+        public bool IsGameOver => CurrentEvent.Kind == StateEventKind.GameEnded;
 
         public bool ClearedAllEnemies { get; private set; }
 
@@ -395,7 +351,7 @@ namespace FF2.Core
 
         private bool Plummet_NoEvent()
         {
-            if (Kind != StateKind.Waiting || mover == null)
+            if (mover == null)
             {
                 return false;
             }
