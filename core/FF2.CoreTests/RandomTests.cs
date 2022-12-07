@@ -58,7 +58,10 @@ namespace FF2.CoreTests
             var queue1 = state1.MakeQueueModel();
             var queue2 = state2.MakeQueueModel();
 
-            for (int i = 0; i < 99; i++)
+            const int peekLimit = 12; // If the implementation changes, just update this number to match
+
+            Assert.AreEqual(peekLimit, queue1.LookaheadLimit);
+            for (int i = 0; i < peekLimit; i++)
             {
                 Assert.AreEqual(queue1[i], queue2[i]);
             }

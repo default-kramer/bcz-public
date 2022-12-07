@@ -336,10 +336,7 @@ namespace FF2.Core
             return 0f;
         }
 
-        public StateEvent AddPenalty(SpawnItem penalty, StateEvent.Factory x, IScheduler y)
-        {
-            throw new NotImplementedException();
-        }
+        public StateEvent? AddPenalty(SpawnItem penalty, StateEvent.Factory x, IScheduler y) => null;
 
         class HealthGrid : GridBase
         {

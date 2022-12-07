@@ -46,6 +46,8 @@ namespace FF2.Core
 
         public int Score => score;
 
+        public int NumCatalystsSpawned = 0; // Try not to use this...
+
         /// <summary>
         /// Holds the action that will be attempted on the next <see cref="Tick"/>.
         /// </summary>
@@ -83,7 +85,12 @@ namespace FF2.Core
         public event EventHandler<ComboInfo>? OnComboCompleted;
         public event EventHandler<SpawnItem>? OnCatalystSpawned;
 
-        public State(Grid grid, ISpawnDeck spawnDeck)
+        public static State CreateWithInfiniteHealth(Grid grid, ISpawnDeck deck)
+        {
+            return new State(grid, deck, NullStateHook.Instance);
+        }
+
+        internal State(Grid grid, ISpawnDeck spawnDeck, IStateHook hook)
         {
             this.grid = grid;
             this.fallSampler = new FallAnimationSampler(grid);
@@ -93,10 +100,13 @@ namespace FF2.Core
             this.scheduler = timekeeper;
             mover = null;
             currentCombo = ComboInfo.Empty;
-            TEMP = new HealthV2(spawnDeck);
-            hook = TEMP;
-            PENALTY_LEFT = TEMP.MakePenaltyGrid(true);
-            PENALTY_RIGHT = TEMP.MakePenaltyGrid(false);
+            this.hook = hook;
+            if (hook is HealthV2 hv2)
+            {
+                TEMP = hv2;
+                PENALTY_LEFT = TEMP.MakePenaltyGrid(true);
+                PENALTY_RIGHT = TEMP.MakePenaltyGrid(false);
+            }
         }
 
         private readonly HealthV2 TEMP;
@@ -115,7 +125,12 @@ namespace FF2.Core
             var spawns = ss.Settings.SpawnBlanks ? Lists.MainDeck : Lists.BlanklessDeck;
             var deck = new InfiniteSpawnDeck(spawns, new PRNG(ss.Seed));
             var grid = Core.Grid.Create(ss.Settings, new PRNG(ss.Seed));
-            return new State(grid, deck);
+
+            IStateHook hook = ss.Settings.InfiniteHealth
+                ? NullStateHook.Instance
+                : new HealthV2(deck);
+
+            return new State(grid, deck, hook);
         }
 
         public Viewmodels.QueueModel MakeQueueModel()
@@ -215,13 +230,16 @@ namespace FF2.Core
             var spawnItem = spawnDeck.Pop();
             if (spawnItem.IsCatalyst(out var _))
             {
+                NumCatalystsSpawned++;
                 mover = grid.NewMover(spawnItem);
                 OnCatalystSpawned?.Invoke(this, spawnItem);
                 return eventFactory.Spawned(spawnItem, scheduler.CreateAppointment(150));
             }
             else if (spawnItem.IsPenalty())
             {
-                return hook.AddPenalty(spawnItem, eventFactory, scheduler);
+                var result = hook.AddPenalty(spawnItem, eventFactory, scheduler);
+                // If the hook returned null, we just ignore the penalty and try again
+                return result ?? Spawn();
             }
             else
             {
@@ -264,20 +282,6 @@ namespace FF2.Core
         public int GetHypotheticalScore(ComboInfo combo)
         {
             return scorePayoutTable.GetPayout(combo.ComboToReward.AdjustedGroupCount);
-        }
-
-        /// <summary>
-        /// Return false if nothing changes, or if <see cref="Kind"/> is the only thing that changes.
-        /// Otherwise return true after executing some "significant" change.
-        /// </summary>
-        public bool Tick(Moment now)
-        {
-            if (CurrentEvent.Kind == StateEventKind.GameEnded)
-            {
-                return false;
-            }
-            Elapse(now);
-            return Transition();
         }
 
         private bool Transition()
@@ -367,7 +371,7 @@ namespace FF2.Core
 
         public Mover? GetMover => mover;
 
-        public Move PreviousMove { get; private set; }
+        public Move? PreviousMove { get; private set; } = null;
 
         private StateEvent? BurstBegin()
         {
@@ -424,7 +428,8 @@ namespace FF2.Core
         private void Burst()
         {
             grid.Burst();
-            PreviousMove = new Move(PreviousMove.Orientation, PreviousMove.SpawnItem, didBurst: true);
+            var pm = PreviousMove!.Value;
+            PreviousMove = new Move(pm.Orientation, pm.SpawnItem, didBurst: true);
         }
 
         private bool Move(Direction dir)
@@ -585,7 +590,7 @@ namespace FF2.Core
         }
 
         bool addToLeft = true;
-        public StateEvent AddPenalty(SpawnItem penalty, StateEvent.Factory factory, IScheduler scheduler)
+        public StateEvent? AddPenalty(SpawnItem penalty, StateEvent.Factory factory, IScheduler scheduler)
         {
             var payload = new PenaltyAddedInfo(addToLeft, 2);
 

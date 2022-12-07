@@ -53,6 +53,20 @@ namespace FF2.Core
 
         bool GameOver { get; }
 
-        StateEvent AddPenalty(SpawnItem penalty, StateEvent.Factory eventFactory, IScheduler scheduler);
+        StateEvent? AddPenalty(SpawnItem penalty, StateEvent.Factory eventFactory, IScheduler scheduler);
+    }
+
+    sealed class NullStateHook : IStateHook
+    {
+        private NullStateHook() { }
+        public static readonly NullStateHook Instance = new NullStateHook();
+
+        public bool GameOver => false;
+
+        public StateEvent? AddPenalty(SpawnItem penalty, StateEvent.Factory eventFactory, IScheduler scheduler) => null;
+
+        public void Elapse(IScheduler scheduler) { }
+
+        public void OnComboCompleted(ComboInfo combo, IScheduler scheduler) { }
     }
 }

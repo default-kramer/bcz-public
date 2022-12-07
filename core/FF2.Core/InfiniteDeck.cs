@@ -7,58 +7,55 @@ using System.Threading.Tasks;
 
 namespace FF2.Core
 {
-    public sealed class InfiniteSpawnDeck : InfiniteDeck<SpawnItem>, ISpawnDeck
+    public sealed class InfiniteSpawnDeck : ISpawnDeck
     {
-        private readonly SpawnItem[] cache;
-        private int penaltyIndex = 0;
+        private readonly InfiniteDeck<SpawnItem> catalysts;
+        private List<SpawnItem> buffer;
+        private readonly int peekLimit;
 
-        public InfiniteSpawnDeck(IReadOnlyList<SpawnItem> deck, PRNG prng) : base(deck, prng)
+        public InfiniteSpawnDeck(IReadOnlyList<SpawnItem> catalysts, PRNG prng)
+            : this(new InfiniteDeck<SpawnItem>(catalysts, prng))
+        { }
+
+        public InfiniteSpawnDeck(InfiniteDeck<SpawnItem> catalysts)
         {
-            cache = new SpawnItem[deck.Count];
-            cache.AsSpan().Fill(SpawnItem.None);
+            this.catalysts = catalysts;
+            this.peekLimit = catalysts.PeekLimit;
+            buffer = new List<SpawnItem>(catalysts.PeekLimit + 4);
         }
 
-        private bool IsPenalty(int i, out SpawnItem penalty)
+        public int PeekLimit => peekLimit;
+
+        private void Refill(int needed)
         {
-            var index = (penaltyIndex + i) % cache.Length;
-            penalty = cache[index];
-            return !penalty.Equals(SpawnItem.None);
+            while (buffer.Count < needed + 1)
+            {
+                buffer.Add(catalysts.Pop());
+            }
         }
 
-        public override SpawnItem Pop()
+        public SpawnItem Pop()
         {
-            penaltyIndex = (penaltyIndex + 1) % cache.Length;
-            if (IsPenalty(0, out var penalty))
-            {
-                cache[penaltyIndex] = SpawnItem.None;
-                return penalty;
-            }
-
-            return base.Pop();
+            Refill(0);
+            var item = buffer[0];
+            buffer.RemoveAt(0);
+            return item;
         }
 
-        public override SpawnItem Peek(int i)
+        public SpawnItem Peek(int i)
         {
-            if (IsPenalty(i, out var penalty))
+            if (i < PeekLimit)
             {
-                return penalty;
+                Refill(i);
+                return buffer[i];
             }
-
-            int adjustedIndex = i;
-            for (int j = 0; j < i; j++)
-            {
-                if (IsPenalty(j, out var _))
-                {
-                    adjustedIndex--;
-                }
-            }
-
-            return base.Peek(adjustedIndex);
+            throw new ArgumentOutOfRangeException($"Index {i} exceeds PeekLimit {PeekLimit}");
         }
 
         public void AddPenalty(SpawnItem penalty)
         {
-            cache[(penaltyIndex + 4) % cache.Length] = penalty;
+            Refill(4);
+            buffer.Insert(4, penalty);
         }
     }
 

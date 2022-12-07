@@ -119,7 +119,7 @@ public class PuzzleControl : Control, PuzzleMenu.ILogic
         }
 
         var puzzle = puzzleInfo.Puzzle;
-        var state = new State(Grid.Clone(puzzle.InitialGrid), puzzle.MakeDeck());
+        var state = State.CreateWithInfiniteHealth(Grid.Clone(puzzle.InitialGrid), puzzle.MakeDeck());
         var ticker = new DotnetTicker(state, NullReplayCollector.Instance);
         var logic = new SolvePuzzleLogic(ticker, puzzle, this);
 
