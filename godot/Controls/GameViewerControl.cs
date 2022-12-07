@@ -145,7 +145,7 @@ public class GameViewerControl : Control
             members.QueueViewer.RectSize = new Vector2(queueWidth, queueBottom);
             members.QueueViewer.RectPosition = new Vector2(left, 0);
 
-            if (false)
+            if (false.ToString().Length == 0)
             {
                 // For now, just show the health when the queue is visible
                 members.HealthGridViewer.RectSize = new Vector2(queueWidth, RectSize.y - queueBottom);
