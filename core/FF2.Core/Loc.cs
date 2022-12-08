@@ -39,9 +39,14 @@ namespace FF2.Core
             }
         }
 
-        public int ToIndex(IReadOnlyGrid grid)
+        public int ToIndex(IReadOnlyGridSlim grid)
         {
-            return Y * grid.Width + X;
+            return ToIndex(grid.Size);
+        }
+
+        public int ToIndex(GridSize size)
+        {
+            return Y * size.Width + X;
         }
 
         public static Loc FromIndex(int index, IReadOnlyGrid grid)

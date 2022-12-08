@@ -49,6 +49,8 @@ namespace FF2.Core
     {
         void Elapse(IScheduler scheduler);
 
+        void OnComboUpdated(ComboInfo previous, ComboInfo current, IScheduler scheduler);
+
         void OnComboCompleted(ComboInfo combo, IScheduler scheduler);
 
         bool GameOver { get; }
@@ -68,5 +70,7 @@ namespace FF2.Core
         public void Elapse(IScheduler scheduler) { }
 
         public void OnComboCompleted(ComboInfo combo, IScheduler scheduler) { }
+
+        public void OnComboUpdated(ComboInfo previous, ComboInfo current, IScheduler scheduler) { }
     }
 }

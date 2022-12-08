@@ -32,9 +32,9 @@ public class GridViewerControl : Control
         this.Logic = new MoverLogic(ticker.state);
     }
 
-    public void SetLogicForPenalty(State state, bool left)
+    public void SetLogicForPenalty(IPenaltyViewmodel viewmodel)
     {
-        this.Logic = new PenaltyLogic(state, left);
+        this.Logic = new PenaltyLogic(viewmodel);
     }
 
     private TrackedSprite[] activeSprites = new TrackedSprite[400]; // should be way more than we need
@@ -81,6 +81,8 @@ public class GridViewerControl : Control
 
     public override void _Draw()
     {
+        Logic.Update();
+
         var grid = Logic.Grid;
         var gridSize = grid.Size;
 
@@ -104,8 +106,8 @@ public class GridViewerControl : Control
         var fullSize = this.RectSize - new Vector2(padding, padding);
 
         float screenCellSize = GetCellSize(fullSize, gridSize);
-        float extraX = Math.Max(0, fullSize.x - screenCellSize * grid.Width);
-        float extraY = Math.Max(0, fullSize.y - screenCellSize * grid.Height);
+        float extraX = Math.Max(0, fullSize.x - screenCellSize * gridSize.Width);
+        float extraY = Math.Max(0, fullSize.y - screenCellSize * gridSize.Height);
 
         // For debugging, show the excess width/height as brown:
         //DrawRect(new Rect2(0, 0, fullSize), Colors.Brown);
@@ -123,9 +125,9 @@ public class GridViewerControl : Control
 
         var fallSampler = Logic.GetFallSample();
 
-        for (int x = 0; x < grid.Width; x++)
+        for (int x = 0; x < gridSize.Width; x++)
         {
-            for (int y = 0; y < grid.Height; y++)
+            for (int y = 0; y < gridSize.Height; y++)
             {
                 var loc = new Loc(x, y);
                 var previewOcc = temp?.GetOcc(loc);
@@ -137,7 +139,7 @@ public class GridViewerControl : Control
                     occ = destroyedOcc;
                 }
 
-                var canvasY = grid.Height - (y + 1);
+                var canvasY = gridSize.Height - (y + 1);
                 var screenY = canvasY * screenCellSize + extraY / 2;
                 var screenX = x * screenCellSize + extraX / 2 + 1f;
 
@@ -162,7 +164,7 @@ public class GridViewerControl : Control
                     kind = GetSpriteKind(occ);
                 }
 
-                var index = loc.ToIndex(grid);
+                var index = loc.ToIndex(gridSize);
                 TrackedSprite previousSprite = activeSprites[index];
                 TrackedSprite currentSprite = default(TrackedSprite);
 
@@ -304,7 +306,7 @@ public class GridViewerControl : Control
 
     public abstract class ILogic
     {
-        public abstract IReadOnlyGrid Grid { get; }
+        public abstract IReadOnlyGridSlim Grid { get; }
 
         /// <summary>
         /// This is used to make the grid flicker when there is very little time left.
@@ -336,17 +338,22 @@ public class GridViewerControl : Control
         }
 
         public virtual (Godot.Color light, Godot.Color dark) BorderColor => (defaultBorderLight, defaultBorderDark);
+
+        /// <summary>
+        /// Allows the implementation to collect/cache data to be used during the Draw() routine.
+        /// </summary>
+        public virtual void Update() { }
     }
 
     public sealed class NullLogic : ILogic
     {
-        private static readonly IReadOnlyGrid defaultGrid = FF2.Core.Grid.Create(FF2.Core.Grid.DefaultWidth, FF2.Core.Grid.DefaultHeight);
+        private static readonly IReadOnlyGridSlim defaultGrid = FF2.Core.Grid.Create(FF2.Core.Grid.DefaultWidth, FF2.Core.Grid.DefaultHeight);
 
         private NullLogic() { }
 
         public static readonly NullLogic Instance = new NullLogic();
 
-        public override IReadOnlyGrid Grid => defaultGrid;
+        public override IReadOnlyGridSlim Grid => defaultGrid;
     }
 
     public sealed class StandardLogic : ILogic
@@ -362,7 +369,7 @@ public class GridViewerControl : Control
             this.tickCalculations = state.TickCalculations;
         }
 
-        public override IReadOnlyGrid Grid => state.Grid;
+        public override IReadOnlyGridSlim Grid => state.Grid;
 
         public override bool ShouldFlicker => state.LastGaspProgress() > 0;
 
@@ -394,34 +401,6 @@ public class GridViewerControl : Control
             {
                 return 0;
             }
-        }
-    }
-
-    public sealed class HealthLogic : ILogic
-    {
-        private readonly IReadOnlyGrid grid;
-        private readonly IHealthGridViewmodel health;
-
-        public HealthLogic(IHealthGridViewmodel health)
-        {
-            this.grid = health.Grid;
-            this.health = health;
-        }
-
-        public override IReadOnlyGrid Grid => grid;
-
-        public override bool ShouldFlicker => health.LastGaspProgress() > 0;
-
-        public override float LastChanceProgress => health.LastGaspProgress();
-
-        public override float DestructionProgress(Loc loc) => health.DestructionProgress(loc);
-
-        public override float FallSampleOverride(Loc loc) => health.GetAdder(loc);
-
-        public override bool OverrideSpriteKind(Occupant occ, Loc loc, out SpriteKind spriteKind)
-        {
-            spriteKind = HealthOccupants.Translate(occ, SpriteKind.None);
-            return spriteKind != SpriteKind.None;
         }
     }
 
@@ -464,9 +443,9 @@ public class GridViewerControl : Control
             return 0;
         }
 
-        public override IReadOnlyGrid Grid => grid;
+        public override IReadOnlyGridSlim Grid => grid;
 
-        class MoverGrid : IReadOnlyGrid
+        class MoverGrid : IReadOnlyGridSlim
         {
             private readonly State state;
             public MoverGrid(State state)
@@ -479,13 +458,6 @@ public class GridViewerControl : Control
             public int Height => GridHeight;
 
             public GridSize Size => new GridSize(Width, Height);
-
-            public string PrintGrid => throw new NotImplementedException();
-
-            public string DiffGridString(params string[] rows)
-            {
-                throw new NotImplementedException();
-            }
 
             public Occupant Get(Loc loc)
             {
@@ -539,36 +511,6 @@ public class GridViewerControl : Control
                     _ => Occupant.None,
                 };
             }
-
-            public int HashGrid()
-            {
-                throw new NotImplementedException();
-            }
-
-            public bool InBounds(Loc loc)
-            {
-                throw new NotImplementedException();
-            }
-
-            public bool IsVacant(Loc loc)
-            {
-                throw new NotImplementedException();
-            }
-
-            public IImmutableGrid MakeImmutable()
-            {
-                throw new NotImplementedException();
-            }
-
-            public Mover NewMover(SpawnItem item)
-            {
-                throw new NotImplementedException();
-            }
-
-            public ReadOnlySpan<Occupant> ToSpan()
-            {
-                throw new NotImplementedException();
-            }
         }
 
         public override bool OverrideSpriteKind(Occupant occ, Loc loc, out SpriteKind spriteKind)
@@ -583,23 +525,83 @@ public class GridViewerControl : Control
         private static readonly Godot.Color borderDark = Godot.Color.Color8(160, 160, 160);
     }
 
-    sealed class PenaltyLogic : ILogic
+    sealed class PenaltyLogic : ILogic, IReadOnlyGridSlim
     {
-        private readonly State state;
-        private readonly bool left;
+        private readonly IPenaltyViewmodel viewmodel;
         private readonly int outerX;
-        private readonly IReadOnlyGrid grid;
+        private readonly PenaltyItem[] penalties;
+        private readonly int[] fallDistances;
+        private const float TODO = 0.35f; // when do we switch from "destroying" to "falling"
 
-        public PenaltyLogic(State state, bool left)
+        // These will be refreshed on every update
+        private float destructionProgress;
+        private int totalPenaltyHeight = 0;
+        private (int startingHeight, float progress) attack;
+        private (int height, float progress) penaltyCreationAnimation;
+
+        public PenaltyLogic(IPenaltyViewmodel viewmodel)
         {
-            // TODO terrible coupling here... should pull all UI-specific logic out into this class
-            this.state = state;
-            this.left = left;
-            this.outerX = left ? 0 : 1;
-            this.grid = left ? state.PENALTY_LEFT : state.PENALTY_RIGHT;
+            this.viewmodel = viewmodel;
+            this.outerX = viewmodel.LeftSide ? 0 : 1;
+            this.penalties = new PenaltyItem[viewmodel.Height];
+            this.fallDistances = new int[viewmodel.Height];
         }
 
-        public override IReadOnlyGrid Grid => grid;
+        public GridSize Size => new GridSize(2, viewmodel.Height);
+
+        public override IReadOnlyGridSlim Grid => this;
+
+        public override void Update()
+        {
+            viewmodel.GetPenalties(penalties, out this.destructionProgress);
+            attack = viewmodel.CurrentAttack() ?? (-1, 0);
+
+            fallDistances.AsSpan().Fill(0);
+            totalPenaltyHeight = 0;
+            int fallDistance = 0;
+            for (int i = 0; i < penalties.Length; i++)
+            {
+                var p = penalties[i];
+                if (p.Size > 0) // size<=0 indicates "no penalty"
+                {
+                    totalPenaltyHeight++;
+                }
+
+                if (p.Destroyed)
+                {
+                    fallDistance++;
+                }
+                else
+                {
+                    fallDistances[i] = fallDistance;
+                }
+            }
+
+            penaltyCreationAnimation = viewmodel.PenaltyCreationAnimation() ?? (0, 0);
+        }
+
+        private PenaltyItem? GetPenalty(Loc loc)
+        {
+            if (loc.X == outerX && loc.Y < totalPenaltyHeight)
+            {
+                return penalties[loc.Y];
+            }
+            return null;
+        }
+
+        public Occupant Get(Loc loc)
+        {
+            if (GetPenalty(loc).HasValue)
+            {
+                return HealthOccupants.Penalty;
+            }
+            else if (loc.X != outerX && loc.Y == attack.startingHeight)
+            {
+                return HealthOccupants.Attack;
+            }
+
+            return Occupant.None;
+        }
 
         public override bool OverrideSpriteKind(Occupant occ, Loc loc, out SpriteKind spriteKind)
         {
@@ -607,16 +609,41 @@ public class GridViewerControl : Control
             return spriteKind != SpriteKind.None;
         }
 
-        public override float FallSampleOverride(Loc loc)
+        public override float DestructionProgress(Loc loc)
         {
-            if (loc.X == outerX && state.CurrentEvent.Kind == StateEventKind.PenaltyAdded)
+            if (destructionProgress > 0)
             {
-                var payload = state.CurrentEvent.PenaltyAddedPayload();
-                if (this.left == payload.LeftSide)
+                var penalty = GetPenalty(loc);
+                if (penalty.HasValue && penalty.Value.Destroyed)
                 {
-                    return -payload.Height * (1 - state.CurrentEvent.Completion.Progress());
+                    return destructionProgress / TODO;
                 }
             }
+
+            return 0;
+        }
+
+        public override float FallSampleOverride(Loc loc)
+        {
+            if (Get(loc) == HealthOccupants.Attack)
+            {
+                return (viewmodel.Height - attack.startingHeight) * attack.progress;
+            }
+
+            if (destructionProgress > TODO)
+            {
+                var penalty = GetPenalty(loc);
+                if (penalty.HasValue)
+                {
+                    return (destructionProgress - TODO) / (1 - TODO) * -fallDistances[loc.Y];
+                }
+            }
+
+            if (loc.X == outerX && penaltyCreationAnimation.height > 0)
+            {
+                return -penaltyCreationAnimation.height * (1 - penaltyCreationAnimation.progress);
+            }
+
             return 0;
         }
     }

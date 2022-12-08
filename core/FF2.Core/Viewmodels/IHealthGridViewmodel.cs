@@ -6,18 +6,36 @@ using System.Threading.Tasks;
 
 namespace FF2.Core.Viewmodels
 {
-    public interface IHealthGridViewmodel
+    public interface IPenaltyViewmodel
     {
-        IReadOnlyGrid Grid { get; }
+        int Height { get; }
 
-        float GetAdder(Loc loc); // formerly handled by FallSample, rethink this?
+        bool LeftSide { get; }
+
+        (int startingHeight, float progress)? CurrentAttack();
 
         /// <summary>
-        /// Used to warn the player that they are nearing failure.
-        /// Values may range from 0.0 (no cause for alarm) to 1.0 (failure).
+        /// Buffer must have a size of at least <see cref="Height"/>.
+        /// Each penalty will occupy <see cref="PenaltyItem.Size"/> slots in the buffer.
         /// </summary>
-        float LastGaspProgress();
+        void GetPenalties(Span<PenaltyItem> buffer, out float destructionProgress);
 
-        float DestructionProgress(Loc loc);
+        (int size, float progress)? PenaltyCreationAnimation();
+    }
+
+    public readonly struct PenaltyItem
+    {
+        public readonly int Id;
+        public readonly int Size;
+        public readonly bool Destroyed;
+
+        public PenaltyItem(int id, int size, bool destroyed)
+        {
+            this.Id = id;
+            this.Size = size;
+            this.Destroyed = destroyed;
+        }
+
+        public static PenaltyItem None = new PenaltyItem(0, 0, false);
     }
 }

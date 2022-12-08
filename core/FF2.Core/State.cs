@@ -60,14 +60,14 @@ namespace FF2.Core
             if (hook is HealthV2 hv2)
             {
                 TEMP = hv2;
-                PENALTY_LEFT = TEMP.MakePenaltyGrid(true);
-                PENALTY_RIGHT = TEMP.MakePenaltyGrid(false);
+                PENALTY_LEFT = TEMP.LEFT_VM;
+                PENALTY_RIGHT = TEMP.RIGHT_VM;
             }
         }
 
         private readonly HealthV2 TEMP;
-        public readonly IReadOnlyGrid PENALTY_LEFT;
-        public readonly IReadOnlyGrid PENALTY_RIGHT;
+        public readonly Viewmodels.IPenaltyViewmodel PENALTY_LEFT;
+        public readonly Viewmodels.IPenaltyViewmodel PENALTY_RIGHT;
         public RestoreHealthAnimation RestoreHealthAnimation => TEMP.RestoreHealthAnimation;
 
         public int CurrentHealth => TEMP.CurrentHealth;
@@ -214,7 +214,9 @@ namespace FF2.Core
             var result = grid.Destroy(ref newCombo);
             if (result)
             {
-                currentCombo = newCombo;
+                var previous = currentCombo;
+                this.currentCombo = newCombo;
+                hook.OnComboUpdated(previous, newCombo, scheduler);
             }
             else
             {
@@ -425,248 +427,6 @@ namespace FF2.Core
         public int HashGrid()
         {
             return grid.HashGrid();
-        }
-    }
-
-    sealed class HealthV2 : IStateHook
-    {
-        readonly struct PenaltyStatus
-        {
-            public readonly int AGCToClear;
-            public readonly int HeightPerPenalty;
-            public readonly int PenaltyCount;
-
-            public PenaltyStatus(int agc, int height, int count)
-            {
-                this.AGCToClear = agc;
-                this.HeightPerPenalty = height;
-                this.PenaltyCount = count;
-            }
-
-            public PenaltyStatus MaybeDecrement(int agc)
-            {
-                if (agc >= AGCToClear && PenaltyCount > 0)
-                {
-                    return new PenaltyStatus(AGCToClear, HeightPerPenalty, PenaltyCount - 1);
-                }
-                return this;
-            }
-
-            public PenaltyStatus Increment()
-            {
-                return new PenaltyStatus(AGCToClear, HeightPerPenalty, PenaltyCount + 1);
-            }
-        }
-
-        readonly struct Attack
-        {
-            public readonly bool LeftSide;
-            public readonly int StartingHeight;
-            public readonly Appointment HitTime;
-
-            public Attack(bool leftSide, int startingHeight, Appointment hitTime)
-            {
-                this.LeftSide = leftSide;
-                this.StartingHeight = startingHeight;
-                this.HitTime = hitTime;
-            }
-        }
-
-        const int GridHeight = 20;
-
-        private int Health = 20;
-        private PenaltyStatus leftPenalty;
-        private PenaltyStatus rightPenalty;
-        private Attack attack;
-        private readonly PayoutTable healthPayoutTable;
-        private readonly ISpawnDeck spawnDeck;
-        private RestoreHealthAnimation restoreHealthAnimation; // For display only! Do not use in logic!
-
-        public RestoreHealthAnimation RestoreHealthAnimation => restoreHealthAnimation;
-
-        public int CurrentHealth => Health;
-
-        public HealthV2(ISpawnDeck spawnDeck)
-        {
-            leftPenalty = new PenaltyStatus(3, 2, 1);
-            rightPenalty = new PenaltyStatus(6, 2, 2);
-            attack = new Attack(true, 0, Appointment.Frame0);
-            healthPayoutTable = PayoutTable.DefaultHealthPayoutTable;
-            this.spawnDeck = spawnDeck;
-            restoreHealthAnimation = new RestoreHealthAnimation(0, Appointment.Frame0);
-        }
-
-        public bool GameOver => Health <= 0;
-
-        public void Elapse(IScheduler scheduler)
-        {
-            if (attack.HitTime.IsFrame0)
-            {
-                StartNewAttack(scheduler, leftSide: true);
-            }
-            else if (attack.HitTime.HasArrived())
-            {
-                Health -= 4;
-                StartNewAttack(scheduler, !attack.LeftSide);
-            }
-        }
-
-        private void StartNewAttack(IScheduler scheduler, bool leftSide)
-        {
-            PenaltyStatus ps = leftSide ? leftPenalty : rightPenalty;
-            int startingHeight = ps.PenaltyCount * ps.HeightPerPenalty;
-            int remain = Math.Max(1, GridHeight - startingHeight);
-            attack = new Attack(leftSide, startingHeight, scheduler.CreateWaitingAppointment(remain * 400));
-        }
-
-        int comboCount = 0;
-
-        public void OnComboCompleted(ComboInfo combo, IScheduler scheduler)
-        {
-            comboCount++;
-            if (comboCount % 2 == 0)
-            {
-                spawnDeck.AddPenalty(SpawnItem.PENALTY); // For now, just add penalty every other destruction
-            }
-
-            // To ensure a finite game (as long as enemy count never increases), we use the Strict Combo
-            // to get the payout. This means that you cannot gain health without destroying enemies.
-            int gainedHealth = combo.NumEnemiesDestroyed + healthPayoutTable.GetPayout(combo.StrictCombo.AdjustedGroupCount);
-            Health += gainedHealth;
-            restoreHealthAnimation = new(gainedHealth, scheduler.CreateAppointment(gainedHealth * 200));
-
-            int agc = combo.PermissiveCombo.AdjustedGroupCount;
-            leftPenalty = leftPenalty.MaybeDecrement(agc);
-            rightPenalty = rightPenalty.MaybeDecrement(agc);
-        }
-
-        public IReadOnlyGrid MakePenaltyGrid(bool left)
-        {
-            return new PenaltyGrid(this, left);
-        }
-
-        bool addToLeft = true;
-        public StateEvent? AddPenalty(SpawnItem penalty, StateEvent.Factory factory, IScheduler scheduler)
-        {
-            var payload = new PenaltyAddedInfo(addToLeft, 2);
-
-            if (addToLeft)
-            {
-                leftPenalty = leftPenalty.Increment();
-            }
-            else
-            {
-                rightPenalty = rightPenalty.Increment();
-            }
-            addToLeft = !addToLeft;
-
-            return factory.PenaltyAdded(payload, scheduler.CreateAppointment(1000));
-        }
-
-        sealed class PenaltyGrid : IReadOnlyGrid
-        {
-            private readonly HealthV2 health;
-            private readonly bool left;
-
-            public PenaltyGrid(HealthV2 parent, bool left)
-            {
-                this.health = parent;
-                this.left = left;
-            }
-
-            public int Width => 2;
-
-            public int Height => GridHeight;
-
-            public GridSize Size => new GridSize(Width, Height);
-
-            public string PrintGrid => throw new NotImplementedException();
-
-            public string DiffGridString(params string[] rows)
-            {
-                throw new NotImplementedException();
-            }
-
-            public Occupant Get(Loc loc)
-            {
-                bool outer = loc.X == (left ? 0 : 1);
-                if (outer)
-                {
-                    var ps = left ? health.leftPenalty : health.rightPenalty;
-                    if (loc.Y < ps.PenaltyCount * ps.HeightPerPenalty)
-                    {
-                        return HealthOccupants.Penalty;
-                    }
-                }
-                else if (left == health.attack.LeftSide)
-                {
-                    float adder = health.attack.HitTime.Progress() * (Height - health.attack.StartingHeight);
-                    if (loc.Y == Convert.ToInt32(health.attack.StartingHeight + adder))
-                    {
-                        return HealthOccupants.Attack;
-                    }
-                }
-
-                return Occupant.None;
-            }
-
-            public int HashGrid()
-            {
-                throw new NotImplementedException();
-            }
-
-            public bool InBounds(Loc loc)
-            {
-                throw new NotImplementedException();
-            }
-
-            public bool IsVacant(Loc loc)
-            {
-                throw new NotImplementedException();
-            }
-
-            public IImmutableGrid MakeImmutable()
-            {
-                throw new NotImplementedException();
-            }
-
-            public Mover NewMover(SpawnItem item)
-            {
-                throw new NotImplementedException();
-            }
-
-            public ReadOnlySpan<Occupant> ToSpan()
-            {
-                throw new NotImplementedException();
-            }
-        }
-    }
-
-    // TODO do not check in. The viewmodel can do this itself if it has the scheduler available
-    // Aha - and animation appointments do not need millisecond-perfection!
-    // Also - this animation is not super obvious... Perhaps each quarter-heart should shoot in from
-    // the side?
-    public readonly struct RestoreHealthAnimation
-    {
-        public readonly int HealthGained;
-        public readonly Appointment Appointment;
-
-        public RestoreHealthAnimation(int healthGained, Appointment appointment)
-        {
-            this.HealthGained = healthGained;
-            this.Appointment = appointment;
-        }
-    }
-
-    public readonly struct PenaltyAddedInfo
-    {
-        public readonly bool LeftSide;
-        public readonly int Height;
-
-        public PenaltyAddedInfo(bool left, int height)
-        {
-            this.LeftSide = left;
-            this.Height = height;
         }
     }
 }

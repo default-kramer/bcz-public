@@ -19,409 +19,269 @@ namespace FF2.Core
         }
     }
 
-    class HealthManager : IStateHook, Viewmodels.IHealthGridViewmodel
+    sealed class HealthV2 : IStateHook
     {
-        const int PenaltyAreaStartRow = 0;
-        const int PenaltyAreaEndRow = 4;
-        // Rows 5-6 will never have penalties or health.
-        // So even when penalties are maxed, the attack will have to traverse these rows.
-        const int HealthStartRow = 7;
-        const int HealthEndRow = 14;
-        const int PartialHealthRow = 15;
+        public readonly Viewmodels.IPenaltyViewmodel LEFT_VM;
+        public readonly Viewmodels.IPenaltyViewmodel RIGHT_VM;
 
-        const int W = 4;
-        const int H = PartialHealthRow + 1;
-
-        const int AttackStartRow = 1; // If no penalties, the Y coordinate where the attack starts
-        const int AttackEndRow = HealthStartRow; // The Y coordinate where each attack ends
-
-        const int HealthPerRow = 2;
-        const int MaxPenaltiesPerColumn = PenaltyAreaEndRow - PenaltyAreaStartRow + 1;
-        const int MaxHealth = (HealthEndRow - HealthStartRow + 1) * HealthPerRow;
-        const int MaxPartialHealth = HealthPerRow * 4; // 4 fragments/heart
-
-        readonly struct AttackShape
+        sealed class PenaltyViewmodel : Viewmodels.IPenaltyViewmodel
         {
-            public readonly Loc HealthStartLoc;
-            public readonly int AttackColumn;
+            private readonly HealthV2 parent;
+            private readonly bool leftSide;
 
-            public AttackShape(Loc a, int b) { this.HealthStartLoc = a; this.AttackColumn = b; }
-        }
-
-        private static readonly AttackShape[] Shapes = new[]
-        {
-            new AttackShape(new Loc(1, HealthStartRow), 0),
-            new AttackShape(new Loc(3, HealthStartRow), 2),
-            new AttackShape(new Loc(0, HealthStartRow), 1),
-            new AttackShape(new Loc(2, HealthStartRow), 3),
-        };
-
-        private int shapeIndex = 0;
-
-        // On the grid, the attack will be placed at the target loc immediately.
-        // Animation will make it slide up into that loc as the appointment arrives.
-        private (Loc target, Appointment arrival) CurrentAttack;
-
-        private int Health;
-        private int PartialHealth;
-        private readonly int[] penaltyLevels = new int[W];
-        private readonly int[] penaltyCounts = new int[W];
-        private readonly PayoutTable healthPayoutTable;
-        private readonly HealthGrid healthGrid;
-        private int penaltyIndex = 0;
-        private Appointment penaltyAppointment;
-        private (int numRows, Appointment appt)? earnedHealthDrop;
-        private Appointment? lostHealthDrop;
-        private (int columnMask, Appointment)? destoyedPenalties;
-        private (int columnMask, Appointment)? fallingPenalties;
-
-        public HealthManager(PayoutTable healthPayoutTable, IScheduler scheduler)
-        {
-            this.healthPayoutTable = healthPayoutTable;
-
-            penaltyLevels[0] = 3;
-            penaltyLevels[1] = 4;
-            penaltyLevels[2] = 6;
-            penaltyLevels[3] = 8;
-            penaltyCounts.AsSpan().Fill(0);
-
-            CurrentAttack = (new Loc(Shapes[shapeIndex].AttackColumn, AttackStartRow), scheduler.CreateWaitingAppointment(AttackMillisPerCell));
-
-            Health = MaxHealth;
-            PartialHealth = 0;
-
-            this.healthGrid = new HealthGrid(this);
-            healthGrid.Redraw();
-
-            penaltyAppointment = scheduler.CreateAppointment(MillisPerPenalty);
-        }
-
-        const int AttackMillisPerCell = 1000; // millis for the attack to travel 1 cell
-        const int MillisPerPenalty = 5000; // millis between penalties
-
-        public IReadOnlyGrid Grid => healthGrid;
-
-        public void OnComboCompleted(ComboInfo combo, IScheduler scheduler)
-        {
-            RestoreHealth(combo.ComboToReward, scheduler);
-            RemovePenalties(combo.ComboToReward.AdjustedGroupCount, scheduler);
-            healthGrid.Redraw();
-        }
-
-        private void RestoreHealth(Combo combo, IScheduler scheduler)
-        {
-            int payout = healthPayoutTable.GetPayout(combo.AdjustedGroupCount);
-            PartialHealth = PartialHealth + payout;
-            int newRows = 0;
-            while (PartialHealth >= MaxPartialHealth)
+            public PenaltyViewmodel(HealthV2 parent, bool leftSide)
             {
-                newRows++;
-                PartialHealth -= MaxPartialHealth;
+                this.parent = parent;
+                this.leftSide = leftSide;
             }
 
-            if (newRows > 0)
-            {
-                Health += newRows * HealthPerRow;
-                this.earnedHealthDrop = (newRows, scheduler.CreateAppointment(800));
-            }
+            public int Height => GridHeight;
 
-            if (Health >= MaxHealth)
-            {
-                PartialHealth = 0; // No room to accumulate lost health while at full health
-            }
-        }
+            public bool LeftSide => leftSide;
 
-        private void RemovePenalties(int AGC, IScheduler scheduler)
-        {
-            int mask = 0;
-            for (int x = 0; x < W; x++)
+            public (int startingHeight, float progress)? CurrentAttack()
             {
-                if (penaltyLevels[x] <= AGC)
+                var attack = parent.attack;
+                if (attack.LeftSide == this.leftSide)
                 {
-                    int count = penaltyCounts[x];
-                    if (count > 0)
-                    {
-                        penaltyCounts[x]--;
-                        mask = Mask.Set(mask, x);
-                    }
+                    return (attack.StartingHeight, attack.HitTime.Progress());
                 }
+                return null;
             }
 
-            if (mask != 0)
+            public void GetPenalties(Span<Viewmodels.PenaltyItem> buffer, out float destructionProgress)
             {
-                destoyedPenalties = (mask, scheduler.CreateAppointment(500));
-            }
-        }
+                var ps = leftSide ? parent.leftPenalty : parent.rightPenalty;
+                var removal = leftSide ? parent.leftSidePenaltyRemoval : parent.rightSidePenaltyRemoval;
 
-        public void Elapse(IScheduler scheduler)
-        {
-            if (earnedHealthDrop.HasValue && earnedHealthDrop.Value.appt.HasArrived())
-            {
-                earnedHealthDrop = null;
-            }
-            if (lostHealthDrop.HasValue && lostHealthDrop.Value.HasArrived())
-            {
-                lostHealthDrop = null;
-            }
-            if (fallingPenalties.HasValue && fallingPenalties.Value.Item2.HasArrived())
-            {
-                fallingPenalties = null;
-            }
+                buffer.Slice(0, GridHeight).Fill(Viewmodels.PenaltyItem.None);
 
-            CompletePenaltyDestruction(scheduler);
-            UpdateAttack(scheduler);
-            UpdatePenalties(scheduler);
-            healthGrid.Redraw();
-        }
+                int index = 0;
 
-        private void CompletePenaltyDestruction(IScheduler scheduler)
-        {
-            if (!destoyedPenalties.HasValue)
-            {
-                return;
-            }
-            var (mask, appt) = destoyedPenalties.Value;
-            if (!appt.HasArrived())
-            {
-                return;
-            }
-
-            destoyedPenalties = null;
-            fallingPenalties = (mask, scheduler.CreateAppointment(500));
-        }
-
-        private int NextShapeIndex => (shapeIndex + 1) % Shapes.Length;
-
-        private static Loc GetAttackStart(int shapeIndex, ReadOnlySpan<int> penaltyCounts)
-        {
-            var shape = Shapes[shapeIndex];
-            return new Loc(shape.AttackColumn, penaltyCounts[shape.AttackColumn] + AttackStartRow);
-        }
-
-        private void UpdateAttack(IScheduler scheduler)
-        {
-            var (target, appt) = CurrentAttack;
-            if (appt.HasArrived())
-            {
-                if (target.Y < AttackEndRow)
+                if (removal.HasValue && !removal.Value.Item1.HasArrived())
                 {
-                    CurrentAttack = (target.Add(0, 1), scheduler.CreateWaitingAppointment(AttackMillisPerCell));
+                    destructionProgress = removal.Value.Item1.Progress();
+
+                    var size = removal.Value.size;
+                    buffer.Slice(0, size).Fill(new Viewmodels.PenaltyItem(999, size, true));
+                    index += size;
                 }
                 else
                 {
-                    Health--;
-                    if (Health % HealthPerRow == 0)
+                    destructionProgress = -1f;
+                }
+
+                for (int penaltyNum = 0; penaltyNum < ps.PenaltyCount && index < GridHeight; penaltyNum++)
+                {
+                    for (int j = 0; j < ps.HeightPerPenalty && index < GridHeight; j++)
                     {
-                        lostHealthDrop = scheduler.CreateAppointment(400);
+                        buffer[index] = new Viewmodels.PenaltyItem(penaltyNum + 1, ps.HeightPerPenalty, false);
+                        index++;
                     }
-                    shapeIndex = NextShapeIndex;
-                    target = GetAttackStart(shapeIndex, penaltyCounts);
-                    CurrentAttack = (target, scheduler.CreateWaitingAppointment(AttackMillisPerCell));
                 }
             }
-        }
 
-        // TODO this should get pulled out into a separate class
-        private static readonly Penalty[] penaltySchedule = new Penalty[]
-        {
-            new Penalty(PenaltyKind.Levelled, 0),
-            new Penalty(PenaltyKind.Levelled, 1),
-            new Penalty(PenaltyKind.Levelled, 2),
-            new Penalty(PenaltyKind.Levelled, 3),
-        };
-
-        private void UpdatePenalties(IScheduler scheduler)
-        {
-            if (penaltyAppointment.HasArrived())
+            public (int size, float progress)? PenaltyCreationAnimation()
             {
-                AddPenalty(penaltySchedule[penaltyIndex].Level);
-                penaltyIndex = (penaltyIndex + 1) % penaltySchedule.Length;
-                penaltyAppointment = scheduler.CreateAppointment(MillisPerPenalty);
+                if (!parent.penaltyCreatedEvent.HasValue)
+                {
+                    return null;
+                }
+                var evnt = parent.penaltyCreatedEvent.Value;
+                if (evnt.Completion.HasArrived())
+                {
+                    return null;
+                }
+
+                var payload = evnt.PenaltyAddedPayload();
+                if (payload.LeftSide == this.leftSide)
+                {
+                    return (payload.Height, evnt.Completion.Progress());
+                }
+                return null;
             }
         }
 
-        private void AddPenalty(int index)
+        readonly struct PenaltyStatus
         {
-            int next = penaltyCounts[index] + 1;
-            if (next <= MaxPenaltiesPerColumn)
+            public readonly int AGCToClear;
+            public readonly int HeightPerPenalty;
+            public readonly int PenaltyCount;
+
+            public PenaltyStatus(int agc, int height, int count)
             {
-                penaltyCounts[index] = next;
+                this.AGCToClear = agc;
+                this.HeightPerPenalty = height;
+                this.PenaltyCount = count;
             }
+
+            public PenaltyStatus MaybeDecrement(int agc)
+            {
+                if (agc >= AGCToClear && PenaltyCount > 0)
+                {
+                    return new PenaltyStatus(AGCToClear, HeightPerPenalty, PenaltyCount - 1);
+                }
+                return this;
+            }
+
+            public PenaltyStatus Increment()
+            {
+                return new PenaltyStatus(AGCToClear, HeightPerPenalty, PenaltyCount + 1);
+            }
+        }
+
+        readonly struct Attack
+        {
+            public readonly bool LeftSide;
+            public readonly int StartingHeight;
+            public readonly Appointment HitTime;
+
+            public Attack(bool leftSide, int startingHeight, Appointment hitTime)
+            {
+                this.LeftSide = leftSide;
+                this.StartingHeight = startingHeight;
+                this.HitTime = hitTime;
+            }
+        }
+
+        const int GridHeight = 20;
+
+        private int Health = 20;
+        private PenaltyStatus leftPenalty;
+        private PenaltyStatus rightPenalty;
+        private Attack attack;
+        private readonly PayoutTable healthPayoutTable;
+        private readonly ISpawnDeck spawnDeck;
+        private RestoreHealthAnimation restoreHealthAnimation; // For display only! Do not use in logic!
+        private StateEvent? penaltyCreatedEvent = null;
+
+        public RestoreHealthAnimation RestoreHealthAnimation => restoreHealthAnimation;
+
+        public int CurrentHealth => Health;
+
+        public HealthV2(ISpawnDeck spawnDeck)
+        {
+            leftPenalty = new PenaltyStatus(3, 2, 1);
+            rightPenalty = new PenaltyStatus(6, 2, 2);
+            attack = new Attack(true, 0, Appointment.Frame0);
+            healthPayoutTable = PayoutTable.DefaultHealthPayoutTable;
+            this.spawnDeck = spawnDeck;
+            restoreHealthAnimation = new RestoreHealthAnimation(0, Appointment.Frame0);
+            this.LEFT_VM = new PenaltyViewmodel(this, true);
+            this.RIGHT_VM = new PenaltyViewmodel(this, false);
         }
 
         public bool GameOver => Health <= 0;
 
-        public float LastGaspProgress()
+        public void Elapse(IScheduler scheduler)
         {
-            if (Health > 2)
+            if (attack.HitTime.IsFrame0)
             {
-                return 0f;
+                StartNewAttack(scheduler, leftSide: true);
             }
-            if (Health <= 0)
+            else if (attack.HitTime.HasArrived())
             {
-                return 1f;
+                Health -= 4;
+                StartNewAttack(scheduler, !attack.LeftSide);
             }
-
-            int cellsUntilDeath = 1 + AttackEndRow - CurrentAttack.target.Y;
-            if (Health > 1)
-            {
-                var next = GetAttackStart(NextShapeIndex, penaltyCounts);
-                cellsUntilDeath += 1 + AttackEndRow - next.Y;
-            }
-
-            var millisRemaining = cellsUntilDeath * AttackMillisPerCell - CurrentAttack.arrival.Progress() * AttackMillisPerCell;
-            const float WarningRange = 5000f; // 5 seconds of warning
-            return (WarningRange - millisRemaining) / WarningRange;
         }
 
-        public float DestructionProgress(Loc loc)
+        private void StartNewAttack(IScheduler scheduler, bool leftSide)
         {
-            // Penalties are always destroyed from the bottom row.
-            // Each column never loses more than one penalty per combo.
-            if (loc.Y == 0 && destoyedPenalties.HasValue)
-            {
-                var (mask, appt) = destoyedPenalties.Value;
-                if (Mask.Test(mask, loc.X))
-                {
-                    return appt.Progress();
-                }
-            }
-
-            return 0;
+            PenaltyStatus ps = leftSide ? leftPenalty : rightPenalty;
+            int startingHeight = ps.PenaltyCount * ps.HeightPerPenalty;
+            int remain = Math.Max(1, GridHeight - startingHeight);
+            attack = new Attack(leftSide, startingHeight, scheduler.CreateWaitingAppointment(remain * 400));
         }
 
-        public float GetAdder(Loc loc)
+        private (Appointment, int size)? leftSidePenaltyRemoval = null;
+        private (Appointment, int size)? rightSidePenaltyRemoval = null;
+
+        public void OnComboUpdated(ComboInfo previous, ComboInfo currentCombo, IScheduler scheduler)
         {
-            var (attackTarget, attackProgress) = CurrentAttack;
-            if (loc == attackTarget)
+            if (previous.TotalNumGroups < 1)
             {
-                return attackProgress.Progress() - 1;
+                leftSidePenaltyRemoval = null;
+                rightSidePenaltyRemoval = null;
             }
 
-            var occ = healthGrid.Get(loc);
+            const int destructionMillis = 550; // TODO should share this value
 
-            if (occ == HealthOccupants.Heart)
+            int agc = currentCombo.PermissiveCombo.AdjustedGroupCount;
+            if (leftSidePenaltyRemoval == null && agc >= leftPenalty.AGCToClear)
             {
-                float adder = 0; // adds up "drop due to earned health" and "drop due to lost health"
-
-                if (lostHealthDrop.HasValue)
-                {
-                    adder = 1 - lostHealthDrop.Value.Progress();
-                }
-
-                if (earnedHealthDrop.HasValue)
-                {
-                    var (numFallingRows, appt) = earnedHealthDrop.Value;
-                    int totalHealthRows = (Health + 1) / HealthPerRow;
-                    int earnedRowStart = HealthStartRow + totalHealthRows - numFallingRows;
-                    if (loc.Y >= earnedRowStart)
-                    {
-                        var distance = H - numFallingRows - loc.Y;
-                        adder += distance * (1 - appt.Progress());
-                    }
-                }
-
-                return adder;
+                leftPenalty = leftPenalty.MaybeDecrement(agc);
+                leftSidePenaltyRemoval = (scheduler.CreateAppointment(destructionMillis), leftPenalty.HeightPerPenalty);
             }
-
-            if (occ == HealthOccupants.Penalty && fallingPenalties.HasValue)
+            if (rightSidePenaltyRemoval == null && agc >= rightPenalty.AGCToClear)
             {
-                var (mask, appt) = fallingPenalties.Value;
-                if (Mask.Test(mask, loc.X))
-                {
-                    return 1 - appt.Progress();
-                }
+                rightPenalty = rightPenalty.MaybeDecrement(agc);
+                rightSidePenaltyRemoval = (scheduler.CreateAppointment(destructionMillis), rightPenalty.HeightPerPenalty);
             }
-
-            return 0f;
         }
 
-        public StateEvent? AddPenalty(SpawnItem penalty, StateEvent.Factory x, IScheduler y) => null;
+        int comboCount = 0;
 
-        class HealthGrid : GridBase
+        public void OnComboCompleted(ComboInfo combo, IScheduler scheduler)
         {
-            private readonly HealthManager manager;
-
-            public HealthGrid(HealthManager manager) : base(W, H)
+            comboCount++;
+            if (comboCount % 2 == 0)
             {
-                this.manager = manager;
+                spawnDeck.AddPenalty(SpawnItem.PENALTY); // For now, just add penalty every other destruction
             }
 
-            public void Redraw()
+            // To ensure a finite game (as long as enemy count never increases), we use the Strict Combo
+            // to get the payout. This means that you cannot gain health without destroying enemies.
+            int gainedHealth = combo.NumEnemiesDestroyed + healthPayoutTable.GetPayout(combo.StrictCombo.AdjustedGroupCount);
+            Health += gainedHealth;
+            restoreHealthAnimation = new(gainedHealth, scheduler.CreateAppointment(gainedHealth * 200));
+        }
+
+        bool addToLeft = true;
+        public StateEvent? AddPenalty(SpawnItem penalty, StateEvent.Factory factory, IScheduler scheduler)
+        {
+            var payload = new PenaltyAddedInfo(addToLeft, 2);
+
+            if (addToLeft)
             {
-                this.Clear();
-
-                // Place penalties
-                int mask = 0;
-                if (manager.destoyedPenalties.HasValue)
-                {
-                    mask = manager.destoyedPenalties.Value.columnMask;
-                }
-                for (int x = 0; x < W; x++)
-                {
-                    int yLimit = manager.penaltyCounts[x];
-                    if (Mask.Test(mask, x))
-                    {
-                        // While destruction is in progress, we draw one extra penalty
-                        // so that we can animate its destruction.
-                        yLimit++;
-                    }
-                    for (int y = 0; y < yLimit; y++)
-                    {
-                        Put(new Loc(x, y), HealthOccupants.Penalty);
-                    }
-                }
-
-                // Place hearts
-                var shape = Shapes[manager.shapeIndex];
-                var loc = shape.HealthStartLoc;
-                int partialHealthOffset = 0;
-                if (shape.AttackColumn > 1)
-                {
-                    // The health is gone, but we keep showing the heart until the row is destroyed:
-                    Put(loc.Add(-2, 0), HealthOccupants.Heart);
-                    // And show the attack that already landed
-                    Put(new Loc(shape.AttackColumn - 2, HealthStartRow), HealthOccupants.Attack);
-                }
-                for (int i = 0; i < manager.Health && loc.Y < H; i++)
-                {
-                    Put(loc, HealthOccupants.Heart);
-                    partialHealthOffset = (loc.X + 1) % 2;
-                    loc = loc.X switch
-                    {
-                        0 => loc.Add(2, 0),
-                        1 => loc.Add(2, 0),
-                        2 => loc.Add(-1, 1),
-                        3 => loc.Add(-3, 1),
-                        _ => throw new Exception("X should never exceed " + W),
-                    };
-                }
-
-                // Place partial hearts
-                var partialLoc = new Loc(partialHealthOffset, PartialHealthRow);
-                Put(partialLoc, GetPartialHeart(manager.PartialHealth));
-                Put(partialLoc.Add(2, 0), GetPartialHeart(manager.PartialHealth - 4));
-
-                // Place current attack
-                if (manager.Health > 0)
-                {
-                    Put(manager.CurrentAttack.target, HealthOccupants.Attack);
-                }
+                leftPenalty = leftPenalty.Increment();
             }
-
-            private static Occupant GetPartialHeart(int partialHealth)
+            else
             {
-                if (partialHealth == 1) { return HealthOccupants.Heart25; }
-                else if (partialHealth == 2) { return HealthOccupants.Heart50; }
-                else if (partialHealth == 3) { return HealthOccupants.Heart75; }
-                else if (partialHealth >= 4) { return HealthOccupants.Heart100; }
-                return HealthOccupants.Heart0;
+                rightPenalty = rightPenalty.Increment();
             }
+            addToLeft = !addToLeft;
 
-            public override IImmutableGrid MakeImmutable()
-            {
-                throw new NotImplementedException();
-            }
+            penaltyCreatedEvent = factory.PenaltyAdded(payload, scheduler.CreateAppointment(1000));
+            return penaltyCreatedEvent;
+        }
+    }
+
+    // TODO do not check in. The viewmodel can do this itself if it has the scheduler available
+    // Aha - and animation appointments do not need millisecond-perfection!
+    // Also - this animation is not super obvious... Perhaps each quarter-heart should shoot in from
+    // the side?
+    public readonly struct RestoreHealthAnimation
+    {
+        public readonly int HealthGained;
+        public readonly Appointment Appointment;
+
+        public RestoreHealthAnimation(int healthGained, Appointment appointment)
+        {
+            this.HealthGained = healthGained;
+            this.Appointment = appointment;
+        }
+    }
+
+    public readonly struct PenaltyAddedInfo
+    {
+        public readonly bool LeftSide;
+        public readonly int Height;
+
+        public PenaltyAddedInfo(bool left, int height)
+        {
+            this.LeftSide = left;
+            this.Height = height;
         }
     }
 }

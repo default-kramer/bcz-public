@@ -30,15 +30,19 @@ namespace FF2.Core
         }
     }
 
+    public interface IReadOnlyGridSlim
+    {
+        GridSize Size { get; }
+        Occupant Get(Loc loc);
+    }
+
     /// <summary>
     /// A read-only reference to a grid which might be mutated by someone else.
     /// </summary>
-    public interface IReadOnlyGrid
+    public interface IReadOnlyGrid : IReadOnlyGridSlim
     {
         int Width { get; }
         int Height { get; }
-        GridSize Size { get; }
-        Occupant Get(Loc loc);
 
         bool InBounds(Loc loc);
 
