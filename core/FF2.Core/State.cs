@@ -290,12 +290,12 @@ namespace FF2.Core
         {
             if (Fall(true))
             {
-                int millis = 150 * fallSampler.MaxFall();
+                int millis = Constants.FallingMillisPerCell * fallSampler.MaxFall();
                 return eventFactory.Fell(fallSampler, scheduler.CreateAppointment(millis));
             }
             else if (Destroy())
             {
-                return eventFactory.Destroyed(TickCalculations, scheduler.CreateAppointment(550));
+                return eventFactory.Destroyed(TickCalculations, scheduler.CreateAppointment(Constants.DestructionMillis));
             }
             else
             {
