@@ -57,7 +57,7 @@ namespace FF2.Core
             mover = null;
             currentCombo = ComboInfo.Empty;
             this.hook = hook;
-            if (hook is HealthV2 hv2)
+            if (hook is HealthManager hv2)
             {
                 TEMP = hv2;
                 PENALTY_LEFT = TEMP.LEFT_VM;
@@ -65,7 +65,7 @@ namespace FF2.Core
             }
         }
 
-        private readonly HealthV2 TEMP;
+        private readonly HealthManager TEMP;
         public readonly Viewmodels.IPenaltyViewmodel PENALTY_LEFT;
         public readonly Viewmodels.IPenaltyViewmodel PENALTY_RIGHT;
         public RestoreHealthAnimation RestoreHealthAnimation => TEMP.RestoreHealthAnimation;
@@ -84,7 +84,7 @@ namespace FF2.Core
 
             IStateHook hook = ss.Settings.InfiniteHealth
                 ? NullStateHook.Instance
-                : new HealthV2(deck);
+                : new HealthManager(deck);
 
             return new State(grid, deck, hook);
         }
@@ -188,6 +188,7 @@ namespace FF2.Core
             {
                 NumCatalystsSpawned++;
                 mover = grid.NewMover(spawnItem);
+                hook.OnCatalystSpawned(spawnItem);
                 OnCatalystSpawned?.Invoke(this, spawnItem);
                 return eventFactory.Spawned(spawnItem, scheduler.CreateAppointment(150));
             }

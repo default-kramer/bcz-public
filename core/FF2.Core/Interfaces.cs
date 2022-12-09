@@ -53,6 +53,8 @@ namespace FF2.Core
 
         void OnComboCompleted(ComboInfo combo, IScheduler scheduler);
 
+        void OnCatalystSpawned(SpawnItem catalyst);
+
         bool GameOver { get; }
 
         StateEvent? AddPenalty(SpawnItem penalty, StateEvent.Factory eventFactory, IScheduler scheduler);
@@ -72,5 +74,7 @@ namespace FF2.Core
         public void OnComboCompleted(ComboInfo combo, IScheduler scheduler) { }
 
         public void OnComboUpdated(ComboInfo previous, ComboInfo current, IScheduler scheduler) { }
+
+        public void OnCatalystSpawned(SpawnItem catalyst) { }
     }
 }

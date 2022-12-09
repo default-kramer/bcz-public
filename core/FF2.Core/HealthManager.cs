@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace FF2.Core
 {
-    sealed class HealthV2 : IStateHook
+    sealed class HealthManager : IStateHook
     {
         readonly struct PenaltyStatus
         {
@@ -67,7 +67,16 @@ namespace FF2.Core
 
         public int CurrentHealth => Health;
 
-        public HealthV2(ISpawnDeck spawnDeck)
+        static class NextPenalty
+        {
+            public const int CostLimit = SpawnCost * 25;
+            public const int SpawnCost = 1;
+            public const int DestructionCost = SpawnCost * 2;
+        }
+
+        int NextPenaltyCountdown = NextPenalty.CostLimit;
+
+        public HealthManager(ISpawnDeck spawnDeck)
         {
             leftPenalty = new PenaltyStatus(3, 2, 1);
             rightPenalty = new PenaltyStatus(6, 2, 2);
@@ -129,14 +138,11 @@ namespace FF2.Core
             }
         }
 
-        int comboCount = 0;
-
         public void OnComboCompleted(ComboInfo combo, IScheduler scheduler)
         {
-            comboCount++;
-            if (comboCount % 2 == 0)
+            if (combo.NumEnemiesDestroyed > 0)
             {
-                spawnDeck.AddPenalty(SpawnItem.PENALTY); // For now, just add penalty every other destruction
+                MaybeAddPenalty(NextPenalty.DestructionCost);
             }
 
             // To ensure a finite game (as long as enemy count never increases), we use the Strict Combo
@@ -144,6 +150,21 @@ namespace FF2.Core
             int gainedHealth = combo.NumEnemiesDestroyed + healthPayoutTable.GetPayout(combo.StrictCombo.AdjustedGroupCount);
             Health += gainedHealth;
             restoreHealthAnimation = new(gainedHealth, scheduler.CreateAppointment(gainedHealth * 200));
+        }
+
+        public void OnCatalystSpawned(SpawnItem catalyst)
+        {
+            MaybeAddPenalty(NextPenalty.SpawnCost);
+        }
+
+        private void MaybeAddPenalty(int amount)
+        {
+            NextPenaltyCountdown -= amount;
+            while (NextPenaltyCountdown <= 0)
+            {
+                spawnDeck.AddPenalty(SpawnItem.PENALTY);
+                NextPenaltyCountdown += NextPenalty.CostLimit;
+            }
         }
 
         bool addToLeft = true;
@@ -167,10 +188,10 @@ namespace FF2.Core
 
         sealed class PenaltyViewmodel : Viewmodels.IPenaltyViewmodel
         {
-            private readonly HealthV2 parent;
+            private readonly HealthManager parent;
             private readonly bool leftSide;
 
-            public PenaltyViewmodel(HealthV2 parent, bool leftSide)
+            public PenaltyViewmodel(HealthManager parent, bool leftSide)
             {
                 this.parent = parent;
                 this.leftSide = leftSide;
