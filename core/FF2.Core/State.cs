@@ -66,9 +66,8 @@ namespace FF2.Core
             else if (hook is NewHealth h3)
             {
                 this.hhh = h3;
-                PENALTY_LEFT = hhh.LEFT;
-                PENALTY_RIGHT = hhh.RIGHT;
                 CountdownViewmodel = h3;
+                PenaltyViewmodel = h3;
             }
         }
 
@@ -78,6 +77,7 @@ namespace FF2.Core
         public readonly Viewmodels.IPenaltyViewmodel PENALTY_LEFT;
         public readonly Viewmodels.IPenaltyViewmodel PENALTY_RIGHT;
         public readonly Viewmodels.ICountdownViewmodel? CountdownViewmodel;
+        public readonly Viewmodels.ISlidingPenaltyViewmodel? PenaltyViewmodel;
         public RestoreHealthAnimation? RestoreHealthAnimation => TEMP?.RestoreHealthAnimation;
 
         public int CurrentHealth => TEMP?.CurrentHealth ?? hhh?.HitPoints ?? 0;

@@ -28,9 +28,6 @@ namespace FF2.Core
 
         public int HitPoints => hitPoints * 4; // current UI draws quarter hearts...
 
-        public readonly Viewmodels.IPenaltyViewmodel RIGHT;
-        public readonly Viewmodels.IPenaltyViewmodel LEFT;
-
         public NewHealth(IScheduler scheduler)
         {
             countdown = scheduler.CreateWaitingAppointment(maxCountdownMillis);
@@ -38,8 +35,6 @@ namespace FF2.Core
             hitPoints = 3;
             penaltyProgress = new int[20];
             penaltyProgress.AsSpan().Fill(0);
-            RIGHT = new FOO(this.penaltyProgress);
-            LEFT = new FOO(new int[0]);
         }
 
         public bool GameOver => hitPoints <= 0 || countdown.HasArrived();
@@ -81,41 +76,6 @@ namespace FF2.Core
 
         public void OnComboUpdated(ComboInfo previous, ComboInfo current, IScheduler scheduler)
         {
-        }
-
-        class FOO : Viewmodels.IPenaltyViewmodel
-        {
-            private readonly int[] penalties;
-
-            public FOO(int[] penalties)
-            {
-                this.penalties = penalties;
-            }
-
-            public int Height => penalties.Length;
-
-            public bool LeftSide => false;
-
-            public (int startingHeight, float progress)? CurrentAttack()
-            {
-                return null;
-            }
-
-            public void GetPenalties(Span<PenaltyItem> buffer, out float destructionProgress)
-            {
-                destructionProgress = 0;
-                for (int i = 0; i < Math.Min(buffer.Length, penalties.Length); i++)
-                {
-                    var size = penalties[i];
-                    var p = size == 0 ? PenaltyItem.None : new PenaltyItem(i + 1, size, false);
-                    buffer[i] = p;
-                }
-            }
-
-            public (int size, float progress)? PenaltyCreationAnimation()
-            {
-                return null;
-            }
         }
 
         int ICountdownViewmodel.MaxMillis => maxCountdownMillis;

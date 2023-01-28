@@ -25,6 +25,9 @@ namespace FF2.Core.Viewmodels
         PenaltyItem GetPenalty(int index);
     }
 
+    /// <summary>
+    /// TODO remove this and the controls
+    /// </summary>
     public interface IPenaltyViewmodel
     {
         int Height { get; }

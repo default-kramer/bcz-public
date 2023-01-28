@@ -61,6 +61,7 @@ public class GameViewerControl : Control
         public readonly GridViewerControl GridViewer;
         public readonly QueueViewerControl QueueViewer;
         public readonly CountdownViewerControl CountdownViewer;
+        public readonly HealthViewerControl HealthViewer;
         public readonly GridViewerControl HealthGridViewer;
         public readonly GridViewerControl MoverGridViewer;
         public readonly GridViewerControl PenaltyGridViewerLeft;
@@ -72,6 +73,7 @@ public class GameViewerControl : Control
             me.FindNode(out GridViewer, nameof(GridViewer));
             me.FindNode(out QueueViewer, nameof(QueueViewer));
             me.FindNode(out CountdownViewer, nameof(CountdownViewer));
+            me.FindNode(out HealthViewer, nameof(HealthViewer));
             me.FindNode(out HealthGridViewer, nameof(HealthGridViewer));
             me.FindNode(out MoverGridViewer, nameof(MoverGridViewer));
             me.FindNode(out PenaltyGridViewerLeft, nameof(PenaltyGridViewerLeft));
@@ -101,6 +103,8 @@ public class GameViewerControl : Control
     {
         const float queueWidth = 140;
         const float queuePadding = 20;
+        const float healthWidth = 50;
+        const float healthPadding = 10;
 
         float availWidth = RectSize.x;
         if (ShowQueue)
@@ -117,6 +121,8 @@ public class GameViewerControl : Control
         {
             totalWidth += queueWidth;
         }
+
+        totalWidth += healthWidth + healthPadding * 2;
 
         float meCenter = RectSize.x / 2f;
         float left = meCenter - totalWidth / 2f;
@@ -157,14 +163,19 @@ public class GameViewerControl : Control
                 members.HealthGridViewer.RectSize = new Vector2(queueWidth, RectSize.y - queueBottom);
                 members.HealthGridViewer.RectPosition = new Vector2(left, queueBottom);
                 members.HealthGridViewer.Visible = true;
-
-                left += queueWidth;
             }
             else
             {
                 members.HealthGridViewer.Visible = false;
             }
+
+            left += queueWidth;
         }
+
+        left += healthPadding;
+        members.HealthViewer.RectSize = new Vector2(healthWidth, RectSize.y);
+        members.HealthViewer.RectPosition = new Vector2(left, 0);
+        left += healthWidth;
     }
 
     private bool _firstDraw = true;
@@ -188,6 +199,7 @@ public class GameViewerControl : Control
         members.GridViewer.Update();
         members.QueueViewer.Update();
         members.CountdownViewer.Update();
+        members.HealthViewer.Update();
         members.HealthGridViewer.Update();
         members.MoverGridViewer.Update();
         members.PenaltyGridViewerLeft.Update();
@@ -255,6 +267,8 @@ public class GameViewerControl : Control
         }
 
         members.CountdownViewer.SetModel(state.CountdownViewmodel);
+
+        members.HealthViewer.SetModel(state.PenaltyViewmodel);
 
         members.HealthGridViewer.SetLogicForhealth(ticker);
         members.HealthGridViewer.Visible = true;
