@@ -488,7 +488,7 @@ public class GridViewerControl : Control
             private Occupant GetHeart(int x)
             {
                 int healthToShow = state.CurrentHealth;
-                var popIn = state.RestoreHealthAnimation;
+                var popIn = state.RestoreHealthAnimation.GetValueOrDefault();
                 if (popIn.HealthGained > 0 && !popIn.Appointment.HasArrived())
                 {
                     int unpopped = Convert.ToInt32(popIn.HealthGained * (1f - popIn.Appointment.Progress()));
@@ -535,7 +535,6 @@ public class GridViewerControl : Control
 
         // These will be refreshed on every update
         private float destructionProgress;
-        private int totalPenaltyHeight = 0;
         private (int startingHeight, float progress) attack;
         private (int height, float progress) penaltyCreationAnimation;
 
@@ -557,34 +556,18 @@ public class GridViewerControl : Control
             attack = viewmodel.CurrentAttack() ?? (-1, 0);
 
             fallDistances.AsSpan().Fill(0);
-            totalPenaltyHeight = 0;
-            int fallDistance = 0;
-            for (int i = 0; i < penalties.Length; i++)
-            {
-                var p = penalties[i];
-                if (p.Size > 0) // size<=0 indicates "no penalty"
-                {
-                    totalPenaltyHeight++;
-                }
-
-                if (p.Destroyed)
-                {
-                    fallDistance++;
-                }
-                else
-                {
-                    fallDistances[i] = fallDistance;
-                }
-            }
-
             penaltyCreationAnimation = viewmodel.PenaltyCreationAnimation() ?? (0, 0);
         }
 
         private PenaltyItem? GetPenalty(Loc loc)
         {
-            if (loc.X == outerX && loc.Y < totalPenaltyHeight)
+            if (loc.X == outerX)
             {
-                return penalties[loc.Y];
+                var item = penalties[loc.Y];
+                if (item.Size > 0)
+                {
+                    return item;
+                }
             }
             return null;
         }

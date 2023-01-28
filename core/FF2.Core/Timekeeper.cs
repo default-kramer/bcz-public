@@ -175,5 +175,10 @@ namespace FF2.Core
         public bool IsFrame0 => occurs.Millis == 0;
 
         public static readonly Appointment Never = new Appointment(Moment.Never, AlwaysZero, Moment.Zero);
+
+        public int MillisRemaining()
+        {
+            return occurs.Millis - now().Millis;
+        }
     }
 }

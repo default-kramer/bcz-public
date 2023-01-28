@@ -43,16 +43,16 @@ namespace FF2.Core
 
         public static State CreateWithInfiniteHealth(Grid grid, ISpawnDeck deck)
         {
-            return new State(grid, deck, NullStateHook.Instance);
+            return new State(grid, deck, NullStateHook.Instance, new Timekeeper());
         }
 
-        internal State(Grid grid, ISpawnDeck spawnDeck, IStateHook hook)
+        internal State(Grid grid, ISpawnDeck spawnDeck, IStateHook hook, Timekeeper timekeeper)
         {
             this.grid = grid;
             this.fallSampler = new FallAnimationSampler(grid);
             this.spawnDeck = spawnDeck;
             this.eventFactory = new();
-            this.timekeeper = new();
+            this.timekeeper = timekeeper;
             this.scheduler = timekeeper;
             mover = null;
             currentCombo = ComboInfo.Empty;
@@ -63,14 +63,24 @@ namespace FF2.Core
                 PENALTY_LEFT = TEMP.LEFT_VM;
                 PENALTY_RIGHT = TEMP.RIGHT_VM;
             }
+            else if (hook is NewHealth h3)
+            {
+                this.hhh = h3;
+                PENALTY_LEFT = hhh.LEFT;
+                PENALTY_RIGHT = hhh.RIGHT;
+                CountdownViewmodel = h3;
+            }
         }
+
+        private readonly NewHealth hhh;
 
         private readonly HealthManager TEMP;
         public readonly Viewmodels.IPenaltyViewmodel PENALTY_LEFT;
         public readonly Viewmodels.IPenaltyViewmodel PENALTY_RIGHT;
-        public RestoreHealthAnimation RestoreHealthAnimation => TEMP.RestoreHealthAnimation;
+        public readonly Viewmodels.ICountdownViewmodel? CountdownViewmodel;
+        public RestoreHealthAnimation? RestoreHealthAnimation => TEMP?.RestoreHealthAnimation;
 
-        public int CurrentHealth => TEMP.CurrentHealth;
+        public int CurrentHealth => TEMP?.CurrentHealth ?? hhh?.HitPoints ?? 0;
 
         public IReadOnlyGrid Grid { get { return grid; } }
 
@@ -81,12 +91,13 @@ namespace FF2.Core
             var spawns = ss.Settings.SpawnBlanks ? Lists.MainDeck : Lists.BlanklessDeck;
             var deck = new InfiniteSpawnDeck(spawns, new PRNG(ss.Seed));
             var grid = Core.Grid.Create(ss.Settings, new PRNG(ss.Seed));
+            var timekeeper = new Timekeeper();
 
             IStateHook hook = ss.Settings.InfiniteHealth
                 ? NullStateHook.Instance
-                : new HealthManager(deck);
+                : new NewHealth(timekeeper);
 
-            return new State(grid, deck, hook);
+            return new State(grid, deck, hook, timekeeper);
         }
 
         public Viewmodels.QueueModel MakeQueueModel()

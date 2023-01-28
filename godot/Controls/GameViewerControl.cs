@@ -60,6 +60,7 @@ public class GameViewerControl : Control
     {
         public readonly GridViewerControl GridViewer;
         public readonly QueueViewerControl QueueViewer;
+        public readonly CountdownViewerControl CountdownViewer;
         public readonly GridViewerControl HealthGridViewer;
         public readonly GridViewerControl MoverGridViewer;
         public readonly GridViewerControl PenaltyGridViewerLeft;
@@ -70,6 +71,7 @@ public class GameViewerControl : Control
         {
             me.FindNode(out GridViewer, nameof(GridViewer));
             me.FindNode(out QueueViewer, nameof(QueueViewer));
+            me.FindNode(out CountdownViewer, nameof(CountdownViewer));
             me.FindNode(out HealthGridViewer, nameof(HealthGridViewer));
             me.FindNode(out MoverGridViewer, nameof(MoverGridViewer));
             me.FindNode(out PenaltyGridViewerLeft, nameof(PenaltyGridViewerLeft));
@@ -144,6 +146,10 @@ public class GameViewerControl : Control
             var queueBottom = RectSize.y / 2f;// * 2f;
             members.QueueViewer.RectSize = new Vector2(queueWidth, queueBottom);
             members.QueueViewer.RectPosition = new Vector2(left, 0);
+            
+            members.CountdownViewer.RectSize = new Vector2(queueWidth, RectSize.y - queueBottom);
+            members.CountdownViewer.RectPosition = new Vector2(left, queueBottom);
+            members.CountdownViewer.Visible = true;
 
             if (false.ToString().Length == 0)
             {
@@ -181,6 +187,7 @@ public class GameViewerControl : Control
 
         members.GridViewer.Update();
         members.QueueViewer.Update();
+        members.CountdownViewer.Update();
         members.HealthGridViewer.Update();
         members.MoverGridViewer.Update();
         members.PenaltyGridViewerLeft.Update();
@@ -246,6 +253,8 @@ public class GameViewerControl : Control
             members.PenaltyGridViewerLeft.Visible = false;
             members.PenaltyGridViewerRight.Visible = false;
         }
+
+        members.CountdownViewer.SetModel(state.CountdownViewmodel);
 
         members.HealthGridViewer.SetLogicForhealth(ticker);
         members.HealthGridViewer.Visible = true;

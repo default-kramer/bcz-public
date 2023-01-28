@@ -6,6 +6,25 @@ using System.Threading.Tasks;
 
 namespace FF2.Core.Viewmodels
 {
+    public interface ICountdownViewmodel
+    {
+        int MaxMillis { get; }
+
+        int CurrentMillis { get; }
+    }
+
+    public interface ISlidingPenaltyViewmodel
+    {
+        int NumSlots { get; }
+
+        /// <summary>
+        /// Contract: A penalty at index N is (N+1) steps away from landing.
+        /// So a penalty at index 0 will land during the next spawn.
+        /// The given index must be less than <see cref="NumSlots"/>.
+        /// </summary>
+        PenaltyItem GetPenalty(int index);
+    }
+
     public interface IPenaltyViewmodel
     {
         int Height { get; }

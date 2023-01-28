@@ -3,9 +3,138 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using FF2.Core.Viewmodels;
 
 namespace FF2.Core
 {
+    /// <summary>
+    /// NEED TO PARAMETERIZE:
+    /// * Max Countdown
+    /// * Millis restored per enemy
+    ///
+    /// * Max HP
+    /// * Penalty Schedule
+    ///   - # Catalysts delay
+    ///   - AGC needed to clear
+    ///   - Is this a ring?
+    /// </summary>
+    sealed class NewHealth : IStateHook, ICountdownViewmodel, ISlidingPenaltyViewmodel
+    {
+        private const int maxCountdownMillis = 1000 * 60;
+        private Appointment countdown;
+        private readonly int[] penaltyProgress;
+        private int hitPoints;
+        private int penaltyCountdown;
+
+        public int HitPoints => hitPoints * 4; // current UI draws quarter hearts...
+
+        public readonly Viewmodels.IPenaltyViewmodel RIGHT;
+        public readonly Viewmodels.IPenaltyViewmodel LEFT;
+
+        public NewHealth(IScheduler scheduler)
+        {
+            countdown = scheduler.CreateWaitingAppointment(maxCountdownMillis);
+            penaltyCountdown = 10;
+            hitPoints = 3;
+            penaltyProgress = new int[20];
+            penaltyProgress.AsSpan().Fill(0);
+            RIGHT = new FOO(this.penaltyProgress);
+            LEFT = new FOO(new int[0]);
+        }
+
+        public bool GameOver => hitPoints <= 0 || countdown.HasArrived();
+
+        public void Elapse(IScheduler scheduler) { }
+
+        public StateEvent? AddPenalty(SpawnItem penalty, StateEvent.Factory eventFactory, IScheduler scheduler)
+        {
+            return null;
+        }
+
+        public void OnCatalystSpawned(SpawnItem catalyst)
+        {
+            if (penaltyProgress[0] > 0)
+            {
+                hitPoints--;
+            }
+            for (int i = 0; i < penaltyProgress.Length - 1; i++)
+            {
+                penaltyProgress[i] = penaltyProgress[i + 1];
+            }
+            penaltyProgress[penaltyProgress.Length - 1] = 0;
+
+            penaltyCountdown--;
+            if (penaltyCountdown <= 0)
+            {
+                penaltyProgress[penaltyProgress.Length - 1] = 1;
+                penaltyCountdown = 10;
+            }
+        }
+
+        public void OnComboCompleted(ComboInfo combo, IScheduler scheduler)
+        {
+            int millisRemaining = countdown.MillisRemaining();
+            millisRemaining += combo.NumEnemiesDestroyed * 5 * 1000; // +5s per enemy
+            millisRemaining = Math.Min(millisRemaining, maxCountdownMillis);
+            countdown = scheduler.CreateWaitingAppointment(millisRemaining);
+        }
+
+        public void OnComboUpdated(ComboInfo previous, ComboInfo current, IScheduler scheduler)
+        {
+        }
+
+        class FOO : Viewmodels.IPenaltyViewmodel
+        {
+            private readonly int[] penalties;
+
+            public FOO(int[] penalties)
+            {
+                this.penalties = penalties;
+            }
+
+            public int Height => penalties.Length;
+
+            public bool LeftSide => false;
+
+            public (int startingHeight, float progress)? CurrentAttack()
+            {
+                return null;
+            }
+
+            public void GetPenalties(Span<PenaltyItem> buffer, out float destructionProgress)
+            {
+                destructionProgress = 0;
+                for (int i = 0; i < Math.Min(buffer.Length, penalties.Length); i++)
+                {
+                    var size = penalties[i];
+                    var p = size == 0 ? PenaltyItem.None : new PenaltyItem(i + 1, size, false);
+                    buffer[i] = p;
+                }
+            }
+
+            public (int size, float progress)? PenaltyCreationAnimation()
+            {
+                return null;
+            }
+        }
+
+        int ICountdownViewmodel.MaxMillis => maxCountdownMillis;
+
+        int ICountdownViewmodel.CurrentMillis => countdown.MillisRemaining();
+
+        int ISlidingPenaltyViewmodel.NumSlots => penaltyProgress.Length;
+
+        PenaltyItem ISlidingPenaltyViewmodel.GetPenalty(int index)
+        {
+            var rank = penaltyProgress[index];
+            if (rank > 0)
+            {
+                return new PenaltyItem(index + 1, rank, false);
+            }
+            return PenaltyItem.None;
+        }
+    }
+
     sealed class HealthManager : IStateHook
     {
         readonly struct PenaltyStatus
