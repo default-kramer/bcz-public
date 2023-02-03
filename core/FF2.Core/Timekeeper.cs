@@ -176,6 +176,10 @@ namespace FF2.Core
 
         public static readonly Appointment Never = new Appointment(Moment.Never, AlwaysZero, Moment.Zero);
 
+        /// <summary>
+        /// TODO does this bypass the protections of <see cref="IScheduler"/>?
+        /// But I can't think of a better to implement the countdown...
+        /// </summary>
         public int MillisRemaining()
         {
             return occurs.Millis - now().Millis;

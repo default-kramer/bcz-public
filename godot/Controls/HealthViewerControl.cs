@@ -5,10 +5,18 @@ using System;
 public class HealthViewerControl : Control
 {
     private ISlidingPenaltyViewmodel vm = NullViewmodel.Instance;
+    private Font font;
+    private static readonly Color BoxColor = Godot.Colors.Orange;
+    private static readonly Color TextColor = Godot.Colors.Black;
 
     public void SetModel(ISlidingPenaltyViewmodel viewmodel)
     {
         this.vm = viewmodel;
+    }
+
+    public override void _Ready()
+    {
+        font = this.GetFont("");
     }
 
     public override void _Draw()
@@ -20,9 +28,36 @@ public class HealthViewerControl : Control
         {
             var penalty = vm.GetPenalty(i);
             var rect = new Rect2(0, i * boxHeight, boxWidth, boxHeight);
-            DrawRect(rect, Godot.Colors.Bisque, filled: penalty.Size > 0, width: 2);
+            if (penalty.Size > 0)
+            {
+                DrawRect(rect, BoxColor, filled: true);
+                DrawString(font, rect.Position + new Vector2(0, 15), levels[penalty.Size], TextColor);
+            }
+            else
+            {
+                DrawRect(rect, BoxColor, filled: false, width: 2);
+            }
         }
     }
+
+    private static readonly string[] levels =
+    {
+        "",
+        "o",
+        "oo",
+        "ooo",
+        "oooo",
+        "W",
+        "W o",
+        "W oo",
+        "W ooo",
+        "W oooo",
+        "WW",
+        "WW o",
+        "WW oo",
+        "WW ooo",
+        "WW oooo",
+    };
 
     class NullViewmodel : ISlidingPenaltyViewmodel
     {
