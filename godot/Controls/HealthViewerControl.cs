@@ -19,6 +19,21 @@ public class HealthViewerControl : Control
         font = this.GetFont("");
     }
 
+    private const float slowBlinkRate = 0.5f;
+    private const float fastBlinkRate = 0.2f;
+    float slowBlinker = 0;
+    float fastBlinker = 0;
+    bool SlowBlinkOn => slowBlinker < slowBlinkRate / 2;
+    bool FastBlinkOn => fastBlinker < fastBlinkRate / 2;
+
+    public override void _Process(float delta)
+    {
+        base._Process(delta);
+
+        slowBlinker = (slowBlinker + delta) % slowBlinkRate;
+        fastBlinker = (fastBlinker + delta) % fastBlinkRate;
+    }
+
     public override void _Draw()
     {
         float boxHeight = RectSize.y / vm.NumSlots;
@@ -28,7 +43,20 @@ public class HealthViewerControl : Control
         {
             var penalty = vm.GetPenalty(i);
             var rect = new Rect2(0, i * boxHeight, boxWidth, boxHeight);
-            if (penalty.Size > 0)
+            bool draw = penalty.Size > 0;
+            if (draw)
+            {
+                if (i == 0)
+                {
+                    draw = FastBlinkOn;
+                }
+                else if (i == 1)
+                {
+                    draw = SlowBlinkOn;
+                }
+            }
+
+            if (draw)
             {
                 DrawRect(rect, BoxColor, filled: true);
                 DrawString(font, rect.Position + new Vector2(0, 15), levels[penalty.Size], TextColor);
