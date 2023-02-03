@@ -59,12 +59,9 @@ public class HealthViewerControl : Control
             if (draw)
             {
                 DrawRect(rect, BoxColor, filled: true);
-                DrawString(font, rect.Position + new Vector2(0, 15), levels[penalty.Size], TextColor);
+                DrawString(font, rect.Position + new Vector2(8, 15), levels[penalty.Size], TextColor);
             }
-            else
-            {
-                DrawRect(rect, BoxColor, filled: false, width: 2);
-            }
+            DrawRect(rect, BoxColor, filled: false, width: 2);
         }
     }
 
