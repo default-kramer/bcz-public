@@ -67,7 +67,7 @@ namespace FF2.Core
 
         private static PenaltyItem[] Build()
         {
-            const int delay = 10;
+            const int delay = 8;
 
             var items = new PenaltyItem[8];
 
@@ -177,6 +177,12 @@ namespace FF2.Core
                 return new PenaltyItem(index + 1, rank, false);
             }
             return PenaltyItem.None;
+        }
+
+        public bool GetHealth(out HealthStatus status)
+        {
+            status = new HealthStatus(hitPoints, MaxHP);
+            return true;
         }
     }
 

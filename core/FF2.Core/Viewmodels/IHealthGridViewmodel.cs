@@ -23,6 +23,20 @@ namespace FF2.Core.Viewmodels
         /// The given index must be less than <see cref="NumSlots"/>.
         /// </summary>
         PenaltyItem GetPenalty(int index);
+
+        bool GetHealth(out HealthStatus status);
+    }
+
+    public struct HealthStatus
+    {
+        public readonly int CurrentHealth;
+        public readonly int MaxHealth;
+
+        public HealthStatus(int current, int max)
+        {
+            this.CurrentHealth = current;
+            this.MaxHealth = max;
+        }
     }
 
     /// <summary>

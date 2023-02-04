@@ -409,8 +409,7 @@ public class GridViewerControl : Control
         private readonly MoverGrid grid;
         private readonly State state;
 
-        public const int GridHeight = 3; // 2 for mover + 1 for health
-        private static bool IsHealthRow(Loc loc) => loc.Y == GridHeight - 1;
+        public const int GridHeight = 2;
 
         public MoverLogic(State state)
         {
@@ -461,11 +460,6 @@ public class GridViewerControl : Control
 
             public Occupant Get(Loc loc)
             {
-                if (IsHealthRow(loc))
-                {
-                    return GetHeart(loc.X);
-                }
-
                 var x = state.GetMover;
                 if (x == null)
                 {
@@ -484,39 +478,6 @@ public class GridViewerControl : Control
 
                 return Occupant.None;
             }
-
-            private Occupant GetHeart(int x)
-            {
-                int healthToShow = state.CurrentHealth;
-                var popIn = state.RestoreHealthAnimation.GetValueOrDefault();
-                if (popIn.HealthGained > 0 && !popIn.Appointment.HasArrived())
-                {
-                    int unpopped = Convert.ToInt32(popIn.HealthGained * (1f - popIn.Appointment.Progress()));
-                    healthToShow -= unpopped;
-                }
-
-                const int healthPerCell = 4;
-                int index = x * healthPerCell;
-                int actual = healthToShow - index;
-
-                if (actual >= 4)
-                {
-                    return HealthOccupants.Heart;
-                }
-                return actual switch
-                {
-                    3 => HealthOccupants.Heart75,
-                    2 => HealthOccupants.Heart50,
-                    1 => HealthOccupants.Heart25,
-                    _ => Occupant.None,
-                };
-            }
-        }
-
-        public override bool OverrideSpriteKind(Occupant occ, Loc loc, out SpriteKind spriteKind)
-        {
-            spriteKind = HealthOccupants.Translate(occ, SpriteKind.None);
-            return IsHealthRow(loc);
         }
 
         public override (Godot.Color light, Godot.Color dark) BorderColor => (borderLight, borderDark);

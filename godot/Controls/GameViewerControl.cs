@@ -101,38 +101,45 @@ public class GameViewerControl : Control
 
     public void OnSizeChanged()
     {
-        const float queueWidth = 140;
-        const float queuePadding = 20;
-        const float healthWidth = 50;
-        const float healthPadding = 10;
+        float ladderWidth = RectSize.y * 0.16f;
+        const float ladderPadding = 10;
+        float queueWidth = ladderWidth;
+        const float queuePadding = ladderPadding;
+
+        const bool ShowLadder = true;
 
         float availWidth = RectSize.x;
+
+        float nonGridWidth = 0;
+        if (ShowLadder)
+        {
+            nonGridWidth += (ladderWidth + ladderPadding);
+        }
         if (ShowQueue)
         {
-            availWidth -= queueWidth;
-            availWidth -= queuePadding;
+            nonGridWidth += (queueWidth + queuePadding);
         }
+
+        availWidth -= nonGridWidth;
 
         // Divide by 2 for both gridviewers
         var (gvSize, moverSize) = members.GridViewer.DesiredSize(new Vector2(availWidth / 2, RectSize.y));
 
-        float totalWidth = gvSize.x;
-        if (ShowQueue)
-        {
-            totalWidth += queueWidth;
-        }
-
-        totalWidth += healthWidth + healthPadding * 2;
+        float neededWidth = gvSize.x + nonGridWidth;
 
         float meCenter = RectSize.x / 2f;
-        float left = meCenter - totalWidth / 2f;
+        float left = meCenter - neededWidth / 2f;
 
-        // WARNING this padding assumes H=20 for both penalty grids
-        var penaltySize = new Vector2(RectSize.y / 20f * 2.2f, RectSize.y);
-        members.PenaltyGridViewerLeft.RectSize = penaltySize;
-        members.PenaltyGridViewerLeft.RectPosition = new Vector2(left, 0);
-        left += penaltySize.x;
 
+        if (ShowLadder)
+        {
+            members.HealthViewer.RectSize = new Vector2(ladderWidth, RectSize.y);
+            members.HealthViewer.RectPosition = new Vector2(left, 0);
+            left += ladderWidth;
+            left += ladderPadding;
+        }
+
+        // show main Grid
         members.MoverGridViewer.RectSize = moverSize;
         members.MoverGridViewer.RectPosition = new Vector2(left, 0);
 
@@ -141,10 +148,6 @@ public class GameViewerControl : Control
 
         left += gvSize.x;
 
-        members.PenaltyGridViewerRight.RectSize = penaltySize;
-        members.PenaltyGridViewerRight.RectPosition = new Vector2(left, 0);
-        left += penaltySize.x;
-
         if (ShowQueue)
         {
             left += queuePadding;
@@ -152,7 +155,7 @@ public class GameViewerControl : Control
             var queueBottom = RectSize.y / 2f;// * 2f;
             members.QueueViewer.RectSize = new Vector2(queueWidth, queueBottom);
             members.QueueViewer.RectPosition = new Vector2(left, 0);
-            
+
             members.CountdownViewer.RectSize = new Vector2(queueWidth, RectSize.y - queueBottom);
             members.CountdownViewer.RectPosition = new Vector2(left, queueBottom);
             members.CountdownViewer.Visible = true;
@@ -171,11 +174,6 @@ public class GameViewerControl : Control
 
             left += queueWidth;
         }
-
-        left += healthPadding;
-        members.HealthViewer.RectSize = new Vector2(healthWidth, RectSize.y);
-        members.HealthViewer.RectPosition = new Vector2(left, 0);
-        left += healthWidth;
     }
 
     private bool _firstDraw = true;
