@@ -233,7 +233,16 @@ public class GameViewerControl : Control
 
         members.CountdownViewer.SetModel(state.CountdownViewmodel);
 
-        members.HealthViewer.SetModel(state.PenaltyViewmodel);
+        if (state.PenaltyViewmodel != null)
+        {
+            members.HealthViewer.SetModel(state.PenaltyViewmodel);
+            members.HealthViewer.Visible = true;
+        }
+        else
+        {
+            members.HealthViewer.SetNullModel();
+            members.HealthViewer.Visible = false;
+        }
     }
 
     internal abstract class LogicBase : ILogic

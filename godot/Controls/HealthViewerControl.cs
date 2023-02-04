@@ -4,14 +4,21 @@ using Godot;
 using System;
 using System.Collections.Generic;
 
+#nullable enable
+
 public class HealthViewerControl : Control
 {
     private ISlidingPenaltyViewmodel vm = NullViewmodel.Instance;
-    private Font font;
+    private Font font = null!;
     private static readonly Color BoxColor = Godot.Colors.Orange;
     private static readonly Color TextColor = Godot.Colors.Black;
-    private Sprites sprites;
+    private Sprites sprites = null!;
     private const int MaxHearts = 3;
+
+    public void SetNullModel()
+    {
+        this.vm = NullViewmodel.Instance;
+    }
 
     public void SetModel(ISlidingPenaltyViewmodel viewmodel)
     {
@@ -21,18 +28,6 @@ public class HealthViewerControl : Control
     public override void _Ready()
     {
         font = this.GetFont("");
-    }
-
-    private TrackedSprite GetHeart(int i, bool full)
-    {
-        if (full)
-        {
-            return sprites.FullHearts[i];
-        }
-        else
-        {
-            return sprites.EmptyHearts[i];
-        }
     }
 
     private const float slowBlinkRate = 0.5f;
