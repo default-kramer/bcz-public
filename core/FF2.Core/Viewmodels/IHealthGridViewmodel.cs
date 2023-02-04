@@ -39,26 +39,6 @@ namespace FF2.Core.Viewmodels
         }
     }
 
-    /// <summary>
-    /// TODO remove this and the controls
-    /// </summary>
-    public interface IPenaltyViewmodel
-    {
-        int Height { get; }
-
-        bool LeftSide { get; }
-
-        (int startingHeight, float progress)? CurrentAttack();
-
-        /// <summary>
-        /// Buffer must have a size of at least <see cref="Height"/>.
-        /// Each penalty will occupy <see cref="PenaltyItem.Size"/> slots in the buffer.
-        /// </summary>
-        void GetPenalties(Span<PenaltyItem> buffer, out float destructionProgress);
-
-        (int size, float progress)? PenaltyCreationAnimation();
-    }
-
     public readonly struct PenaltyItem
     {
         public readonly int Id;

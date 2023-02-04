@@ -22,19 +22,9 @@ public class GridViewerControl : Control
         this.Logic = new StandardLogic(ticker);
     }
 
-    public void SetLogicForhealth(Ticker ticker)
-    {
-        this.Logic = NullLogic.Instance;// new HealthLogic(ticker.state.HealthModel);
-    }
-
     public void SetLogicForMover(Ticker ticker)
     {
         this.Logic = new MoverLogic(ticker.state);
-    }
-
-    public void SetLogicForPenalty(IPenaltyViewmodel viewmodel)
-    {
-        this.Logic = new PenaltyLogic(viewmodel);
     }
 
     private TrackedSprite[] activeSprites = new TrackedSprite[400]; // should be way more than we need
@@ -484,111 +474,5 @@ public class GridViewerControl : Control
 
         private static readonly Godot.Color borderLight = Godot.Color.Color8(215, 215, 215);
         private static readonly Godot.Color borderDark = Godot.Color.Color8(160, 160, 160);
-    }
-
-    sealed class PenaltyLogic : ILogic, IReadOnlyGridSlim
-    {
-        private readonly IPenaltyViewmodel viewmodel;
-        private readonly int outerX;
-        private readonly PenaltyItem[] penalties;
-        private readonly int[] fallDistances;
-        private const float TODO = 0.35f; // when do we switch from "destroying" to "falling"
-
-        // These will be refreshed on every update
-        private float destructionProgress;
-        private (int startingHeight, float progress) attack;
-        private (int height, float progress) penaltyCreationAnimation;
-
-        public PenaltyLogic(IPenaltyViewmodel viewmodel)
-        {
-            this.viewmodel = viewmodel;
-            this.outerX = viewmodel.LeftSide ? 0 : 1;
-            this.penalties = new PenaltyItem[viewmodel.Height];
-            this.fallDistances = new int[viewmodel.Height];
-        }
-
-        public GridSize Size => new GridSize(2, viewmodel.Height);
-
-        public override IReadOnlyGridSlim Grid => this;
-
-        public override void Update()
-        {
-            viewmodel.GetPenalties(penalties, out this.destructionProgress);
-            attack = viewmodel.CurrentAttack() ?? (-1, 0);
-
-            fallDistances.AsSpan().Fill(0);
-            penaltyCreationAnimation = viewmodel.PenaltyCreationAnimation() ?? (0, 0);
-        }
-
-        private PenaltyItem? GetPenalty(Loc loc)
-        {
-            if (loc.X == outerX)
-            {
-                var item = penalties[loc.Y];
-                if (item.Size > 0)
-                {
-                    return item;
-                }
-            }
-            return null;
-        }
-
-        public Occupant Get(Loc loc)
-        {
-            if (GetPenalty(loc).HasValue)
-            {
-                return HealthOccupants.Penalty;
-            }
-            else if (loc.X != outerX && loc.Y == attack.startingHeight)
-            {
-                return HealthOccupants.Attack;
-            }
-
-            return Occupant.None;
-        }
-
-        public override bool OverrideSpriteKind(Occupant occ, Loc loc, out SpriteKind spriteKind)
-        {
-            spriteKind = HealthOccupants.Translate(occ, SpriteKind.None);
-            return spriteKind != SpriteKind.None;
-        }
-
-        public override float DestructionProgress(Loc loc)
-        {
-            if (destructionProgress > 0)
-            {
-                var penalty = GetPenalty(loc);
-                if (penalty.HasValue && penalty.Value.Destroyed)
-                {
-                    return destructionProgress / TODO;
-                }
-            }
-
-            return 0;
-        }
-
-        public override float FallSampleOverride(Loc loc)
-        {
-            if (Get(loc) == HealthOccupants.Attack)
-            {
-                return (viewmodel.Height - attack.startingHeight) * attack.progress;
-            }
-
-            if (destructionProgress > TODO)
-            {
-                var penalty = GetPenalty(loc);
-                if (penalty.HasValue)
-                {
-                    return (destructionProgress - TODO) / (1 - TODO) * -fallDistances[loc.Y];
-                }
-            }
-
-            if (loc.X == outerX && penaltyCreationAnimation.height > 0)
-            {
-                return -penaltyCreationAnimation.height * (1 - penaltyCreationAnimation.progress);
-            }
-
-            return 0;
-        }
     }
 }

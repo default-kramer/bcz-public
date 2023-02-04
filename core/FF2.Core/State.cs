@@ -57,30 +57,15 @@ namespace FF2.Core
             mover = null;
             currentCombo = ComboInfo.Empty;
             this.hook = hook;
-            if (hook is HealthManager hv2)
+            if (hook is NewHealth h3)
             {
-                TEMP = hv2;
-                PENALTY_LEFT = TEMP.LEFT_VM;
-                PENALTY_RIGHT = TEMP.RIGHT_VM;
-            }
-            else if (hook is NewHealth h3)
-            {
-                this.hhh = h3;
                 CountdownViewmodel = h3;
                 PenaltyViewmodel = h3;
             }
         }
 
-        private readonly NewHealth hhh;
-
-        private readonly HealthManager TEMP;
-        public readonly Viewmodels.IPenaltyViewmodel PENALTY_LEFT;
-        public readonly Viewmodels.IPenaltyViewmodel PENALTY_RIGHT;
         public readonly Viewmodels.ICountdownViewmodel? CountdownViewmodel;
         public readonly Viewmodels.ISlidingPenaltyViewmodel? PenaltyViewmodel;
-        public RestoreHealthAnimation? RestoreHealthAnimation => TEMP?.RestoreHealthAnimation;
-
-        public int CurrentHealth => TEMP?.CurrentHealth ?? hhh?.HitPoints ?? 0;
 
         public IReadOnlyGrid Grid { get { return grid; } }
 

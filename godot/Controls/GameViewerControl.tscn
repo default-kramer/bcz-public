@@ -28,12 +28,6 @@ anchor_bottom = 0.0
 margin_right = 40.0
 margin_bottom = 40.0
 
-[node name="HealthGridViewer" parent="." instance=ExtResource( 2 )]
-
 [node name="MoverGridViewer" parent="." instance=ExtResource( 2 )]
-
-[node name="PenaltyGridViewerLeft" parent="." instance=ExtResource( 2 )]
-
-[node name="PenaltyGridViewerRight" parent="." instance=ExtResource( 2 )]
 
 [node name="GameOverMenu" parent="." instance=ExtResource( 5 )]
