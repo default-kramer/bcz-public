@@ -12,19 +12,14 @@ public class NewRoot : Control
         public readonly GameViewerControl GameViewer;
         public readonly PuzzleControl PuzzleControl;
         public readonly MainMenu MainMenu;
+        public readonly ControllerSetupControl ControllerSetupControl;
 
         public Members(Control me)
         {
             me.FindNode(out GameViewer, nameof(GameViewer));
             me.FindNode(out PuzzleControl, nameof(PuzzleControl));
             me.FindNode(out MainMenu, nameof(MainMenu));
-        }
-
-        public void HideAll()
-        {
-            GameViewer.Visible = false;
-            PuzzleControl.Visible = false;
-            MainMenu.Visible = false;
+            me.FindNode(out ControllerSetupControl, nameof(ControllerSetupControl));
         }
     }
 
@@ -41,6 +36,7 @@ public class NewRoot : Control
     {
         // TheSpritePool should be the first child, causing it to be loaded and ready
         // before any other children are able to request it.
+        // (We can't use _Ready because the children will be _Ready before the root.)
         return TheSpritePool.Instance.Pool;
     }
 
@@ -96,31 +92,46 @@ public class NewRoot : Control
         StartGame(levelToken.Value);
     }
 
+    private void SwitchTo(Control control)
+    {
+        // Removing children is better than just hiding them, probably for many reasons.
+        // One reason is so that the input events aren't constantly routing to the Controller Setup code.
+
+        var me = this;
+        while (me.GetChildCount() > 0)
+        {
+            me.RemoveChild(me.GetChild(0));
+        }
+        control.Visible = true;
+        me.AddChild(control);
+    }
+
     private void StartGame(SeededSettings ss)
     {
-        members.HideAll();
-        members.GameViewer.Visible = true;
+        SwitchTo(members.GameViewer);
         members.GameViewer.StartGame(ss);
     }
 
     public void BackToMainMenu()
     {
-        members.HideAll();
-        members.MainMenu.Visible = true;
+        SwitchTo(members.MainMenu);
         members.MainMenu.ShowMainMenu();
     }
 
     public void WatchReplay(string replayFile)
     {
-        members.HideAll();
-        members.GameViewer.Visible = true;
+        SwitchTo(members.GameViewer);
         members.GameViewer.WatchReplay(replayFile);
     }
 
     public void SolvePuzzles()
     {
-        members.HideAll();
-        members.PuzzleControl.Visible = true;
+        SwitchTo(members.PuzzleControl);
         members.PuzzleControl.TEST_SolvePuzzle();
+    }
+
+    public void ControllerSetup()
+    {
+        SwitchTo(members.ControllerSetupControl);
     }
 }

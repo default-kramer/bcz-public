@@ -28,6 +28,7 @@ public class HealthViewerControl : Control
     public override void _Ready()
     {
         font = this.GetFont("");
+        sprites = new Sprites(NewRoot.GetSpritePool(this), this);
     }
 
     private const float slowBlinkRate = 0.5f;
@@ -39,7 +40,6 @@ public class HealthViewerControl : Control
 
     public override void _Process(float delta)
     {
-        sprites = sprites ?? new Sprites(NewRoot.GetSpritePool(this), this);
         slowBlinker = (slowBlinker + delta) % slowBlinkRate;
         fastBlinker = (fastBlinker + delta) % fastBlinkRate;
     }
