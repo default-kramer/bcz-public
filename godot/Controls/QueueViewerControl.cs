@@ -16,14 +16,17 @@ public class QueueViewerControl : Control
     private static int Index1(int i) { return i; }
     private static int Index2(int i) { return i + count; }
 
+    public override void _Ready()
+    {
+        spritePool = NewRoot.GetSpritePool(this);
+    }
+
     public override void _Draw()
     {
         if (Model == null)
         {
             return;
         }
-
-        spritePool = spritePool ?? NewRoot.GetSpritePool(this);
 
         DrawRect(new Rect2(0, 0, this.RectSize), new Godot.Color(0.03f, 0.03f, 0.03f));
 

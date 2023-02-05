@@ -8,20 +8,20 @@ using Godot;
 
 #nullable enable
 
-    readonly struct TrackedSprite
+readonly struct TrackedSprite
+{
+    public readonly SpriteKind Kind;
+    public readonly Sprite Sprite;
+
+    public TrackedSprite(SpriteKind kind, Sprite sprite)
     {
-        public readonly SpriteKind Kind;
-        public readonly Sprite Sprite;
-
-        public TrackedSprite(SpriteKind kind, Sprite sprite)
-        {
-            this.Kind = kind;
-            this.Sprite = sprite;
-        }
-
-        public bool IsNothing { get { return Kind == SpriteKind.None; } }
-        public bool IsSomething { get { return Kind != SpriteKind.None; } }
+        this.Kind = kind;
+        this.Sprite = sprite;
     }
+
+    public bool IsNothing { get { return Kind == SpriteKind.None; } }
+    public bool IsSomething { get { return Kind != SpriteKind.None; } }
+}
 
 // TODO should implement IDisposable probably...
 sealed class SpritePool

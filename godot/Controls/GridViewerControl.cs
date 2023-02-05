@@ -34,6 +34,7 @@ public class GridViewerControl : Control
 
     public override void _Ready()
     {
+        spritePool = NewRoot.GetSpritePool(this);
     }
 
     float elapsedSeconds = 0;
@@ -74,8 +75,6 @@ public class GridViewerControl : Control
 
         var grid = Logic.Grid;
         var gridSize = grid.Size;
-
-        spritePool = spritePool ?? NewRoot.GetSpritePool(this);
 
         if (Logic.ShouldFlicker)
         {

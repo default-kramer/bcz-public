@@ -33,10 +33,9 @@ public class NewRoot : Control
 
     internal static SpritePool GetSpritePool(Node child)
     {
-        // TheSpritePool should be the first child, causing it to be loaded and ready
-        // before any other children are able to request it.
-        // (We can't use _Ready because the children will be _Ready before the root.)
-        return TheSpritePool.Instance.Pool;
+        var obj = child.GetNode("/root/TheSpritePool");
+        var sp = (TheSpritePool)obj;
+        return sp.Pool;
     }
 
     internal static NewRoot FindRoot(Node child)
