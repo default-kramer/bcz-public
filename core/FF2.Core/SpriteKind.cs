@@ -16,10 +16,12 @@ namespace FF2.Core
         Enemy,
         Heart,
         Heart0,
-        Heart25,
-        Heart50,
-        Heart75,
-        Heart100,
-        Heartbreaker,
+
+        // No longer used:
+        //Heart25,
+        //Heart50,
+        //Heart75,
+        //Heart100,
+        //Heartbreaker,
     }
 }

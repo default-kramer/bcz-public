@@ -9,17 +9,12 @@ public class NewRoot : Control
 {
     readonly struct Members
     {
-        public readonly SpritePool SpritePool;
         public readonly GameViewerControl GameViewer;
         public readonly PuzzleControl PuzzleControl;
         public readonly MainMenu MainMenu;
 
         public Members(Control me)
         {
-            SpritePool = new SpritePool(me, SpriteKind.Single, SpriteKind.Joined,
-                SpriteKind.Enemy, SpriteKind.BlankJoined, SpriteKind.BlankSingle, SpriteKind.Heart,
-                SpriteKind.Heart0, SpriteKind.Heart25, SpriteKind.Heart50, SpriteKind.Heart75, SpriteKind.Heart100, SpriteKind.Heartbreaker);
-
             me.FindNode(out GameViewer, nameof(GameViewer));
             me.FindNode(out PuzzleControl, nameof(PuzzleControl));
             me.FindNode(out MainMenu, nameof(MainMenu));
@@ -44,7 +39,9 @@ public class NewRoot : Control
 
     internal static SpritePool GetSpritePool(Node child)
     {
-        return FindRoot(child).members.SpritePool;
+        // TheSpritePool should be the first child, causing it to be loaded and ready
+        // before any other children are able to request it.
+        return TheSpritePool.Instance.Pool;
     }
 
     internal static NewRoot FindRoot(Node child)
