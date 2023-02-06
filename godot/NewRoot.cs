@@ -131,5 +131,6 @@ public class NewRoot : Control
     public void ControllerSetup()
     {
         SwitchTo(members.ControllerSetupControl);
+        members.ControllerSetupControl.Reset();
     }
 }
