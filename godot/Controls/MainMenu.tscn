@@ -46,6 +46,7 @@ margin_bottom = 116.0
 text = "Solve Puzzles"
 
 [node name="MenuSinglePlayer" parent="." instance=ExtResource( 1 )]
+visible = false
 
 [node name="FileDialog" type="FileDialog" parent="."]
 margin_right = 315.0
