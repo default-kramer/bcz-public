@@ -142,11 +142,10 @@ namespace FF2.Core
             return true;
         }
 
-        [Obsolete("Argument is no longer nullable. Call Update() instead.")]
+        [Obsolete("Attention call site: Your argument is no longer nullable. You should call Update() instead.")]
         private bool MaybeUpdate(StateEvent result)
         {
-            __currentEvent = result;
-            return true;
+            throw new Exception("I told you not to call this...");
         }
 
         private bool Update(StateEvent result)
