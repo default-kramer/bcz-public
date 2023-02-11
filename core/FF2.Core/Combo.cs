@@ -35,7 +35,7 @@ namespace FF2.Core
         internal ComboInfo AfterDestruction(DestructionCalculations calculations)
         {
             var strict2 = StrictCombo.AfterDestruction(calculations.NumVerticalGroupsStrict, calculations.NumHorizontalGroupsStrict);
-            var perm2 = PermissiveCombo.AfterDestruction(calculations.NumVerticalGroupsLoose, calculations.NumHorizontalGroupsLoose);
+            var perm2 = PermissiveCombo.AfterDestruction(calculations.NumVerticalGroupsPermissive, calculations.NumHorizontalGroupsPermissive);
             return new ComboInfo(strict2, perm2, NumEnemiesDestroyed + calculations.NumEnemiesDestroyed);
         }
 

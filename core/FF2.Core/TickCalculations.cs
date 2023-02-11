@@ -48,8 +48,8 @@ namespace FF2.Core
 
         private Occupant[] destroyedOccupants;
 
-        public int NumVerticalGroupsLoose;
-        public int NumHorizontalGroupsLoose;
+        public int NumVerticalGroupsPermissive;
+        public int NumHorizontalGroupsPermissive;
         public int NumVerticalGroupsStrict;
         public int NumHorizontalGroupsStrict;
         public int NumEnemiesDestroyed;
@@ -62,15 +62,15 @@ namespace FF2.Core
         int ITickCalculations.ColumnDestructionBitmap => this.ColumnDestructionBitmap;
         int ITickCalculations.RowDestructionBitmap => this.RowDestructionBitmap;
 
-        int ITickCalculations.TotalNumGroupsPermissive => NumVerticalGroupsLoose + NumHorizontalGroupsLoose;
+        int ITickCalculations.TotalNumGroupsPermissive => NumVerticalGroupsPermissive + NumHorizontalGroupsPermissive;
 
         public void Reset()
         {
             ColumnDestructionBitmap = 0;
             RowDestructionBitmap = 0;
             destroyedOccupants.AsSpan().Fill(Occupant.None);
-            NumVerticalGroupsLoose = 0;
-            NumHorizontalGroupsLoose = 0;
+            NumVerticalGroupsPermissive = 0;
+            NumHorizontalGroupsPermissive = 0;
             NumVerticalGroupsStrict = 0;
             NumHorizontalGroupsStrict = 0;
             NumEnemiesDestroyed = 0;
@@ -78,7 +78,7 @@ namespace FF2.Core
 
         public void AddColumnDestruction(int x, bool hasEnemy)
         {
-            NumVerticalGroupsLoose++;
+            NumVerticalGroupsPermissive++;
             if (hasEnemy)
             {
                 NumVerticalGroupsStrict++;
@@ -88,7 +88,7 @@ namespace FF2.Core
 
         public void AddRowDestruction(int y, IReadOnlyGrid grid, bool hasEnemy)
         {
-            NumHorizontalGroupsLoose++;
+            NumHorizontalGroupsPermissive++;
             if (hasEnemy)
             {
                 NumHorizontalGroupsStrict++;
