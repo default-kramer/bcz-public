@@ -80,7 +80,6 @@ namespace FF2.Core.ReplayModel
             {
                 throw new InvalidReplayException("Missing random seed");
             }
-            settings.InfiniteHealth = true;
             return State.Create(new SeededSettings(seed.Value, settings));
         }
 

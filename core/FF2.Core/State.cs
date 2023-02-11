@@ -78,9 +78,7 @@ namespace FF2.Core
             var grid = Core.Grid.Create(ss.Settings, new PRNG(ss.Seed));
             var timekeeper = new Timekeeper();
 
-            IStateHook hook = ss.Settings.InfiniteHealth
-                ? NullStateHook.Instance
-                : new NewHealth(timekeeper);
+            var hook = new NewHealth(timekeeper);
 
             return new State(grid, deck, hook, timekeeper);
         }

@@ -35,14 +35,6 @@ namespace FF2.Core
         /// </summary>
         int RowsPerStripe { get; }
 
-        /// <summary>
-        /// Right now, I'm not concerned about health and penalties during replays, I just want
-        /// to be able to extract combos. So replaying games with no health or penalties
-        /// allows me to re-tune the game while keeping all my old replays valid.
-        /// This setting should eventually go away...
-        /// </summary>
-        bool InfiniteHealth { get; }
-
         SeededSettings AddRandomSeed();
     }
 
@@ -54,7 +46,6 @@ namespace FF2.Core
         public int GridHeight { get; set; } = Grid.DefaultHeight;
         public int EnemiesPerStripe { get; set; } = 5;
         public int RowsPerStripe { get; set; } = 2;
-        public bool InfiniteHealth { get; set; } = false;
 
         public static readonly SinglePlayerSettings Default = new SinglePlayerSettings();
 
