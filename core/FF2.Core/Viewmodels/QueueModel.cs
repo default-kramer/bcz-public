@@ -17,16 +17,6 @@ namespace FF2.Core.Viewmodels
 
         public int LookaheadLimit => deck.PeekLimit;
 
-        public (Occupant, Occupant) this[int index]
-        {
-            get
-            {
-                var colors = deck.Peek(index);
-                return (left.SetColor(colors.LeftColor), right.SetColor(colors.RightColor));
-            }
-        }
-
-        private static readonly Occupant left = new Occupant(OccupantKind.Catalyst, Color.Yellow, Direction.Right);
-        private static readonly Occupant right = new Occupant(OccupantKind.Catalyst, Color.Yellow, Direction.Left);
+        public SpawnItem this[int index] => deck.Peek(index);
     }
 }

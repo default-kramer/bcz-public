@@ -1,6 +1,5 @@
 using FF2.Core;
 using FF2.Core.Viewmodels;
-using FF2.Godot;
 using Godot;
 using System;
 
@@ -17,14 +16,17 @@ public class QueueViewerControl : Control
     private static int Index1(int i) { return i; }
     private static int Index2(int i) { return i + count; }
 
+    public override void _Ready()
+    {
+        spritePool = NewRoot.GetSpritePool(this);
+    }
+
     public override void _Draw()
     {
         if (Model == null)
         {
             return;
         }
-
-        spritePool = spritePool ?? NewRoot.GetSpritePool(this);
 
         DrawRect(new Rect2(0, 0, this.RectSize), new Godot.Color(0.03f, 0.03f, 0.03f));
 
@@ -34,7 +36,21 @@ public class QueueViewerControl : Control
 
         for (int i = 0; i < Math.Min(count, Model.LookaheadLimit); i++)
         {
-            var (left, right) = Model[i];
+            var item = Model[i];
+            Occupant left;
+            Occupant right;
+
+            if (item.IsCatalyst(out var pair))
+            {
+                left = pair.left;
+                right = pair.right;
+            }
+            else
+            {
+                left = Occupant.IndestructibleEnemy;
+                right = Occupant.IndestructibleEnemy;
+            }
+
             float y = 40f * i + 100f;
             Draw(left, marginLeft, y, Index1(i));
             Draw(right, marginLeft + cellSize, y, Index2(i));
@@ -71,6 +87,8 @@ public class QueueViewerControl : Control
             ts = spritePool.Rent(kind, this);
             sprites[index] = ts;
         }
+
+        if (ts.Sprite == null) { return; }
 
         var sprite = ts.Sprite;
         sprite.Visible = true;

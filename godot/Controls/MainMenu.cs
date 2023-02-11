@@ -54,6 +54,7 @@ public class MainMenu : Control
 
         members.ButtonSinglePlayer.Connect("pressed", this, nameof(PressedSinglePlayer));
         members.ButtonMultiplayer.Connect("pressed", this, nameof(PressedMultiplayer));
+        members.ButtonControllerSetup.Connect("pressed", this, nameof(PressedControllerSetup));
         members.ButtonWatchReplay.Connect("pressed", this, nameof(PressedWatchReplay));
         members.ButtonSolvePuzzles.Connect("pressed", this, nameof(PressedSolvePuzzles));
         members.FileDialog.Connect("file_selected", this, nameof(OnFileSelected));
@@ -76,6 +77,11 @@ public class MainMenu : Control
     private void PressedMultiplayer()
     {
         Console.WriteLine("TODO show multiplayer menu");
+    }
+
+    public void PressedControllerSetup()
+    {
+        NewRoot.FindRoot(this).ControllerSetup();
     }
 
     private void PressedWatchReplay()

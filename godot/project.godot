@@ -14,6 +14,10 @@ config/name="ff2"
 run/main_scene="res://NewRoot.tscn"
 config/icon="res://icon.png"
 
+[autoload]
+
+TheSpritePool="*res://Controls/TheSpritePool.tscn"
+
 [gui]
 
 theme/custom="res://global_theme.tres"

@@ -101,18 +101,7 @@ public class SinglePlayerMenu : Control
         GameModeChoices.OnChanged(GameModeChanged);
         LevelChoices.OnChanged(LevelChanged);
 
-        members.ChoiceGameMode.GrabFocus();
         GameModeChanged();
-    }
-
-    private bool firstTime = true;
-    public override void _Input(InputEvent @event)
-    {
-        if (firstTime)
-        {
-            members.ChoiceGameMode.GrabFocus();
-            firstTime = false;
-        }
     }
 
     private void Show(Control control)

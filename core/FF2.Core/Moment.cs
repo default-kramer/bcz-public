@@ -15,6 +15,9 @@ namespace FF2.Core
 
         public Moment(int millis) { this.Millis = millis; }
 
+        public static readonly Moment Zero = new Moment(0);
+        public static readonly Moment Never = new Moment(int.MaxValue);
+
         public Moment AddMillis(int millis)
         {
             return new Moment(this.Millis + millis);

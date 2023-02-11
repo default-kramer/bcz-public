@@ -95,7 +95,7 @@ namespace FF2.Core
             }
         }
 
-        void FindGroups(int groupCount, DestructionCalculations calculations)
+        internal void FindGroups(int groupCount, DestructionCalculations calculations)
         {
             // For each row, find runs Left-to-Right
             for (int y = 0; y < grid.Height; y++)

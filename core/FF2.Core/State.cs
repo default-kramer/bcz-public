@@ -8,26 +8,6 @@ using FF2.Core.Viewmodels;
 
 namespace FF2.Core
 {
-    // State.Kind contains the action we are about to attempt.
-    public enum StateKind : int
-    {
-        Empty = 0,
-        Spawning = 1,
-        Waiting = 2,
-        Falling = 3,
-        Destroying = 4,
-        GameOver = 5,
-
-        // Values larger than 100 are not used by the State class.
-        // It's just convenient to add them to this enum.
-        Bursting = 101,
-
-        // To be used as an "assertion failed" state:
-        Unreachable = int.MaxValue,
-    }
-
-    // Does timing-related stuff belong in the state class? Or at a higher level?
-    // Meh, I don't know, so just start hacking and we can always refactor later
     public sealed class State
     {
         private readonly Grid grid;
@@ -38,18 +18,19 @@ namespace FF2.Core
         private int score = 0;
         private readonly PayoutTable scorePayoutTable = PayoutTable.DefaultScorePayoutTable;
         private readonly IStateHook hook;
-        private readonly Viewmodels.IHealthGridViewmodel healthVM;
-
-        public IHealthGridViewmodel HealthModel => healthVM;
+        private readonly StateEvent.Factory eventFactory;
+        private readonly Timekeeper timekeeper;
+        private readonly IScheduler scheduler;
+        private StateEvent __currentEvent = StateEvent.StateConstructed;
+        public StateEvent CurrentEvent => __currentEvent;
 
         public int Score => score;
 
-        /// <summary>
-        /// Holds the action that will be attempted on the next <see cref="Tick"/>.
-        /// </summary>
-        public StateKind Kind { get; private set; }
+        public int NumCatalystsSpawned = 0; // Try not to use this...
 
-        internal FallAnimationSampler FallSampler => fallSampler;
+        public bool IsWaitingOnUser => CurrentEvent.Kind == StateEventKind.Spawned;
+
+        public bool IsGameOver => CurrentEvent.Kind == StateEventKind.GameEnded;
 
         public bool ClearedAllEnemies { get; private set; }
 
@@ -60,18 +41,31 @@ namespace FF2.Core
         public event EventHandler<ComboInfo>? OnComboCompleted;
         public event EventHandler<SpawnItem>? OnCatalystSpawned;
 
-        public State(Grid grid, ISpawnDeck spawnDeck)
+        public static State CreateWithInfiniteHealth(Grid grid, ISpawnDeck deck)
+        {
+            return new State(grid, deck, NullStateHook.Instance, new Timekeeper());
+        }
+
+        internal State(Grid grid, ISpawnDeck spawnDeck, IStateHook hook, Timekeeper timekeeper)
         {
             this.grid = grid;
             this.fallSampler = new FallAnimationSampler(grid);
             this.spawnDeck = spawnDeck;
+            this.eventFactory = new();
+            this.timekeeper = timekeeper;
+            this.scheduler = timekeeper;
             mover = null;
-            Kind = StateKind.Spawning;
             currentCombo = ComboInfo.Empty;
-            var healthMgr = new HealthManager(PayoutTable.DefaultHealthPayoutTable, timekeeper);
-            hook = healthMgr;
-            healthVM = healthMgr;
+            this.hook = hook;
+            if (hook is NewHealth h3)
+            {
+                CountdownViewmodel = h3;
+                PenaltyViewmodel = h3;
+            }
         }
+
+        public readonly Viewmodels.ICountdownViewmodel? CountdownViewmodel;
+        public readonly Viewmodels.ISlidingPenaltyViewmodel? PenaltyViewmodel;
 
         public IReadOnlyGrid Grid { get { return grid; } }
 
@@ -82,7 +76,13 @@ namespace FF2.Core
             var spawns = ss.Settings.SpawnBlanks ? Lists.MainDeck : Lists.BlanklessDeck;
             var deck = new InfiniteSpawnDeck(spawns, new PRNG(ss.Seed));
             var grid = Core.Grid.Create(ss.Settings, new PRNG(ss.Seed));
-            return new State(grid, deck);
+            var timekeeper = new Timekeeper();
+
+            IStateHook hook = ss.Settings.InfiniteHealth
+                ? NullStateHook.Instance
+                : new NewHealth(timekeeper);
+
+            return new State(grid, deck, hook, timekeeper);
         }
 
         public Viewmodels.QueueModel MakeQueueModel()
@@ -101,53 +101,103 @@ namespace FF2.Core
         {
             hook.Elapse(scheduler);
 
+            Transition();
+
             if (hook.GameOver)
             {
-                ChangeKind(true, StateKind.GameOver, StateKind.GameOver);
+                Update(StateEvent.GameEnded);
             }
         }
-
-        private readonly Timekeeper timekeeper = new Timekeeper();
 
         public bool HandleCommand(Command command, Moment now)
         {
             Elapse(now);
 
-            return command switch
+            switch (command)
             {
-                Command.Left => Move(Direction.Left),
-                Command.Right => Move(Direction.Right),
-                Command.RotateCW => Rotate(clockwise: true),
-                Command.RotateCCW => Rotate(clockwise: false),
-                Command.Plummet => Plummet(),
-                _ => throw new Exception($"Bad command: {command}"),
-            };
+                case Command.Left:
+                    return Move(Direction.Left);
+                case Command.Right:
+                    return Move(Direction.Right);
+                case Command.RotateCW:
+                    return Rotate(clockwise: true);
+                case Command.RotateCCW:
+                    return Rotate(clockwise: false);
+                case Command.Plummet:
+                    return MaybeUpdate(Plummet());
+                case Command.BurstBegin:
+                    return MaybeUpdate(BurstBegin());
+                case Command.BurstCancel:
+                    return MaybeUpdate(BurstCancel());
+                default:
+                    throw new Exception($"Bad command: {command}");
+            }
         }
 
-        public float LastGaspProgress() { return HealthModel.LastGaspProgress(); }
-
-        private bool Spawn()
+        private bool MaybeUpdate(StateEvent? result)
         {
-            if (Kind != StateKind.Spawning)
+            if (result == null)
             {
-                throw new Exception("State got hosed: " + Kind);
+                return false;
             }
+            __currentEvent = result.Value;
+            return true;
+        }
+
+        [Obsolete("Argument is no longer nullable. Call Update() instead.")]
+        private bool MaybeUpdate(StateEvent result)
+        {
+            __currentEvent = result;
+            return true;
+        }
+
+        private bool Update(StateEvent result)
+        {
+            __currentEvent = result;
+            return true;
+        }
+
+        public float LastGaspProgress() => 0; // TODO
+
+        private StateEvent Spawn()
+        {
             if (mover.HasValue)
             {
                 throw new Exception("State got hosed: mover already exists");
             }
 
+            if (ClearedAllEnemies)
+            {
+                // Now that the combo is resolved, we can transition to the GameOver state.
+                return StateEvent.GameEnded;
+            }
+
             if (spawnDeck.PeekLimit < 1)
             {
                 // Puzzle mode can exhaust the spawn deck.
-                return false;
+                return StateEvent.GameEnded;
             }
 
             Slowmo = false;
-            var colors = spawnDeck.Pop();
-            mover = grid.NewMover(colors);
-            OnCatalystSpawned?.Invoke(this, colors);
-            return true;
+            var spawnItem = spawnDeck.Pop();
+            if (spawnItem.IsCatalyst(out var _))
+            {
+                NumCatalystsSpawned++;
+                mover = grid.NewMover(spawnItem);
+                hook.OnCatalystSpawned(spawnItem);
+                OnCatalystSpawned?.Invoke(this, spawnItem);
+                return eventFactory.Spawned(spawnItem, scheduler.CreateAppointment(150));
+            }
+            else if (spawnItem.IsPenalty())
+            {
+                var result = hook.AddPenalty(spawnItem, eventFactory, scheduler);
+                // If the hook returned null, we just ignore the penalty and try again
+                return result ?? Spawn();
+            }
+            else
+            {
+                throw new Exception($"Cannot spawn: {spawnItem}");
+            }
         }
 
         public Command? Approach(Orientation o)
@@ -161,7 +211,9 @@ namespace FF2.Core
             var result = grid.Destroy(ref newCombo);
             if (result)
             {
-                currentCombo = newCombo;
+                var previous = currentCombo;
+                this.currentCombo = newCombo;
+                hook.OnComboUpdated(previous, newCombo, scheduler);
             }
             else
             {
@@ -170,7 +222,7 @@ namespace FF2.Core
                     var scorePayout = GetHypotheticalScore(currentCombo);
                     score += scorePayout;
                     //Console.WriteLine($"Score: {score} (+{scorePayout})");
-                    hook.OnComboCompleted(currentCombo, timekeeper); // TODO should be passed into Destroy() here
+                    hook.OnComboCompleted(currentCombo, scheduler); // TODO should be passed into Destroy() here
                     OnComboCompleted?.Invoke(this, currentCombo);
                 }
                 currentCombo = ComboInfo.Empty;
@@ -187,14 +239,10 @@ namespace FF2.Core
             return scorePayoutTable.GetPayout(combo.ComboToReward.AdjustedGroupCount);
         }
 
-        /// <summary>
-        /// Return false if nothing changes, or if <see cref="Kind"/> is the only thing that changes.
-        /// Otherwise return true after executing some "significant" change.
-        /// </summary>
-        public bool Tick(Moment now)
+        private bool Transition()
         {
-            grid.PreTick();
-            var retval = DoTick(now);
+            bool retval = __SingleTransition();
+            while (__SingleTransition()) { }
             if (retval && grid.Stats.EnemyCount == 0)
             {
                 // Don't change to GameOver immediately. Let the combo resolve.
@@ -203,37 +251,52 @@ namespace FF2.Core
             return retval;
         }
 
-        private bool DoTick(Moment now)
+        private bool __SingleTransition()
         {
-            if (Kind == StateKind.GameOver)
+            if (!CurrentEvent.Completion.HasArrived())
             {
                 return false;
             }
-
-            Elapse(now);
-
-            if (ClearedAllEnemies && Kind == StateKind.Spawning)
+            else if (CurrentEvent.Kind == StateEventKind.Destroyed)
             {
-                // Now that the combo is resolved, we can transition to the GameOver state.
-                return ChangeKind(true, StateKind.GameOver, StateKind.GameOver);
+                grid.ResetDestructionCalculations();
             }
 
-            // Normal flow:
-            switch (Kind)
+            switch (CurrentEvent.Kind)
             {
-                case StateKind.Spawning:
-                    // During a normal game, Spawn() should never fail.
-                    // In puzzle mode, Spawn() will fail when the deck runs out
-                    // and when that happens we transition to GameOver.
-                    return ChangeKind(Spawn(), StateKind.Waiting, StateKind.GameOver);
-                case StateKind.Waiting:
+                case StateEventKind.StateConstructed:
+                case StateEventKind.PenaltyAdded:
+                    return Update(Spawn());
+                case StateEventKind.Spawned:
                     return false;
-                case StateKind.Falling:
-                    return ChangeKind(Fall(true), StateKind.Falling, StateKind.Destroying);
-                case StateKind.Destroying:
-                    return ChangeKind(Destroy(), StateKind.Falling, StateKind.Spawning);
+                case StateEventKind.Fell:
+                case StateEventKind.Destroyed:
+                case StateEventKind.Plummeted:
+                    return Update(FallOrDestroyOrSpawn());
+                case StateEventKind.GameEnded:
+                    return false;
+                case StateEventKind.BurstBegan:
+                    Burst();
+                    return Update(FallOrDestroyOrSpawn());
                 default:
-                    throw new Exception("Unexpected kind: " + Kind);
+                    throw new Exception("TODO");
+            }
+        }
+
+        private StateEvent FallOrDestroyOrSpawn()
+        {
+            if (Fall(true))
+            {
+                int millis = Constants.FallingMillisPerCell * fallSampler.MaxFall();
+                return eventFactory.Fell(fallSampler, scheduler.CreateAppointment(millis));
+            }
+            else if (Destroy())
+            {
+                return eventFactory.Destroyed(TickCalculations, scheduler.CreateAppointment(Constants.DestructionMillis));
+            }
+            else
+            {
+                return Spawn();
             }
         }
 
@@ -263,11 +326,31 @@ namespace FF2.Core
 
         public Mover? GetMover => mover;
 
-        public Move PreviousMove { get; private set; }
+        public Move? PreviousMove { get; private set; } = null;
 
-        private bool Plummet()
+        private StateEvent? BurstBegin()
         {
-            if (Kind != StateKind.Waiting || mover == null)
+            if (!Plummet_NoEvent())
+            {
+                return null;
+            }
+
+            return eventFactory.BurstBegan(scheduler.CreateAppointment(500));
+        }
+
+        private StateEvent? BurstCancel()
+        {
+            if (CurrentEvent.Kind != StateEventKind.BurstBegan)
+            {
+                return null;
+            }
+
+            return eventFactory.Plummeted(scheduler.CreateAppointment(0));
+        }
+
+        private bool Plummet_NoEvent()
+        {
+            if (mover == null)
             {
                 return false;
             }
@@ -280,7 +363,6 @@ namespace FF2.Core
                 grid.Set(m.LocA, m.OccA);
                 grid.Set(m.LocB, m.OccB);
                 mover = null;
-                Kind = StateKind.Falling;
                 return true;
             }
             else
@@ -289,17 +371,20 @@ namespace FF2.Core
             }
         }
 
-        public void Burst(Moment now)
+        private StateEvent? Plummet()
         {
-            Elapse(now);
-            grid.Burst();
-            PreviousMove = new Move(PreviousMove.Orientation, PreviousMove.SpawnItem, didBurst: true);
+            if (Plummet_NoEvent())
+            {
+                return eventFactory.Plummeted(scheduler.CreateAppointment(0));
+            }
+            return null;
         }
 
-        private bool ChangeKind(bool significantChange, StateKind a, StateKind b)
+        private void Burst()
         {
-            Kind = significantChange ? a : b;
-            return significantChange;
+            grid.Burst();
+            var pm = PreviousMove!.Value;
+            PreviousMove = new Move(pm.Orientation, pm.SpawnItem, didBurst: true);
         }
 
         private bool Move(Direction dir)

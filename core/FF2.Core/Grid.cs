@@ -30,15 +30,19 @@ namespace FF2.Core
         }
     }
 
+    public interface IReadOnlyGridSlim
+    {
+        GridSize Size { get; }
+        Occupant Get(Loc loc);
+    }
+
     /// <summary>
     /// A read-only reference to a grid which might be mutated by someone else.
     /// </summary>
-    public interface IReadOnlyGrid
+    public interface IReadOnlyGrid : IReadOnlyGridSlim
     {
         int Width { get; }
         int Height { get; }
-        GridSize Size { get; }
-        Occupant Get(Loc loc);
 
         bool InBounds(Loc loc);
 
@@ -158,11 +162,16 @@ namespace FF2.Core
 
         public Mover NewMover(SpawnItem item)
         {
-            var occA = Occupant.MakeCatalyst(item.LeftColor, Direction.Right);
-            var occB = Occupant.MakeCatalyst(item.RightColor, Direction.Left);
-            var locA = new Loc(Width / 2 - 1, 0);
-            var locB = locA.Neighbor(Direction.Right);
-            return new Mover(locA, occA, locB, occB);
+            if (item.IsCatalyst(out var occs))
+            {
+                var locA = new Loc(Width / 2 - 1, 0);
+                var locB = locA.Neighbor(Direction.Right);
+                return new Mover(locA, occs.left, locB, occs.right);
+            }
+            else
+            {
+                throw new Exception("TODO hmm...");
+            }
         }
 
         public Loc Loc(int index)
@@ -461,15 +470,19 @@ namespace FF2.Core
             return GridFallHelper.CanFall(this, blockedFlagBuffer, assumeUnblockedBuffer);
         }
 
-        /// <summary>
-        /// TODO - I refactored the "tick calcluations" stuff and introduced a weird issue that (seemingly) only affects the drawing.
-        /// Probably has to do with GetDestroyedOccupant preserving the recently-destroyed occupants for too long.
-        /// For now I'll just make sure to call Reset() before every tick to preserve the old behavior.
-        /// Better would be for that UI code to check the state to know whether it should call GetDestroyedOccupant or not.
-        /// </summary>
-        internal void PreTick()
+        internal void ResetDestructionCalculations()
         {
             tickCalculations.Reset();
+        }
+
+        /// <summary>
+        /// For testing only
+        /// </summary>
+        public ITickCalculations Test_FindGroups(int matchCount)
+        {
+            tickCalculations.Reset();
+            new GridDestroyHelper(this, groupsBuffer, tickCalculations).FindGroups(matchCount, tickCalculations);
+            return tickCalculations;
         }
 
         internal bool Destroy(ref ComboInfo info)

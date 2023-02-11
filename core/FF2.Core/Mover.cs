@@ -28,7 +28,7 @@ namespace FF2.Core
 
         public Move GetMove(bool didBurst)
         {
-            return new Move(Orientation, new SpawnItem(OccA.Color, OccB.Color), didBurst);
+            return new Move(Orientation, SpawnItem.MakeCatalystPair(OccA.Color, OccB.Color), didBurst);
         }
 
         /// <summary>

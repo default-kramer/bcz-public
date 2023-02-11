@@ -1,5 +1,4 @@
 using FF2.Core;
-using FF2.Godot;
 using Godot;
 using System;
 
@@ -9,27 +8,17 @@ public class NewRoot : Control
 {
     readonly struct Members
     {
-        public readonly SpritePool SpritePool;
         public readonly GameViewerControl GameViewer;
         public readonly PuzzleControl PuzzleControl;
         public readonly MainMenu MainMenu;
+        public readonly ControllerSetupControl ControllerSetupControl;
 
         public Members(Control me)
         {
-            SpritePool = new SpritePool(me, SpriteKind.Single, SpriteKind.Joined,
-                SpriteKind.Enemy, SpriteKind.BlankJoined, SpriteKind.BlankSingle, SpriteKind.Heart,
-                SpriteKind.Heart0, SpriteKind.Heart25, SpriteKind.Heart50, SpriteKind.Heart75, SpriteKind.Heart100, SpriteKind.Heartbreaker);
-
             me.FindNode(out GameViewer, nameof(GameViewer));
             me.FindNode(out PuzzleControl, nameof(PuzzleControl));
             me.FindNode(out MainMenu, nameof(MainMenu));
-        }
-
-        public void HideAll()
-        {
-            GameViewer.Visible = false;
-            PuzzleControl.Visible = false;
-            MainMenu.Visible = false;
+            me.FindNode(out ControllerSetupControl, nameof(ControllerSetupControl));
         }
     }
 
@@ -44,7 +33,9 @@ public class NewRoot : Control
 
     internal static SpritePool GetSpritePool(Node child)
     {
-        return FindRoot(child).members.SpritePool;
+        var obj = child.GetNode("/root/TheSpritePool");
+        var sp = (TheSpritePool)obj;
+        return sp.Pool;
     }
 
     internal static NewRoot FindRoot(Node child)
@@ -99,31 +90,47 @@ public class NewRoot : Control
         StartGame(levelToken.Value);
     }
 
+    private void SwitchTo(Control control)
+    {
+        // Removing children is better than just hiding them, probably for many reasons.
+        // One reason is so that the input events aren't constantly routing to the Controller Setup code.
+
+        var me = this;
+        while (me.GetChildCount() > 0)
+        {
+            me.RemoveChild(me.GetChild(0));
+        }
+        control.Visible = true;
+        me.AddChild(control);
+    }
+
     private void StartGame(SeededSettings ss)
     {
-        members.HideAll();
-        members.GameViewer.Visible = true;
+        SwitchTo(members.GameViewer);
         members.GameViewer.StartGame(ss);
     }
 
     public void BackToMainMenu()
     {
-        members.HideAll();
-        members.MainMenu.Visible = true;
+        SwitchTo(members.MainMenu);
         members.MainMenu.ShowMainMenu();
     }
 
     public void WatchReplay(string replayFile)
     {
-        members.HideAll();
-        members.GameViewer.Visible = true;
+        SwitchTo(members.GameViewer);
         members.GameViewer.WatchReplay(replayFile);
     }
 
     public void SolvePuzzles()
     {
-        members.HideAll();
-        members.PuzzleControl.Visible = true;
+        SwitchTo(members.PuzzleControl);
         members.PuzzleControl.TEST_SolvePuzzle();
+    }
+
+    public void ControllerSetup()
+    {
+        SwitchTo(members.ControllerSetupControl);
+        members.ControllerSetupControl.Reset();
     }
 }

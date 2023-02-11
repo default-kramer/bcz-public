@@ -1,6 +1,5 @@
 using FF2.Core;
 using FF2.Core.ReplayModel;
-using FF2.Godot;
 using Godot;
 using System;
 using System.Collections.Generic;
@@ -60,7 +59,8 @@ public class GameViewerControl : Control
     {
         public readonly GridViewerControl GridViewer;
         public readonly QueueViewerControl QueueViewer;
-        public readonly GridViewerControl HealthGridViewer;
+        public readonly CountdownViewerControl CountdownViewer;
+        public readonly HealthViewerControl HealthViewer;
         public readonly GridViewerControl MoverGridViewer;
         public readonly GameOverMenu GameOverMenu;
 
@@ -68,7 +68,8 @@ public class GameViewerControl : Control
         {
             me.FindNode(out GridViewer, nameof(GridViewer));
             me.FindNode(out QueueViewer, nameof(QueueViewer));
-            me.FindNode(out HealthGridViewer, nameof(HealthGridViewer));
+            me.FindNode(out CountdownViewer, nameof(CountdownViewer));
+            me.FindNode(out HealthViewer, nameof(HealthViewer));
             me.FindNode(out MoverGridViewer, nameof(MoverGridViewer));
             me.FindNode(out GameOverMenu, nameof(GameOverMenu));
 
@@ -93,28 +94,45 @@ public class GameViewerControl : Control
 
     public void OnSizeChanged()
     {
-        const float queueWidth = 140;
-        const float queuePadding = 20;
+        float ladderWidth = RectSize.y * 0.16f;
+        const float ladderPadding = 10;
+        float queueWidth = ladderWidth;
+        const float queuePadding = ladderPadding;
+
+        const bool ShowLadder = true;
 
         float availWidth = RectSize.x;
+
+        float nonGridWidth = 0;
+        if (ShowLadder)
+        {
+            nonGridWidth += (ladderWidth + ladderPadding);
+        }
         if (ShowQueue)
         {
-            availWidth -= queueWidth;
-            availWidth -= queuePadding;
+            nonGridWidth += (queueWidth + queuePadding);
         }
+
+        availWidth -= nonGridWidth;
 
         // Divide by 2 for both gridviewers
         var (gvSize, moverSize) = members.GridViewer.DesiredSize(new Vector2(availWidth / 2, RectSize.y));
 
-        float totalWidth = gvSize.x;
-        if (ShowQueue)
-        {
-            totalWidth += queueWidth;
-        }
+        float neededWidth = gvSize.x + nonGridWidth;
 
         float meCenter = RectSize.x / 2f;
-        float left = meCenter - totalWidth / 2f;
+        float left = meCenter - neededWidth / 2f;
 
+
+        if (ShowLadder)
+        {
+            members.HealthViewer.RectSize = new Vector2(ladderWidth, RectSize.y);
+            members.HealthViewer.RectPosition = new Vector2(left, 0);
+            left += ladderWidth;
+            left += ladderPadding;
+        }
+
+        // show main Grid
         members.MoverGridViewer.RectSize = moverSize;
         members.MoverGridViewer.RectPosition = new Vector2(left, 0);
 
@@ -131,10 +149,9 @@ public class GameViewerControl : Control
             members.QueueViewer.RectSize = new Vector2(queueWidth, queueBottom);
             members.QueueViewer.RectPosition = new Vector2(left, 0);
 
-            // For now, just show the health when the queue is visible
-            members.HealthGridViewer.RectSize = new Vector2(queueWidth, RectSize.y - queueBottom);
-            members.HealthGridViewer.RectPosition = new Vector2(left, queueBottom);
-            members.HealthGridViewer.Visible = true;
+            members.CountdownViewer.RectSize = new Vector2(queueWidth, RectSize.y - queueBottom);
+            members.CountdownViewer.RectPosition = new Vector2(left, queueBottom);
+            members.CountdownViewer.Visible = true;
 
             left += queueWidth;
         }
@@ -160,7 +177,8 @@ public class GameViewerControl : Control
 
         members.GridViewer.Update();
         members.QueueViewer.Update();
-        members.HealthGridViewer.Update();
+        members.CountdownViewer.Update();
+        members.HealthViewer.Update();
         members.MoverGridViewer.Update();
 
         this.logic.CheckGameOver();
@@ -212,8 +230,18 @@ public class GameViewerControl : Control
 
         members.MoverGridViewer.SetLogicForMover(ticker);
 
-        members.HealthGridViewer.SetLogicForhealth(ticker);
-        members.HealthGridViewer.Visible = true;
+        members.CountdownViewer.SetModel(state.CountdownViewmodel);
+
+        if (state.PenaltyViewmodel != null)
+        {
+            members.HealthViewer.SetModel(state.PenaltyViewmodel);
+            members.HealthViewer.Visible = true;
+        }
+        else
+        {
+            members.HealthViewer.SetNullModel();
+            members.HealthViewer.Visible = false;
+        }
     }
 
     internal abstract class LogicBase : ILogic
@@ -308,7 +336,7 @@ public class GameViewerControl : Control
         public override void CheckGameOver()
         {
             var state = ticker.state;
-            if (state.Kind == StateKind.GameOver && !members.GameOverMenu.Visible)
+            if (state.IsGameOver && !members.GameOverMenu.Visible)
             {
                 members.GameOverMenu.OnGameOver(state);
             }

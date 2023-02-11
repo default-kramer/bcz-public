@@ -56,7 +56,7 @@ namespace FF2.Core
             {
                 foreach (var color2 in Lists.Colors.RYB)
                 {
-                    temp.Add(new SpawnItem(color, color2));
+                    temp.Add(SpawnItem.MakeCatalystPair(color, color2));
                 }
             }
             MainDeck = temp;
@@ -66,7 +66,7 @@ namespace FF2.Core
             {
                 foreach (var color2 in Lists.Colors.RYB)
                 {
-                    temp.Add(new SpawnItem(color, color2));
+                    temp.Add(SpawnItem.MakeCatalystPair(color, color2));
                 }
             }
             BlanklessDeck = temp;

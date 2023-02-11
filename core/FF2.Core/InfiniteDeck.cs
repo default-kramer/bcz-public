@@ -7,9 +7,56 @@ using System.Threading.Tasks;
 
 namespace FF2.Core
 {
-    public sealed class InfiniteSpawnDeck : InfiniteDeck<SpawnItem>, ISpawnDeck
+    public sealed class InfiniteSpawnDeck : ISpawnDeck
     {
-        public InfiniteSpawnDeck(IReadOnlyList<SpawnItem> deck, PRNG prng) : base(deck, prng) { }
+        private readonly InfiniteDeck<SpawnItem> catalysts;
+        private List<SpawnItem> buffer;
+        private readonly int peekLimit;
+
+        public InfiniteSpawnDeck(IReadOnlyList<SpawnItem> catalysts, PRNG prng)
+            : this(new InfiniteDeck<SpawnItem>(catalysts, prng))
+        { }
+
+        public InfiniteSpawnDeck(InfiniteDeck<SpawnItem> catalysts)
+        {
+            this.catalysts = catalysts;
+            this.peekLimit = catalysts.PeekLimit;
+            buffer = new List<SpawnItem>(catalysts.PeekLimit + 4);
+        }
+
+        public int PeekLimit => peekLimit;
+
+        private void Refill(int needed)
+        {
+            while (buffer.Count < needed + 1)
+            {
+                buffer.Add(catalysts.Pop());
+            }
+        }
+
+        public SpawnItem Pop()
+        {
+            Refill(0);
+            var item = buffer[0];
+            buffer.RemoveAt(0);
+            return item;
+        }
+
+        public SpawnItem Peek(int i)
+        {
+            if (i < PeekLimit)
+            {
+                Refill(i);
+                return buffer[i];
+            }
+            throw new ArgumentOutOfRangeException($"Index {i} exceeds PeekLimit {PeekLimit}");
+        }
+
+        public void AddPenalty(SpawnItem penalty)
+        {
+            Refill(4);
+            buffer.Insert(4, penalty);
+        }
     }
 
     public class InfiniteDeck<T>
@@ -50,7 +97,7 @@ namespace FF2.Core
 
         public InfiniteDeck<T> Clone() { return new InfiniteDeck<T>(this); }
 
-        public T Peek(int i)
+        public virtual T Peek(int i)
         {
             i = (index + i) % shuffle.Length;
             return shuffle[i];
@@ -58,7 +105,7 @@ namespace FF2.Core
 
         public int PeekLimit => shuffle.Length / 2;
 
-        public T Pop()
+        public virtual T Pop()
         {
             T retval = shuffle[index];
             index++;

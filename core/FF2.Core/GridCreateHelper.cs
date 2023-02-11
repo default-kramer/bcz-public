@@ -72,13 +72,59 @@ namespace FF2.Core
                 int x = rand.NextInt32(width);
                 int y = rand.NextInt32(height) + yLo;
                 var loc = new Loc(x, y);
-                if (grid.IsVacant(loc))
+                if (grid.IsVacant(loc) && !WouldCreateGroupOf3(grid, (loc, colorCycle)))
                 {
                     grid.Set(loc, Occupant.MakeEnemy(colorCycle));
                     colorCycle = NextColor(colorCycle);
                     placedCount++;
                 }
             }
+        }
+
+        private static bool WouldCreateGroupOf3(IReadOnlyGrid grid, (Loc loc, Color color) proposed)
+        {
+            int matches = 0;
+            for (int dx = -2; dx <= 2; dx++)
+            {
+                var iterLoc = proposed.loc.Add(dx, 0);
+                if (Match3Helper(ref matches, grid, proposed, iterLoc))
+                {
+                    return true;
+                }
+            }
+
+            matches = 0;
+            for (int dy = -2; dy <= 2; dy++)
+            {
+                var iterLoc = proposed.loc.Add(0, dy);
+                if (Match3Helper(ref matches, grid, proposed, iterLoc))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool Match3Helper(ref int matches, IReadOnlyGrid grid, (Loc loc, Color color) proposed, Loc iterLoc)
+        {
+            if (!grid.InBounds(iterLoc))
+            {
+                matches = 0;
+            }
+            else if (iterLoc == proposed.loc || grid.Get(iterLoc).Color == proposed.color)
+            {
+                matches++;
+                if (matches == 3)
+                {
+                    return true;
+                }
+            }
+            else
+            {
+                matches = 0;
+            }
+            return false;
         }
 
         private static Color NextColor(Color color)

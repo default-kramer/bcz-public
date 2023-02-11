@@ -119,7 +119,7 @@ public class PuzzleControl : Control, PuzzleMenu.ILogic
         }
 
         var puzzle = puzzleInfo.Puzzle;
-        var state = new State(Grid.Clone(puzzle.InitialGrid), puzzle.MakeDeck());
+        var state = State.CreateWithInfiniteHealth(Grid.Clone(puzzle.InitialGrid), puzzle.MakeDeck());
         var ticker = new DotnetTicker(state, NullReplayCollector.Instance);
         var logic = new SolvePuzzleLogic(ticker, puzzle, this);
 
@@ -184,7 +184,7 @@ public class PuzzleControl : Control, PuzzleMenu.ILogic
         public override void CheckGameOver()
         {
             var state = ticker.state;
-            if (!gameOver && state.Kind == StateKind.GameOver)
+            if (!gameOver && state.IsGameOver)
             {
                 gameOver = true;
                 var targetScore = state.GetHypotheticalScore(puzzle.LastCombo);

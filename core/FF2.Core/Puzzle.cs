@@ -258,6 +258,11 @@ namespace FF2.Core
 
             public int PeekLimit => queue.Count - i;
 
+            public void AddPenalty(SpawnItem penalty)
+            {
+                throw new NotImplementedException("Should never be called");
+            }
+
             public SpawnItem Peek(int index)
             {
                 return queue[i + index];
@@ -327,7 +332,14 @@ namespace FF2.Core
                 }
                 else
                 {
-                    comboMoves.Add(Ticker.state.PreviousMove);
+                    if (Ticker.state.PreviousMove.HasValue)
+                    {
+                        comboMoves.Add(Ticker.state.PreviousMove.Value);
+                    }
+                    else if (Ticker.state.NumCatalystsSpawned > 1)
+                    {
+                        throw new Exception("Bug - PreviousMove was not updated correctly");
+                    }
                 }
             }
 
@@ -335,7 +347,7 @@ namespace FF2.Core
             {
                 if (comboStartGrid != null)
                 {
-                    comboMoves.Add(Ticker.state.PreviousMove);
+                    comboMoves.Add(Ticker.state.PreviousMove!.Value);
 
                     var puzzle = new Puzzle(comboStartGrid, comboMoves.ToList(), combo);
                     Puzzles.Add(puzzle);

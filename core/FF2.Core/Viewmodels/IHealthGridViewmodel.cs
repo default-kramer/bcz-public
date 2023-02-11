@@ -6,18 +6,52 @@ using System.Threading.Tasks;
 
 namespace FF2.Core.Viewmodels
 {
-    public interface IHealthGridViewmodel
+    public interface ICountdownViewmodel
     {
-        IReadOnlyGrid Grid { get; }
+        int MaxMillis { get; }
 
-        float GetAdder(Loc loc); // formerly handled by FallSample, rethink this?
+        int CurrentMillis { get; }
+    }
+
+    public interface ISlidingPenaltyViewmodel
+    {
+        int NumSlots { get; }
 
         /// <summary>
-        /// Used to warn the player that they are nearing failure.
-        /// Values may range from 0.0 (no cause for alarm) to 1.0 (failure).
+        /// Contract: A penalty at index N is (N+1) steps away from landing.
+        /// So a penalty at index 0 will land during the next spawn.
+        /// The given index must be less than <see cref="NumSlots"/>.
         /// </summary>
-        float LastGaspProgress();
+        PenaltyItem GetPenalty(int index);
 
-        float DestructionProgress(Loc loc);
+        bool GetHealth(out HealthStatus status);
+    }
+
+    public struct HealthStatus
+    {
+        public readonly int CurrentHealth;
+        public readonly int MaxHealth;
+
+        public HealthStatus(int current, int max)
+        {
+            this.CurrentHealth = current;
+            this.MaxHealth = max;
+        }
+    }
+
+    public readonly struct PenaltyItem
+    {
+        public readonly int Id;
+        public readonly int Size;
+        public readonly bool Destroyed;
+
+        public PenaltyItem(int id, int size, bool destroyed)
+        {
+            this.Id = id;
+            this.Size = size;
+            this.Destroyed = destroyed;
+        }
+
+        public static PenaltyItem None = new PenaltyItem(0, 0, false);
     }
 }
