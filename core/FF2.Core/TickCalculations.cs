@@ -25,6 +25,8 @@ namespace FF2.Core
         int RowDestructionBitmap { get; }
 
         Occupant GetDestroyedOccupant(Loc loc, IReadOnlyGrid grid);
+
+        int TotalNumGroupsPermissive { get; }
     }
 
     /// <summary>
@@ -59,6 +61,8 @@ namespace FF2.Core
 
         int ITickCalculations.ColumnDestructionBitmap => this.ColumnDestructionBitmap;
         int ITickCalculations.RowDestructionBitmap => this.RowDestructionBitmap;
+
+        int ITickCalculations.TotalNumGroupsPermissive => NumVerticalGroupsLoose + NumHorizontalGroupsLoose;
 
         public void Reset()
         {

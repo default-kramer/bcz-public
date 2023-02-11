@@ -475,6 +475,16 @@ namespace FF2.Core
             tickCalculations.Reset();
         }
 
+        /// <summary>
+        /// For testing only
+        /// </summary>
+        public ITickCalculations Test_FindGroups(int matchCount)
+        {
+            tickCalculations.Reset();
+            new GridDestroyHelper(this, groupsBuffer, tickCalculations).FindGroups(matchCount, tickCalculations);
+            return tickCalculations;
+        }
+
         internal bool Destroy(ref ComboInfo info)
         {
             tickCalculations.Reset();
