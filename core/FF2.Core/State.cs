@@ -185,12 +185,6 @@ namespace FF2.Core
                 OnCatalystSpawned?.Invoke(this, spawnItem);
                 return eventFactory.Spawned(spawnItem, scheduler.CreateAppointment(150));
             }
-            else if (spawnItem.IsPenalty())
-            {
-                var result = hook.AddPenalty(spawnItem, eventFactory, scheduler);
-                // If the hook returned null, we just ignore the penalty and try again
-                return result ?? Spawn();
-            }
             else
             {
                 throw new Exception($"Cannot spawn: {spawnItem}");

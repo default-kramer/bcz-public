@@ -10,8 +10,11 @@ namespace FF2.Core
     public sealed class InfiniteSpawnDeck : ISpawnDeck
     {
         private readonly InfiniteDeck<SpawnItem> catalysts;
-        private List<SpawnItem> buffer;
         private readonly int peekLimit;
+
+        // I don't think this list is actually needed anymore...
+        // It was added when I inserted penalty items into the queue, but that code is all gone now
+        private List<SpawnItem> buffer;
 
         public InfiniteSpawnDeck(IReadOnlyList<SpawnItem> catalysts, PRNG prng)
             : this(new InfiniteDeck<SpawnItem>(catalysts, prng))
@@ -50,12 +53,6 @@ namespace FF2.Core
                 return buffer[i];
             }
             throw new ArgumentOutOfRangeException($"Index {i} exceeds PeekLimit {PeekLimit}");
-        }
-
-        public void AddPenalty(SpawnItem penalty)
-        {
-            Refill(4);
-            buffer.Insert(4, penalty);
         }
     }
 

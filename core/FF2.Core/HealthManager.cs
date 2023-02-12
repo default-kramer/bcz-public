@@ -117,11 +117,6 @@ namespace FF2.Core
 
         public void Elapse(IScheduler scheduler) { }
 
-        public StateEvent? AddPenalty(SpawnItem penalty, StateEvent.Factory eventFactory, IScheduler scheduler)
-        {
-            return null;
-        }
-
         public void OnCatalystSpawned(SpawnItem catalyst)
         {
             if (penaltyProgress[0] > 0)

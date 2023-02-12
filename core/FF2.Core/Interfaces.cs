@@ -34,8 +34,6 @@ namespace FF2.Core
         SpawnItem Peek(int index);
 
         int PeekLimit { get; }
-
-        void AddPenalty(SpawnItem penalty);
     }
 
     public interface IReplayDriver
@@ -56,8 +54,6 @@ namespace FF2.Core
         void OnCatalystSpawned(SpawnItem catalyst);
 
         bool GameOver { get; }
-
-        StateEvent? AddPenalty(SpawnItem penalty, StateEvent.Factory eventFactory, IScheduler scheduler);
     }
 
     sealed class NullStateHook : IStateHook
@@ -66,8 +62,6 @@ namespace FF2.Core
         public static readonly NullStateHook Instance = new NullStateHook();
 
         public bool GameOver => false;
-
-        public StateEvent? AddPenalty(SpawnItem penalty, StateEvent.Factory eventFactory, IScheduler scheduler) => null;
 
         public void Elapse(IScheduler scheduler) { }
 

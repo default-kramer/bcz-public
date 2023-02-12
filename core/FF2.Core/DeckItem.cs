@@ -9,7 +9,6 @@ namespace FF2.Core
     public readonly struct SpawnItem
     {
         public static readonly SpawnItem None = default(SpawnItem);
-        public static readonly SpawnItem PENALTY = new SpawnItem(Occupant.IndestructibleEnemy, Occupant.IndestructibleEnemy);
 
         private readonly Occupant left;
         private readonly Occupant right;
@@ -36,11 +35,6 @@ namespace FF2.Core
             }
             pair = (Occupant.None, Occupant.None);
             return false;
-        }
-
-        public bool IsPenalty()
-        {
-            return this.Equals(PENALTY);
         }
 
         public override string ToString()
