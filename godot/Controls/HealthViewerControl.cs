@@ -1,3 +1,4 @@
+using FF2.Core;
 using FF2.Core.Viewmodels;
 using Godot;
 using System;
@@ -9,10 +10,12 @@ public class HealthViewerControl : Control
 {
     private ISlidingPenaltyViewmodel vm = NullViewmodel.Instance;
     private Font font = null!;
-    private static readonly Color BoxColor = Godot.Colors.Orange;
-    private static readonly Color TextColor = Godot.Colors.Black;
+    private static readonly Godot.Color BoxColor = Godot.Colors.Orange;
+    private static readonly Godot.Color TextColor = Godot.Colors.Black;
+    private SpritePool spritePool = null!;
     private Sprites sprites = null!;
     private const int MaxHearts = 3;
+    private readonly List<TrackedSprite> slidingSprites = new List<TrackedSprite>();
 
     public void SetNullModel()
     {
@@ -27,7 +30,8 @@ public class HealthViewerControl : Control
     public override void _Ready()
     {
         font = this.GetFont("");
-        sprites = new Sprites(NewRoot.GetSpritePool(this), this);
+        spritePool = NewRoot.GetSpritePool(this);
+        sprites = new Sprites(spritePool, this);
     }
 
     private const float slowBlinkRate = 0.5f;
@@ -47,12 +51,17 @@ public class HealthViewerControl : Control
     {
         sprites.HideAll();
 
-        float boxHeight = RectSize.y / vm.NumSlots;
-        float boxWidth = RectSize.x;
-
         bool hasHealth = vm.GetHealth(out var health);
         int healthAdder = hasHealth ? 1 : 0;
         int numSlots = vm.NumSlots + healthAdder;
+
+        float boxHeight = RectSize.y / numSlots;
+        float boxWidth = RectSize.x;
+
+        while (slidingSprites.Count < vm.NumSlots)
+        {
+            slidingSprites.Add(TrackedSprite.Nothing);
+        }
 
         for (int i = 0; i < numSlots; i++)
         {
@@ -65,28 +74,65 @@ public class HealthViewerControl : Control
             }
             else
             {
-                int index = i - healthAdder;
-
-                var penalty = vm.GetPenalty(index);
-                bool draw = penalty.Size > 0;
-                if (draw)
-                {
-                    if (index == 0)
-                    {
-                        draw = FastBlinkOn;
-                    }
-                    else if (index == 1)
-                    {
-                        draw = SlowBlinkOn;
-                    }
-                }
-
-                if (draw)
-                {
-                    DrawRect(rect, BoxColor, filled: true);
-                    DrawString(font, rect.Position + new Vector2(8, 15), levels[penalty.Size], TextColor);
-                }
+                DrawPenalty(i - healthAdder, rect);
             }
+        }
+    }
+
+    private void DrawPenalty(int index, Rect2 rect)
+    {
+        var penalty = vm.GetPenalty(index);
+        var neededKind = SpriteKind.None;
+        bool draw = false;
+
+        if (penalty.Size > 0)
+        {
+            neededKind = SpriteKind.Num1 - 1 + penalty.Size;
+            draw = true;
+        }
+
+        if (slidingSprites[index].Kind != neededKind)
+        {
+            if (slidingSprites[index].IsSomething)
+            {
+                spritePool.Return(slidingSprites[index]);
+                slidingSprites[index] = TrackedSprite.Nothing;
+            }
+            if (neededKind != SpriteKind.None)
+            {
+                slidingSprites[index] = spritePool.Rent(neededKind, this);
+            }
+        }
+
+        if (draw)
+        {
+            if (index == 0)
+            {
+                draw = FastBlinkOn;
+            }
+            else if (index == 1)
+            {
+                draw = SlowBlinkOn;
+            }
+        }
+
+        var ts = slidingSprites[index];
+
+        if (draw)
+        {
+            DrawRect(rect, BoxColor, filled: true);
+            DrawString(font, rect.Position + new Vector2(8, 15), penalty.Size.ToString(), TextColor);
+            ts.Sprite.Visible = true;
+            ts.Sprite.ScaleAndCenter(rect);
+            var shader = ts.Sprite.Material as ShaderMaterial;
+            if (shader != null)
+            {
+                shader.SetShaderParam("destructionProgress", penalty.DestructionProgress);
+            }
+        }
+        else if (ts.IsSomething)
+        {
+            ts.Sprite.Visible = false;
         }
     }
 
@@ -117,25 +163,6 @@ public class HealthViewerControl : Control
         }
     }
 
-    private static readonly string[] levels =
-    {
-        "",
-        "o",
-        "oo",
-        "ooo",
-        "oooo",
-        "W",
-        "W o",
-        "W oo",
-        "W ooo",
-        "W oooo",
-        "WW",
-        "WW o",
-        "WW oo",
-        "WW ooo",
-        "WW oooo",
-    };
-
     class NullViewmodel : ISlidingPenaltyViewmodel
     {
         private NullViewmodel() { }
@@ -143,9 +170,9 @@ public class HealthViewerControl : Control
 
         public int NumSlots => 20;
 
-        public PenaltyItem GetPenalty(int index)
+        public PenaltyViewmodel GetPenalty(int index)
         {
-            return PenaltyItem.None;
+            return PenaltyViewmodel.None;
         }
 
         public bool GetHealth(out HealthStatus status)

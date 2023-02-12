@@ -16,4 +16,21 @@ static class Util
             ?? throw new ArgumentException("Couldn't find: " + name);
         target = (T)node;
     }
+
+    public static void ScaleAndCenter(this Sprite sprite, Rect2 box)
+    {
+        var texW = sprite.Texture.GetWidth();
+        var texH = sprite.Texture.GetHeight();
+        var wScale = box.Size.x / texW;
+        var hScale = box.Size.y / texH;
+        var scale = Math.Min(wScale, hScale);
+        sprite.Scale = new Vector2(scale, scale);
+
+        // position determines the center of the sprite, so we have to add half of the scaled W and H
+        var spriteW = texW * scale;
+        var spriteH = texH * scale;
+        var extraW = box.Size.x - spriteW;
+        var extraH = box.Size.y - spriteH;
+        sprite.Position = box.Position + new Vector2(spriteW / 2 + extraW / 2, spriteH / 2 + extraH / 2);
+    }
 }

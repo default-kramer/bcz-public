@@ -1,0 +1,3 @@
+# Copy the .bmp files into the godot project.
+# No need to keep a copy here.
+*.bmp

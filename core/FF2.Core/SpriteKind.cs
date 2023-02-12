@@ -23,5 +23,22 @@ namespace FF2.Core
         //Heart75,
         //Heart100,
         //Heartbreaker,
+
+        Num1,
+        Num2,
+        Num3,
+        Num4,
+        Num5,
+        Num6,
+        Num7,
+        Num8,
+        Num9,
+        Num10,
+        Num11,
+        Num12,
+        Num13,
+        Num14,
+        Num15,
+        Num16,
     }
 }

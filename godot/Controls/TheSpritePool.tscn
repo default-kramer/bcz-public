@@ -1,4 +1,4 @@
-[gd_scene load_steps=19 format=2]
+[gd_scene load_steps=37 format=2]
 
 [ext_resource path="res://Controls/TheSpritePool.cs" type="Script" id=1]
 [ext_resource path="res://Sprites/blank-joined.bmp" type="Texture" id=2]
@@ -8,6 +8,22 @@
 [ext_resource path="res://Sprites/joined.bmp" type="Texture" id=6]
 [ext_resource path="res://Sprites/heart.bmp" type="Texture" id=7]
 [ext_resource path="res://Sprites/heart0.bmp" type="Texture" id=8]
+[ext_resource path="res://Sprites/numerals/1.bmp" type="Texture" id=9]
+[ext_resource path="res://Sprites/numerals/6.bmp" type="Texture" id=10]
+[ext_resource path="res://Sprites/numerals/14.bmp" type="Texture" id=11]
+[ext_resource path="res://Sprites/numerals/13.bmp" type="Texture" id=12]
+[ext_resource path="res://Sprites/numerals/15.bmp" type="Texture" id=13]
+[ext_resource path="res://Sprites/numerals/16.bmp" type="Texture" id=14]
+[ext_resource path="res://Sprites/numerals/12.bmp" type="Texture" id=15]
+[ext_resource path="res://Sprites/numerals/11.bmp" type="Texture" id=16]
+[ext_resource path="res://Sprites/numerals/7.bmp" type="Texture" id=17]
+[ext_resource path="res://Sprites/numerals/9.bmp" type="Texture" id=18]
+[ext_resource path="res://Sprites/numerals/2.bmp" type="Texture" id=19]
+[ext_resource path="res://Sprites/numerals/4.bmp" type="Texture" id=20]
+[ext_resource path="res://Sprites/numerals/10.bmp" type="Texture" id=21]
+[ext_resource path="res://Sprites/numerals/3.bmp" type="Texture" id=22]
+[ext_resource path="res://Sprites/numerals/5.bmp" type="Texture" id=23]
+[ext_resource path="res://Sprites/numerals/8.bmp" type="Texture" id=24]
 
 [sub_resource type="Shader" id=1]
 code = "shader_type canvas_item;
@@ -302,6 +318,49 @@ shader_param/my_color = null
 shader_param/my_alpha = null
 shader_param/destructionProgress = null
 
+[sub_resource type="Shader" id=13]
+code = "shader_type canvas_item;
+
+uniform float destructionProgress = 0.0;
+
+// Used by the noise functin to generate a pseudo random value between 0.0 and 1.0
+vec2 random(vec2 uv){
+    uv = vec2( dot(uv, vec2(127.1,311.7) ),
+               dot(uv, vec2(269.5,183.3) ) );
+    return -1.0 + 2.0 * fract(sin(uv) * 43758.5453123);
+}
+
+vec4 applyFizzle(vec4 color, vec2 uv, float amount) {
+    float fizzle = amount;
+    vec2 rand2 = random(ceil(uv * 30.0)) + 1.0;
+    rand2 *= 0.5;
+    if (rand2.x < fizzle) {
+        color.a = 0.0;
+    } else {
+        vec3 headroom = vec3(1.0, 1.0, 1.0) - color.rgb;
+        headroom = min(vec3(0.6, 0.6, 0.6), headroom);
+        color.rgb += headroom * fizzle * fizzle;
+    }
+    return color;
+}
+
+void fragment() {
+    float input = destructionProgress;
+    // For testing:
+    //input = max(0.0, mod(TIME / 0.7, 3.0) - 2.0);
+    float brightness = smoothstep(0.0, 0.6, input) * 1.6;
+    float fizzle = smoothstep(0.35, 1.0, input);
+    vec4 color = texture(TEXTURE, UV);
+    color.b += brightness * 1.2;
+    color.g += brightness * 0.5;
+    color = applyFizzle(color, UV, fizzle);
+    COLOR = color;
+}"
+
+[sub_resource type="ShaderMaterial" id=14]
+shader = SubResource( 13 )
+shader_param/destructionProgress = 0.0
+
 [node name="Control" type="Control"]
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -313,7 +372,6 @@ material = SubResource( 2 )
 texture = ExtResource( 2 )
 
 [node name="BlankSingle" type="Sprite" parent="."]
-visible = false
 material = SubResource( 4 )
 texture = ExtResource( 3 )
 
@@ -339,3 +397,68 @@ texture = ExtResource( 7 )
 [node name="Heart0" type="Sprite" parent="."]
 visible = false
 texture = ExtResource( 8 )
+
+[node name="Num1" type="Sprite" parent="."]
+visible = false
+material = SubResource( 14 )
+texture = ExtResource( 9 )
+
+[node name="Num2" type="Sprite" parent="."]
+visible = false
+texture = ExtResource( 19 )
+
+[node name="Num3" type="Sprite" parent="."]
+visible = false
+texture = ExtResource( 22 )
+
+[node name="Num4" type="Sprite" parent="."]
+visible = false
+texture = ExtResource( 20 )
+
+[node name="Num5" type="Sprite" parent="."]
+visible = false
+texture = ExtResource( 23 )
+
+[node name="Num6" type="Sprite" parent="."]
+visible = false
+texture = ExtResource( 10 )
+
+[node name="Num7" type="Sprite" parent="."]
+visible = false
+texture = ExtResource( 17 )
+
+[node name="Num8" type="Sprite" parent="."]
+visible = false
+texture = ExtResource( 24 )
+
+[node name="Num9" type="Sprite" parent="."]
+visible = false
+texture = ExtResource( 18 )
+
+[node name="Num10" type="Sprite" parent="."]
+visible = false
+texture = ExtResource( 21 )
+
+[node name="Num11" type="Sprite" parent="."]
+visible = false
+texture = ExtResource( 16 )
+
+[node name="Num12" type="Sprite" parent="."]
+visible = false
+texture = ExtResource( 15 )
+
+[node name="Num13" type="Sprite" parent="."]
+visible = false
+texture = ExtResource( 12 )
+
+[node name="Num14" type="Sprite" parent="."]
+visible = false
+texture = ExtResource( 11 )
+
+[node name="Num15" type="Sprite" parent="."]
+visible = false
+texture = ExtResource( 13 )
+
+[node name="Num16" type="Sprite" parent="."]
+visible = false
+texture = ExtResource( 14 )

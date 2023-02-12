@@ -19,6 +19,8 @@ readonly struct TrackedSprite
         this.Sprite = sprite;
     }
 
+    public static readonly TrackedSprite Nothing = default(TrackedSprite);
+
     public bool IsNothing { get { return Kind == SpriteKind.None; } }
     public bool IsSomething { get { return Kind != SpriteKind.None; } }
 }
@@ -36,6 +38,27 @@ sealed class SpritePool
             var template = owner.GetNode<Sprite>(kind.ToString());
             pools[kind] = new Pool(template, kind);
         }
+
+        const bool addNumerals = true;
+        if (addNumerals)
+        {
+            // We expect the first one to have the shader and we will copy it to all the other numerals.
+            Material? numeralMaterial = null;
+
+            for (var kind = SpriteKind.Num1; kind <= SpriteKind.Num16; kind++)
+            {
+                var sprite = owner.GetNode<Sprite>(kind.ToString());
+                numeralMaterial = numeralMaterial ?? sprite.Material;
+
+                if (sprite.Material == null)
+                {
+                    sprite.Material = numeralMaterial!.Duplicate() as Material;
+                }
+
+                pools[kind] = new Pool(sprite, kind);
+            }
+        }
+
         this.pools = pools;
     }
 

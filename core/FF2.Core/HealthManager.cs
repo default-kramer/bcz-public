@@ -100,6 +100,12 @@ namespace FF2.Core
 
         private Appointment countdown;
         private readonly int[] penaltyProgress;
+
+        // When a penalty is destroyed, we will save it in this array to support the destruction animation.
+        // We say that if the slot's appointment has arrived, there is nothing relevant in this slot.
+        // This allows us to avoid doing any cleanup after an animation completes.
+        private readonly (int, Appointment)[] destroyedPenalties;
+
         private int hitPoints;
 
         public int HitPoints => hitPoints * 4; // current UI draws quarter hearts...
@@ -111,6 +117,8 @@ namespace FF2.Core
             penaltySchedule = PenaltySchedule.Create();
             penaltyProgress = new int[20];
             penaltyProgress.AsSpan().Fill(0);
+            destroyedPenalties = new (int, Appointment)[penaltyProgress.Length];
+            destroyedPenalties.AsSpan().Fill((0, Appointment.Frame0));
         }
 
         public bool GameOver => hitPoints <= 0 || countdown.HasArrived();
@@ -142,20 +150,20 @@ namespace FF2.Core
             millisRemaining += combo.NumEnemiesDestroyed * millisRestoredPerEnemy;
             millisRemaining = Math.Min(millisRemaining, maxCountdownMillis);
             countdown = scheduler.CreateWaitingAppointment(millisRemaining);
+        }
 
-            int agc = combo.PermissiveCombo.AdjustedGroupCount;
+        public void OnComboUpdated(ComboInfo previous, ComboInfo current, IScheduler scheduler)
+        {
+            int agc = current.PermissiveCombo.AdjustedGroupCount;
             for (int i = 0; i < penaltyProgress.Length; i++)
             {
                 int rank = penaltyProgress[i];
                 if (agc >= rank)
                 {
+                    destroyedPenalties[i] = (penaltyProgress[i], scheduler.CreateAppointment(350));
                     penaltyProgress[i] = 0;
                 }
             }
-        }
-
-        public void OnComboUpdated(ComboInfo previous, ComboInfo current, IScheduler scheduler)
-        {
         }
 
         int ICountdownViewmodel.MaxMillis => maxCountdownMillis;
@@ -164,14 +172,21 @@ namespace FF2.Core
 
         int ISlidingPenaltyViewmodel.NumSlots => penaltyProgress.Length;
 
-        PenaltyItem ISlidingPenaltyViewmodel.GetPenalty(int index)
+        PenaltyViewmodel ISlidingPenaltyViewmodel.GetPenalty(int index)
         {
             var rank = penaltyProgress[index];
             if (rank > 0)
             {
-                return new PenaltyItem(index + 1, rank, false);
+                return new PenaltyViewmodel(rank, 0f);
             }
-            return PenaltyItem.None;
+
+            var item = destroyedPenalties[index];
+            if (!item.Item2.HasArrived())
+            {
+                return new PenaltyViewmodel(item.Item1, item.Item2.Progress());
+            }
+
+            return PenaltyViewmodel.None;
         }
 
         public bool GetHealth(out HealthStatus status)

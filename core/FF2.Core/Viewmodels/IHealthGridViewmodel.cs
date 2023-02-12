@@ -22,7 +22,7 @@ namespace FF2.Core.Viewmodels
         /// So a penalty at index 0 will land during the next spawn.
         /// The given index must be less than <see cref="NumSlots"/>.
         /// </summary>
-        PenaltyItem GetPenalty(int index);
+        PenaltyViewmodel GetPenalty(int index);
 
         bool GetHealth(out HealthStatus status);
     }
@@ -39,19 +39,17 @@ namespace FF2.Core.Viewmodels
         }
     }
 
-    public readonly struct PenaltyItem
+    public readonly struct PenaltyViewmodel
     {
-        public readonly int Id;
         public readonly int Size;
-        public readonly bool Destroyed;
+        public readonly float DestructionProgress;
 
-        public PenaltyItem(int id, int size, bool destroyed)
+        public PenaltyViewmodel(int size, float destructionProgress)
         {
-            this.Id = id;
             this.Size = size;
-            this.Destroyed = destroyed;
+            this.DestructionProgress = destructionProgress;
         }
 
-        public static PenaltyItem None = new PenaltyItem(0, 0, false);
+        public static PenaltyViewmodel None = new PenaltyViewmodel(0, 0);
     }
 }
