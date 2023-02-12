@@ -27,6 +27,12 @@ public class NewRoot : Control
     // Called when the node enters the scene tree for the first time.
     public override void _Ready()
     {
+        var userAgent = JavaScript.Eval("navigator.userAgent") as string;
+        if (userAgent != null)
+        {
+            Console.WriteLine("Got user agent: " + userAgent);
+        }
+
         this.members = new Members(this);
         BackToMainMenu();
     }
