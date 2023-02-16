@@ -100,11 +100,10 @@ public class NewRoot : Control
     {
         // Removing children is better than just hiding them, probably for many reasons.
         // One reason is so that the input events aren't constantly routing to the Controller Setup code.
-
         var me = this;
-        while (me.GetChildCount() > 0)
+        while (me.GetChildCount() > 1) // the 0th child is the background, which should always be shown
         {
-            me.RemoveChild(me.GetChild(0));
+            me.RemoveChild(me.GetChild(1));
         }
         control.Visible = true;
         me.AddChild(control);

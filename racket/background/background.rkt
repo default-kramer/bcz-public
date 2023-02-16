@@ -75,32 +75,34 @@
                  (go (sub1 y))))]))
         (go (if down? y (sub1 y)))))))
 
-(define green (make-object color% 40 220 40))
+(define line-color
+  (make-parameter (make-object color% 74 85 104)))
 
 (define (draw rect size [thickness 1])
-  (dc (lambda (dc dx dy)
-        (define old-pen (send dc get-pen))
-        (send dc set-pen (new pen%
-                              [width thickness]
-                              ;[style 'hilite]
-                              [color green]))
-        (for ([y (in-range (rect-slots rect))])
-          (let* ([top (+ dy (* y size))]
-                 [bottom (+ top size)]
-                 [left dx]
-                 [middle (+ left size)]
-                 [right (+ middle size)])
-            (when (rect-has? rect y 'lside)
-              (send dc draw-line left top left bottom))
-            (when (rect-has? rect y 'left)
-              (send dc draw-line left top middle top))
-            (when (rect-has? rect y 'right)
-              (send dc draw-line middle top right top))
-            (when (rect-has? rect y 'vert)
-              (send dc draw-line middle top middle bottom))))
-        (send dc set-pen old-pen))
-      (* size 2)
-      (* size (rect-slots rect))))
+  (let ([line-color (line-color)])
+    (dc (lambda (dc dx dy)
+          (define old-pen (send dc get-pen))
+          (send dc set-pen (new pen%
+                                [width thickness]
+                                ;[style 'hilite]
+                                [color line-color]))
+          (for ([y (in-range (rect-slots rect))])
+            (let* ([top (+ dy (* y size))]
+                   [bottom (+ top size)]
+                   [left dx]
+                   [middle (+ left size)]
+                   [right (+ middle size)])
+              (when (rect-has? rect y 'lside)
+                (send dc draw-line left top left bottom))
+              (when (rect-has? rect y 'left)
+                (send dc draw-line left top middle top))
+              (when (rect-has? rect y 'right)
+                (send dc draw-line middle top right top))
+              (when (rect-has? rect y 'vert)
+                (send dc draw-line middle top middle bottom))))
+          (send dc set-pen old-pen))
+        (* size 2)
+        (* size (rect-slots rect)))))
 
 (define V (make-vector 20 '(lside rside)))
 (add-crossers! V)
@@ -127,8 +129,9 @@
 (add-crossers! R)
 (add-verticals! R)
 
-(define (make-column)
-  (let*-values ([(V) (make-vector 80 '(lside rside))]
+; Forgot how this code works... but h roughly controls the height
+(define (make-column #:height h)
+  (let*-values ([(V) (make-vector h '(lside rside))]
                 [(_) (add-crossers! V)]
                 [(_) (add-verticals! V)]
                 [(L R) (split V)])
@@ -142,9 +145,33 @@
 
 (define the-pict
   (apply hc-append
-         (for/list ([i (in-range 10)])
-           (make-column))))
+         (for/list ([i (in-range 30)])
+           (make-column #:height 45))))
 
-the-pict
+(define pict-2
+  (scale
+   (parameterize ([line-color (make-object color% 45 55 72)]); 26 32 44)])
+     (apply hc-append
+            (for/list ([i (in-range 10)])
+              (make-column #:height 15))))
+   3))
 
-(send (pict->bitmap the-pict) save-file "background.png" 'png)
+(list "same size?"
+      (pict-width the-pict) (pict-width pict-2)
+      (pict-height the-pict) (pict-height pict-2))
+;the-pict
+
+;(send (pict->bitmap the-pict) save-file "background.png" 'png)
+(define both (lt-superimpose the-pict pict-2))
+
+(define bg
+  (filled-rectangle (pict-width both)
+                    (pict-height both)
+                    #:draw-border? #f
+                    #:color (make-object color% 26 32 44))); 45 55 72)))
+
+(define with-bg
+  (lt-superimpose bg both))
+
+with-bg
+(send (pict->bitmap with-bg) save-file "background.png" 'png)
