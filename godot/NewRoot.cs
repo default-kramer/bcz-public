@@ -96,17 +96,22 @@ public class NewRoot : Control
         StartGame(levelToken.Value);
     }
 
+    private static void Remove(Control c)
+    {
+        c.GetParent()?.RemoveChild(c);
+    }
+
     private void SwitchTo(Control control)
     {
         // Removing children is better than just hiding them, probably for many reasons.
         // One reason is so that the input events aren't constantly routing to the Controller Setup code.
-        var me = this;
-        while (me.GetChildCount() > 1) // the 0th child is the background, which should always be shown
-        {
-            me.RemoveChild(me.GetChild(1));
-        }
+        Remove(members.GameViewer);
+        Remove(members.PuzzleControl);
+        Remove(members.MainMenu);
+        Remove(members.ControllerSetupControl);
+
         control.Visible = true;
-        me.AddChild(control);
+        this.AddChild(control);
     }
 
     private void StartGame(SeededSettings ss)

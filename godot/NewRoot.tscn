@@ -101,8 +101,6 @@ visible = false
 visible = false
 
 [node name="MainMenu" parent="." instance=ExtResource( 8 )]
-margin_left = 50.0
-margin_top = 50.0
 script = ExtResource( 9 )
 
 [node name="ControllerSetupControl" parent="." instance=ExtResource( 3 )]
