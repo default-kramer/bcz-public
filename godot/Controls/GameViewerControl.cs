@@ -63,6 +63,8 @@ public class GameViewerControl : Control
         public readonly HealthViewerControl HealthViewer;
         public readonly GridViewerControl MoverGridViewer;
         public readonly GameOverMenu GameOverMenu;
+        public readonly HBoxContainer HBoxContainer;
+        public readonly Control BackdropRect;
 
         public Members(Control me)
         {
@@ -72,6 +74,8 @@ public class GameViewerControl : Control
             me.FindNode(out HealthViewer, nameof(HealthViewer));
             me.FindNode(out MoverGridViewer, nameof(MoverGridViewer));
             me.FindNode(out GameOverMenu, nameof(GameOverMenu));
+            me.FindNode(out HBoxContainer, nameof(HBoxContainer));
+            me.FindNode(out BackdropRect, nameof(BackdropRect));
 
             QueueViewer.GridViewer = GridViewer;
         }
@@ -92,13 +96,26 @@ public class GameViewerControl : Control
         OnSizeChanged();
     }
 
+    public override void _Notification(int what)
+    {
+        base._Notification(what);
+
+        if (what == NotificationResized)
+        {
+            OnSizeChanged();
+        }
+    }
+
     public void OnSizeChanged()
     {
         // Calculate how wide each component should be given the height.
         // The HBoxContainer.Alignment property will take care of centering them.
         // I overlooked this property for way too long. Thanks to lewiji on the Godot Discord!
 
-        float availHeight = RectSize.y;
+        // TODO - Using the MarginContainer itself or a child causes a growth feedback loop.
+        // It's more than can be explained by floating point precision... Hmm
+        //float availHeight = members.BackdropRect.RectSize.y;
+        float availHeight = this.RectSize.y - 60;
         float ladderWidth = availHeight * 0.16f;
 
         members.HealthViewer.RectMinSize = new Vector2(ladderWidth, 0);

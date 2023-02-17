@@ -69,9 +69,17 @@ public class GridViewerControl : Control
     private static readonly Godot.Color bgColor = Godot.Color.Color8(0, 0, 0);
     private static readonly Godot.Color shroudColor = Godot.Color.Color8(0, 0, 0, 120);
 
+    int counter = 0;
+
     public override void _Draw()
     {
         Logic.Update();
+
+        if (counter++ == 100)
+        {
+            counter = 0;
+            Console.WriteLine($"GV stuff: {RectSize}, {RectPosition}");
+        }
 
         var grid = Logic.Grid;
         var gridSize = grid.Size;
@@ -91,6 +99,7 @@ public class GridViewerControl : Control
         const int padding = 2;
 
         DrawRect(new Rect2(default(Vector2), this.RectSize), bgColor);
+
         var fullSize = this.RectSize - new Vector2(padding, padding);
 
         float screenCellSize = GetCellSize(fullSize, gridSize);
@@ -225,6 +234,8 @@ public class GridViewerControl : Control
             var height = Logic.LastChanceProgress * RectSize.y;
             DrawRect(new Rect2(0, 0, RectSize.x, height), shroudColor, filled: true);
         }
+
+        DrawRect(new Rect2(5, 5, this.RectSize - new Vector2(10, 10)), Godot.Colors.LightGreen, filled: false);
     }
 
     internal static SpriteKind GetSpriteKind(Occupant occ)
