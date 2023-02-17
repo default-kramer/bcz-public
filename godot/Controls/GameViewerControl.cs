@@ -94,67 +94,17 @@ public class GameViewerControl : Control
 
     public void OnSizeChanged()
     {
-        float ladderWidth = RectSize.y * 0.16f;
-        const float ladderPadding = 10;
-        float queueWidth = ladderWidth;
-        const float queuePadding = ladderPadding;
+        // Calculate how wide each component should be given the height.
+        // The HBoxContainer.Alignment property will take care of centering them.
+        // I overlooked this property for way too long. Thanks to lewiji on the Godot Discord!
 
-        const bool ShowLadder = true;
+        float availHeight = RectSize.y;
+        float ladderWidth = availHeight * 0.16f;
 
-        float availWidth = RectSize.x;
-
-        float nonGridWidth = 0;
-        if (ShowLadder)
-        {
-            nonGridWidth += (ladderWidth + ladderPadding);
-        }
-        if (ShowQueue)
-        {
-            nonGridWidth += (queueWidth + queuePadding);
-        }
-
-        availWidth -= nonGridWidth;
-
-        // Divide by 2 for both gridviewers
-        var (gvSize, moverSize) = members.GridViewer.DesiredSize(new Vector2(availWidth / 2, RectSize.y));
-
-        float neededWidth = gvSize.x + nonGridWidth;
-
-        float meCenter = RectSize.x / 2f;
-        float left = meCenter - neededWidth / 2f;
-
-
-        if (ShowLadder)
-        {
-            members.HealthViewer.RectSize = new Vector2(ladderWidth, RectSize.y);
-            members.HealthViewer.RectPosition = new Vector2(left, 0);
-            left += ladderWidth;
-            left += ladderPadding;
-        }
-
-        // show main Grid
-        members.MoverGridViewer.RectSize = moverSize;
-        members.MoverGridViewer.RectPosition = new Vector2(left, 0);
-
-        members.GridViewer.RectSize = gvSize;
-        members.GridViewer.RectPosition = new Vector2(left, moverSize.y);
-
-        left += gvSize.x;
-
-        if (ShowQueue)
-        {
-            left += queuePadding;
-
-            var queueBottom = RectSize.y / 2f;// * 2f;
-            members.QueueViewer.RectSize = new Vector2(queueWidth, queueBottom);
-            members.QueueViewer.RectPosition = new Vector2(left, 0);
-
-            members.CountdownViewer.RectSize = new Vector2(queueWidth, RectSize.y - queueBottom);
-            members.CountdownViewer.RectPosition = new Vector2(left, queueBottom);
-            members.CountdownViewer.Visible = true;
-
-            left += queueWidth;
-        }
+        members.HealthViewer.RectMinSize = new Vector2(ladderWidth, 0);
+        members.GridViewer.RectMinSize = new Vector2(availHeight * 0.4f, 0); // TODO this AR should come from the grid being shown
+        members.QueueViewer.RectMinSize = new Vector2(ladderWidth, availHeight / 2f);
+        members.CountdownViewer.RectMinSize = new Vector2(ladderWidth, availHeight / 2f);
     }
 
     private bool _firstDraw = true;
