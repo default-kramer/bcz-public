@@ -33,12 +33,6 @@ namespace FF2.Core
             return maxFall.Value;
         }
 
-        private int GetFall(Loc loc)
-        {
-            var index = loc.ToIndex(grid);
-            return fallCountBuffer[index];
-        }
-
         /// <summary>
         /// If the occupant at (2,4) fell from (2,10) then the adder returned by this method for
         /// the location (2,4) will decrease from 6.0 to 0.0 as the given <paramref name="animationProgress"/>
@@ -48,17 +42,25 @@ namespace FF2.Core
         /// </summary>
         public float GetAdder(Loc loc, float animationProgress)
         {
+            var index = loc.ToIndex(grid);
+            if (index >= fallCountBuffer.Length)
+            {
+                return 0;
+            }
+
             var maxFall = MaxFall();
             if (maxFall < 1)
             {
                 return 0;
             }
-            float completeTime = GetFall(loc) * 1f / maxFall;
+
+            int fall = fallCountBuffer[index];
+
+            float completeTime = fall * 1f / maxFall;
             if (animationProgress >= completeTime)
             {
                 return 0;
             }
-            int fall = GetFall(loc);
             return fall - animationProgress / completeTime * fall;
         }
     }

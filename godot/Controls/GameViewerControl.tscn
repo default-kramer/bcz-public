@@ -46,8 +46,7 @@ margin_bottom = 0.0
 [node name="CountdownViewer" parent="HBoxContainer/VBoxContainer" instance=ExtResource( 3 )]
 anchor_right = 0.0
 anchor_bottom = 0.0
-
-[node name="MoverGridViewer" parent="." instance=ExtResource( 2 )]
-visible = false
+margin_top = 4.0
+margin_bottom = 4.0
 
 [node name="GameOverMenu" parent="." instance=ExtResource( 5 )]

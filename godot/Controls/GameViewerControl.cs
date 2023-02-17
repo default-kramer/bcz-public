@@ -61,7 +61,6 @@ public class GameViewerControl : Control
         public readonly QueueViewerControl QueueViewer;
         public readonly CountdownViewerControl CountdownViewer;
         public readonly HealthViewerControl HealthViewer;
-        public readonly GridViewerControl MoverGridViewer;
         public readonly GameOverMenu GameOverMenu;
         public readonly HBoxContainer HBoxContainer;
 
@@ -71,7 +70,6 @@ public class GameViewerControl : Control
             me.FindNode(out QueueViewer, nameof(QueueViewer));
             me.FindNode(out CountdownViewer, nameof(CountdownViewer));
             me.FindNode(out HealthViewer, nameof(HealthViewer));
-            me.FindNode(out MoverGridViewer, nameof(MoverGridViewer));
             me.FindNode(out GameOverMenu, nameof(GameOverMenu));
             me.FindNode(out HBoxContainer, nameof(HBoxContainer));
 
@@ -168,7 +166,6 @@ public class GameViewerControl : Control
         members.QueueViewer.Update();
         members.CountdownViewer.Update();
         members.HealthViewer.Update();
-        members.MoverGridViewer.Update();
 
         this.logic.CheckGameOver();
     }
@@ -216,8 +213,6 @@ public class GameViewerControl : Control
 
         members.GridViewer.Visible = true;
         members.QueueViewer.Visible = true;
-
-        members.MoverGridViewer.SetLogicForMover(ticker);
 
         members.CountdownViewer.SetModel(state.CountdownViewmodel);
 
