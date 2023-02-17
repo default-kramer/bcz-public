@@ -64,7 +64,6 @@ public class GameViewerControl : Control
         public readonly GridViewerControl MoverGridViewer;
         public readonly GameOverMenu GameOverMenu;
         public readonly HBoxContainer HBoxContainer;
-        public readonly Control BackdropRect;
 
         public Members(Control me)
         {
@@ -75,7 +74,6 @@ public class GameViewerControl : Control
             me.FindNode(out MoverGridViewer, nameof(MoverGridViewer));
             me.FindNode(out GameOverMenu, nameof(GameOverMenu));
             me.FindNode(out HBoxContainer, nameof(HBoxContainer));
-            me.FindNode(out BackdropRect, nameof(BackdropRect));
 
             QueueViewer.GridViewer = GridViewer;
         }
@@ -92,7 +90,6 @@ public class GameViewerControl : Control
     public override void _Ready()
     {
         this.members = new Members(this);
-        GetTree().Root.Connect("size_changed", this, nameof(OnSizeChanged));
         OnSizeChanged();
     }
 
@@ -106,22 +103,47 @@ public class GameViewerControl : Control
         }
     }
 
+    /// <summary>
+    /// We need to set our min width to match our contents.
+    /// I tried letting the HBox calculate the width and using that, but it got squirrelly.
+    /// </summary>
+    private float minWidth = 0;
+
+    public override Vector2 _GetMinimumSize()
+    {
+        return new Vector2(minWidth, 0);
+    }
+
     public void OnSizeChanged()
     {
         // Calculate how wide each component should be given the height.
         // The HBoxContainer.Alignment property will take care of centering them.
         // I overlooked this property for way too long. Thanks to lewiji on the Godot Discord!
 
-        // TODO - Using the MarginContainer itself or a child causes a growth feedback loop.
-        // It's more than can be explained by floating point precision... Hmm
-        //float availHeight = members.BackdropRect.RectSize.y;
-        float availHeight = this.RectSize.y - 60;
+        // Not sure why, but we will draw off the bottom without a fudge factor here
+        float availHeight = this.RectSize.y - 20f;
+        if (availHeight < 0)
+        {
+            return;
+        }
+
         float ladderWidth = availHeight * 0.16f;
 
+        minWidth = 0;
+
         members.HealthViewer.RectMinSize = new Vector2(ladderWidth, 0);
+        minWidth += ladderWidth;
+
         members.GridViewer.RectMinSize = new Vector2(availHeight * 0.4f, 0); // TODO this AR should come from the grid being shown
+        minWidth += availHeight * 0.4f;
+
         members.QueueViewer.RectMinSize = new Vector2(ladderWidth, availHeight / 2f);
         members.CountdownViewer.RectMinSize = new Vector2(ladderWidth, availHeight / 2f);
+        minWidth += ladderWidth;
+
+        // I don't know why this is needed... but who cares?
+        // (Maybe some margins hiding somewhere in the tree?)
+        minWidth += 20f;
     }
 
     private bool _firstDraw = true;
