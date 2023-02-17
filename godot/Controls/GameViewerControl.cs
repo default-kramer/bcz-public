@@ -20,6 +20,9 @@ public class GameViewerControl : Control
         OnSizeChanged(); // In case the grid size changed
     }
 
+    // To be implemented by each child
+    public const int SharedYPadding = 10;
+
     public void WatchReplay(string filepath)
     {
         logic.Cleanup();
@@ -132,8 +135,9 @@ public class GameViewerControl : Control
         members.HealthViewer.RectMinSize = new Vector2(ladderWidth, 0);
         minWidth += ladderWidth;
 
-        members.GridViewer.RectMinSize = new Vector2(availHeight * 0.4f, 0); // TODO this AR should come from the grid being shown
-        minWidth += availHeight * 0.4f;
+        float gridWidth = members.GridViewer.DesiredWidth(RectSize.y);
+        members.GridViewer.RectMinSize = new Vector2(gridWidth, 0);
+        minWidth += gridWidth;
 
         members.QueueViewer.RectMinSize = new Vector2(ladderWidth, availHeight / 2f);
         members.CountdownViewer.RectMinSize = new Vector2(ladderWidth, availHeight / 2f);

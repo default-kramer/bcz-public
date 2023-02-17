@@ -43,6 +43,15 @@ public class GridViewerControl : Control
         return Math.Min(maxSize.x / gridSize.Width, maxSize.y / gridSize.Height);
     }
 
+    const int yPadding = GameViewerControl.SharedYPadding;
+
+    public float DesiredWidth(float height)
+    {
+        var size = Logic.Grid.Size;
+        var cellSize = GetCellSize(new Vector2(9999, height - yPadding * 2), size);
+        return cellSize * size.Width;
+    }
+
     internal Vector2 CurrentSpriteScale { get; set; }
     internal float CurrentCellSize { get; set; }
 
@@ -68,11 +77,9 @@ public class GridViewerControl : Control
             flicker = FlickerState.Initial;
         }
 
-        const int padding = 2;
-
         DrawRect(new Rect2(default(Vector2), this.RectSize), bgColor);
 
-        var fullSize = this.RectSize - new Vector2(padding, padding);
+        var fullSize = this.RectSize - new Vector2(0, yPadding * 2);
 
         float screenCellSize = GetCellSize(fullSize, gridSize);
         float extraX = Math.Max(0, fullSize.x - screenCellSize * gridSize.Width);
@@ -108,8 +115,8 @@ public class GridViewerControl : Control
                     occ = destroyedOcc;
                 }
 
-                var canvasY = gridSize.Height - (y + 1);
-                var screenY = canvasY * screenCellSize + extraY / 2;
+                var gridY = gridSize.Height - (y + 1);
+                var screenY = gridY * screenCellSize + extraY / 2 + yPadding;
                 var screenX = x * screenCellSize + extraX / 2 + 1f;
 
                 float adder = 0f;
@@ -124,10 +131,10 @@ public class GridViewerControl : Control
                 {
                     var (borderLight, borderDark) = Logic.BorderColor(loc);
 
-                    var YY = canvasY;
-                    DrawRect(new Rect2(screenX - 1, YY * screenCellSize, screenCellSize + 2, screenCellSize + 2), borderDark);
-                    DrawRect(new Rect2(screenX, YY * screenCellSize + 1, screenCellSize, screenCellSize), borderLight);
-                    DrawRect(new Rect2(screenX + 1, YY * screenCellSize + 2, screenCellSize - 2, screenCellSize - 2), bgColor);
+                    var YY = gridY;
+                    DrawRect(new Rect2(screenX - 1, YY * screenCellSize + yPadding, screenCellSize + 2, screenCellSize + 2), borderDark);
+                    DrawRect(new Rect2(screenX, YY * screenCellSize + 1 + yPadding, screenCellSize, screenCellSize), borderLight);
+                    DrawRect(new Rect2(screenX + 1, YY * screenCellSize + 2 + yPadding, screenCellSize - 2, screenCellSize - 2), bgColor);
                 }
 
                 if (!Logic.OverrideSpriteKind(occ, loc, out var kind))
