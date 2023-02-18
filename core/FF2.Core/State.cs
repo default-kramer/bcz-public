@@ -15,6 +15,7 @@ namespace FF2.Core
         private readonly ISpawnDeck spawnDeck;
         private Mover? mover;
         private ComboInfo currentCombo;
+        public ComboInfo? ActiveOrPreviousCombo { get; private set; } = null;
         private int score = 0;
         private readonly PayoutTable scorePayoutTable = PayoutTable.DefaultScorePayoutTable;
         private readonly IStateHook hook;
@@ -204,6 +205,7 @@ namespace FF2.Core
             {
                 var previous = currentCombo;
                 this.currentCombo = newCombo;
+                ActiveOrPreviousCombo = newCombo;
                 hook.OnComboUpdated(previous, newCombo, scheduler);
             }
             else

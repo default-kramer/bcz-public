@@ -150,5 +150,6 @@ public class NewRoot : Control
     public void StartTutorial()
     {
         SwitchTo(members.TutorialControl);
+        members.TutorialControl.Reset();
     }
 }
