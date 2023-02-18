@@ -328,7 +328,7 @@ public class GridViewerControl : Control
 
     public sealed class NullLogic : ILogic
     {
-        private static readonly IReadOnlyGridSlim defaultGrid = FF2.Core.Grid.Create(FF2.Core.Grid.DefaultWidth, FF2.Core.Grid.DefaultHeight);
+        private static readonly IReadOnlyGridSlim defaultGrid = FF2.Core.Grid.Create();
 
         private NullLogic() { }
 

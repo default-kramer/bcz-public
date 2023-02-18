@@ -8,7 +8,8 @@ using System.Linq;
 public class SinglePlayerMenu : Control
 {
     private readonly ChoiceModel<string> GameModeChoices = new ChoiceModel<string>()
-        .AddChoices(ModeNormal, ModeScoreAttack, ModeTraining);
+        .AddChoices(ModeTutorial, ModeNormal, ModeScoreAttack, ModeTraining);
+    const string ModeTutorial = "Tutorial";
     const string ModeNormal = "Normal";
     const string ModeScoreAttack = "Score Attack";
     const string ModeTraining = "Training";
@@ -134,10 +135,18 @@ public class SinglePlayerMenu : Control
 
     private void StartGame()
     {
-        var collection = FF2.Core.SinglePlayerSettings.NormalSettings;
-        int level = LevelChoices.SelectedItem;
-        var token = new LevelToken(level, collection);
-        NewRoot.FindRoot(this).StartGame(token);
+        var mode = GameModeChoices.SelectedItem;
+        if (mode == ModeTutorial)
+        {
+            NewRoot.FindRoot(this).StartTutorial();
+        }
+        else
+        {
+            var collection = FF2.Core.SinglePlayerSettings.NormalSettings;
+            int level = LevelChoices.SelectedItem;
+            var token = new LevelToken(level, collection);
+            NewRoot.FindRoot(this).StartGame(token);
+        }
     }
 
     private void BackToMainMenu()

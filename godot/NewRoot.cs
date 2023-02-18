@@ -12,6 +12,7 @@ public class NewRoot : Control
         public readonly PuzzleControl PuzzleControl;
         public readonly MainMenu MainMenu;
         public readonly ControllerSetupControl ControllerSetupControl;
+        public readonly TutorialControl TutorialControl;
 
         public Members(Control me)
         {
@@ -19,6 +20,7 @@ public class NewRoot : Control
             me.FindNode(out PuzzleControl, nameof(PuzzleControl));
             me.FindNode(out MainMenu, nameof(MainMenu));
             me.FindNode(out ControllerSetupControl, nameof(ControllerSetupControl));
+            me.FindNode(out TutorialControl, nameof(TutorialControl));
         }
     }
 
@@ -109,6 +111,7 @@ public class NewRoot : Control
         Remove(members.PuzzleControl);
         Remove(members.MainMenu);
         Remove(members.ControllerSetupControl);
+        Remove(members.TutorialControl);
 
         control.Visible = true;
         this.AddChild(control);
@@ -142,5 +145,10 @@ public class NewRoot : Control
     {
         SwitchTo(members.ControllerSetupControl);
         members.ControllerSetupControl.Reset();
+    }
+
+    public void StartTutorial()
+    {
+        SwitchTo(members.TutorialControl);
     }
 }
