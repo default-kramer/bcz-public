@@ -43,7 +43,7 @@ public class GridViewerControl : Control
         return Math.Min(maxSize.x / gridSize.Width, maxSize.y / gridSize.Height);
     }
 
-    const int yPadding = GameViewerControl.SharedYPadding;
+    const int yPadding = 0; // No longer needed... but maybe it will be needed in the future.
 
     public float DesiredWidth(float height)
     {

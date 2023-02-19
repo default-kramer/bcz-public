@@ -17,38 +17,45 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 color = Color( 0.168627, 0.0666667, 0.0666667, 1 )
 
-[node name="HBoxContainer" type="HBoxContainer" parent="."]
+[node name="MarginContainer" type="MarginContainer" parent="."]
 anchor_right = 1.0
 anchor_bottom = 1.0
+custom_constants/margin_top = 10
+custom_constants/margin_bottom = 10
+
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer"]
+margin_top = 10.0
+margin_right = 1024.0
+margin_bottom = 590.0
 alignment = 1
 
-[node name="HealthViewer" parent="HBoxContainer" instance=ExtResource( 6 )]
+[node name="HealthViewer" parent="MarginContainer/HBoxContainer" instance=ExtResource( 6 )]
 anchor_right = 0.0
 anchor_bottom = 0.0
 margin_left = 508.0
 margin_right = 508.0
-margin_bottom = 600.0
+margin_bottom = 580.0
 
-[node name="GridViewer" parent="HBoxContainer" instance=ExtResource( 2 )]
+[node name="GridViewer" parent="MarginContainer/HBoxContainer" instance=ExtResource( 2 )]
 margin_left = 512.0
 margin_right = 512.0
-margin_bottom = 600.0
+margin_bottom = 580.0
 
-[node name="VBoxContainer" type="VBoxContainer" parent="HBoxContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/HBoxContainer"]
 margin_left = 516.0
 margin_right = 516.0
-margin_bottom = 600.0
+margin_bottom = 580.0
 
-[node name="QueueViewer" parent="HBoxContainer/VBoxContainer" instance=ExtResource( 4 )]
+[node name="QueueViewer" parent="MarginContainer/HBoxContainer/VBoxContainer" instance=ExtResource( 4 )]
 margin_right = 0.0
-margin_bottom = 298.0
+margin_bottom = 288.0
 size_flags_vertical = 3
 
-[node name="CountdownViewer" parent="HBoxContainer/VBoxContainer" instance=ExtResource( 3 )]
+[node name="CountdownViewer" parent="MarginContainer/HBoxContainer/VBoxContainer" instance=ExtResource( 3 )]
 anchor_right = 0.0
 anchor_bottom = 0.0
-margin_top = 302.0
-margin_bottom = 600.0
+margin_top = 292.0
+margin_bottom = 580.0
 size_flags_vertical = 3
 
 [node name="GameOverMenu" parent="." instance=ExtResource( 5 )]

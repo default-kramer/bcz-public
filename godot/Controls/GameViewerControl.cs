@@ -20,9 +20,6 @@ public class GameViewerControl : Control
         OnSizeChanged(); // In case the grid size changed
     }
 
-    // To be implemented by each child
-    public const int SharedYPadding = 10;
-
     public void WatchReplay(string filepath)
     {
         logic.Cleanup();
@@ -117,18 +114,28 @@ public class GameViewerControl : Control
 
     public void OnSizeChanged()
     {
-        // Calculate how wide each component should be given the height.
-        // The HBoxContainer.Alignment property will take care of centering them.
+        // SIZING NOTES:
+        // We want this control to be full-height, minus a little bit dictated by the outermost MarginContainer.
+        // This y-margin is important because the drawing code is not super-precise and I think it draws beyond
+        // its bounds by a few pixels.
+        //
+        // The width should be dynamically controlled based on the height.
+        // The AspectRatioContainer does not seem to work the way I want.
+        // So instead we calculate how wide each component should be given the height,
+        // and we specify a RectMinSize.x for each component (but never RectMinSize.y because we want full-height).
+        //
+        // The HBoxContainer.Alignment property will take care of centering the components.
         // I overlooked this property for way too long. Thanks to lewiji on the Godot Discord!
 
-        // Not sure why, but we will draw off the bottom without a fudge factor here
-        float availHeight = this.RectSize.y - 20f;
+        // WARNING - This must be kept in sync manually
+        const float yMargin = 20f;
+        float availHeight = this.RectSize.y - yMargin;
         if (availHeight < 0)
         {
             return;
         }
 
-        float ladderWidth = availHeight * 0.16f;
+        float ladderWidth = RectSize.y * 0.16f;
 
         minWidth = 0;
 
@@ -138,7 +145,7 @@ public class GameViewerControl : Control
             minWidth += ladderWidth;
         }
 
-        float gridWidth = members.GridViewer.DesiredWidth(RectSize.y);
+        float gridWidth = members.GridViewer.DesiredWidth(availHeight);
         members.GridViewer.RectMinSize = new Vector2(gridWidth, 0);
         minWidth += gridWidth;
 
