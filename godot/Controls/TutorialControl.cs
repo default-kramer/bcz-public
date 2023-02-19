@@ -153,7 +153,7 @@ public class TutorialControl : Control
     {
         SetText("Blank pieces [icon] have no color and do not form groups."
             + " Holding the drop button Bursts all blanks."
-            + " A 2-group is already set up here, all you have to do is hold the drop button.");
+            + " A 2-group combo is already set up here, all you have to do is hold the drop button.");
 
         var grid = Grid.Create();
 
@@ -172,7 +172,7 @@ public class TutorialControl : Control
         return MakeChallenge(Progress.Challenge2_Active, grid, spawns2);
     }
 
-    static readonly SpawnItem[] spawns2 = { SpawnItem.MakeCatalystPair(red, blue) };
+    static readonly SpawnItem[] spawns2 = { SpawnItem.MakeCatalystPair(yellow, yellow) };
 
     private Challenge Challenge3()
     {
