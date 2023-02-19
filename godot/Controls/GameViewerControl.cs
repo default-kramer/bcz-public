@@ -127,8 +127,10 @@ public class GameViewerControl : Control
         // The HBoxContainer.Alignment property will take care of centering the components.
         // I overlooked this property for way too long. Thanks to lewiji on the Godot Discord!
 
-        // WARNING - This must be kept in sync manually
+        // WARNING - These must match what you set in the editor. (Of course, I could grab the values here, but meh...)
         const float yMargin = 20f;
+        const float xSeparation = 13;
+
         float availHeight = this.RectSize.y - yMargin;
         if (availHeight < 0)
         {
@@ -138,16 +140,19 @@ public class GameViewerControl : Control
         float ladderWidth = RectSize.y * 0.16f;
 
         minWidth = 0;
+        int separationCount = 0;
 
         if (members.HealthViewer.Visible)
         {
             members.HealthViewer.RectMinSize = new Vector2(ladderWidth, 0);
             minWidth += ladderWidth;
+            separationCount++;
         }
 
         float gridWidth = members.GridViewer.DesiredWidth(availHeight);
         members.GridViewer.RectMinSize = new Vector2(gridWidth, 0);
         minWidth += gridWidth;
+        separationCount++;
 
         members.QueueViewer.RectMinSize = new Vector2(ladderWidth, 0);
         members.CountdownViewer.RectMinSize = new Vector2(ladderWidth, 0);
@@ -155,7 +160,8 @@ public class GameViewerControl : Control
 
         // I don't know why this is needed... but who cares?
         // (Maybe some margins hiding somewhere in the tree?)
-        minWidth += 20f;
+        const float fudge = 20f;
+        minWidth += fudge + separationCount * xSeparation;
     }
 
     private bool _firstDraw = true;

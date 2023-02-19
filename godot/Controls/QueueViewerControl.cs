@@ -21,6 +21,12 @@ public class QueueViewerControl : Control
         spritePool = NewRoot.GetSpritePool(this);
     }
 
+    private void DrawBorder(float bottomY)
+    {
+        DrawRect(new Rect2(0, 0, RectSize.x, bottomY), Godot.Colors.LightGray, filled: false, width: 1);
+        DrawRect(new Rect2(1, 1, RectSize.x - 2, bottomY - 2), Godot.Colors.WhiteSmoke, filled: false, width: 1);
+    }
+
     public override void _Draw()
     {
         if (Model == null)
@@ -28,13 +34,21 @@ public class QueueViewerControl : Control
             return;
         }
 
-        DrawRect(new Rect2(0, 0, this.RectSize), new Godot.Color(0.33f, 0.33f, 0.33f));
-
+        float mid = RectSize.x / 2;
         float cellSize = GridViewer.CurrentCellSize;
-        float marginLeft = (RectSize.x - cellSize - cellSize) / 2f;
-        marginLeft = Math.Max(marginLeft, 0);
+        float leftX = mid - cellSize / 2;
+        leftX = Math.Max(leftX, 0);
 
-        for (int i = 0; i < Math.Min(count, Model.LookaheadLimit); i++)
+        int itemsToDraw = Math.Min(count, Model.LookaheadLimit);
+
+        // When the queue is empty, it looks silly to draw a very small box.
+        // So always size as if there is at least 1 item in the queue.
+        var bottomY = GetScreenY(cellSize, Math.Max(1, itemsToDraw)) - cellSize / 2;
+
+        DrawRect(new Rect2(0, 0, RectSize.x, bottomY), Godot.Colors.Black);
+        DrawBorder(bottomY);
+
+        for (int i = 0; i < itemsToDraw; i++)
         {
             var item = Model[i];
             Occupant left;
@@ -51,9 +65,9 @@ public class QueueViewerControl : Control
                 right = Occupant.IndestructibleEnemy;
             }
 
-            float y = 40f * i + 100f;
-            Draw(left, marginLeft, y, Index1(i));
-            Draw(right, marginLeft + cellSize, y, Index2(i));
+            float y = GetScreenY(cellSize, i);
+            Draw(left, leftX, y, Index1(i));
+            Draw(right, leftX + cellSize, y, Index2(i));
         }
 
         for (int i = Model.LookaheadLimit; i < count; i++)
@@ -61,6 +75,12 @@ public class QueueViewerControl : Control
             HideSprite(Index1(i));
             HideSprite(Index2(i));
         }
+    }
+
+    private float GetScreenY(float cellSize, int index)
+    {
+        const float spacing = 1.5f;
+        return cellSize + index * cellSize * spacing;
     }
 
     private void HideSprite(int index)
