@@ -2,10 +2,10 @@
 
 [ext_resource path="res://Controls/GameViewerControl.tscn" type="PackedScene" id=1]
 [ext_resource path="res://Controls/TutorialControl.cs" type="Script" id=2]
-[ext_resource path="res://licensed/Qaz_Font_0_7/OpenType (.otf)/Qaz-Regular.otf" type="DynamicFontData" id=3]
+[ext_resource path="res://licensed/Mulish/static/Mulish-SemiBold.ttf" type="DynamicFontData" id=3]
 
 [sub_resource type="DynamicFont" id=1]
-size = 24
+size = 22
 font_data = ExtResource( 3 )
 
 [node name="Control" type="Control"]
