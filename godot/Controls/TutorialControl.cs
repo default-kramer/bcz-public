@@ -1,6 +1,7 @@
 using FF2.Core;
 using Godot;
 using System;
+using System.Collections.Generic;
 
 #nullable enable
 
@@ -17,13 +18,14 @@ public class TutorialControl : Control
     readonly struct Members
     {
         public readonly GameViewerControl GameViewerControl;
-        public readonly RichTextLabel RichTextLabel;
+        public readonly MessageScroller Message;
         public readonly Texture EnemyTexture;
 
         public Members(Control me)
         {
             me.FindNode(out GameViewerControl, nameof(GameViewerControl));
-            me.FindNode(out RichTextLabel, nameof(RichTextLabel));
+            me.FindNode(out RichTextLabel lbl, "MessageLabel");
+            Message = new MessageScroller(lbl);
 
             EnemyTexture = (Texture)ResourceLoader.Load("res://Sprites/enemy.bmp");
         }
@@ -52,6 +54,11 @@ public class TutorialControl : Control
 
     public override void _Process(float delta)
     {
+        if (members.Message.Scroll())
+        {
+            return;
+        }
+
         if (Input.IsActionJustPressed("game_drop")
             || Input.IsActionJustPressed("game_rotate_cw")
             || Input.IsActionJustPressed("game_rotate_ccw")
@@ -97,12 +104,10 @@ public class TutorialControl : Control
 
     private Challenge Challenge0()
     {
-        var lbl = members.RichTextLabel;
-        lbl.Clear();
-
-        lbl.AddText("Drop pieces to make groups of matching colors. Groups of 4 or more are destroyed. Destroy all ");
-        lbl.AddImage(members.EnemyTexture, 20, 0);
-        lbl.AddText(" to proceed.");
+        members.Message.Clear();
+        members.Message.AddText("Drop pieces to make groups of matching colors. Groups of 4 or more are destroyed. Destroy all ");
+        members.Message.AddImage(members.EnemyTexture, 20, 0);
+        members.Message.AddText(" to proceed.");
 
         var grid = Grid.Create();
         grid.Set(new Loc(1, 2), enemyYellow);
@@ -123,10 +128,7 @@ public class TutorialControl : Control
 
     private Challenge Challenge1()
     {
-        var lbl = members.RichTextLabel;
-        lbl.Clear();
-
-        lbl.AddText("Making combos will become an important skill. Place your pieces carefully to create a combo.");
+        SetText("Making combos will become an important skill. Place your pieces carefully to create a combo.");
 
         var grid = Grid.Create();
         grid.Set(new Loc(4, 0), enemyRed);
@@ -151,7 +153,7 @@ public class TutorialControl : Control
     {
         SetText("Blank pieces [icon] have no color and do not form groups."
             + " Holding the drop button Bursts all blanks."
-            + " A nice combo is already set up here, all you have to do is hold the drop button.");
+            + " A 2-group is already set up here, all you have to do is hold the drop button.");
 
         var grid = Grid.Create();
 
@@ -174,7 +176,7 @@ public class TutorialControl : Control
 
     private Challenge Challenge3()
     {
-        SetText("Use the blank to set up a 3-group combo. Don't forget to Burst, but don't Burst too early!");
+        SetText("Use the blank to perform a 3-group combo. Don't forget to Burst, but don't Burst too early!");
 
         var grid = Grid.Create();
         grid.Set(new Loc(2, 0), enemyYellow);
@@ -207,13 +209,13 @@ public class TutorialControl : Control
 
     void SetText(string text)
     {
-        members.RichTextLabel.Clear();
-        members.RichTextLabel.AddText(text);
+        members.Message.Clear();
+        members.Message.AddText(text);
     }
 
     void CheckGameOver(State state)
     {
-        if (state.ClearedAllEnemies)
+        if (state.IsGameOver && state.ClearedAllEnemies)
         {
             if (progress == Progress.Challenge0_Active)
             {
@@ -222,7 +224,7 @@ public class TutorialControl : Control
             }
             else if (progress == Progress.Challenge1_Active)
             {
-                SetText("Brilliant! Combos keep you healthy in Levels mode, and earn bonus points in Score Attack.");
+                SetText("Brilliant! Combos keep you healthy in Levels mode, and earn bonus points in Score Attack mode.");
                 progress = Progress.Challenge1_Success;
             }
             else if (progress == Progress.Challenge2_Active)
@@ -347,5 +349,59 @@ public class TutorialControl : Control
         Challenge3_Success,
         Challenge3_Fail,
         Farewell,
+    }
+
+    readonly struct MessageScroller
+    {
+        private readonly RichTextLabel label;
+        private readonly Queue<Action<RichTextLabel>> queue = new();
+        private readonly System.Text.StringBuilder chunk = new();
+
+        public MessageScroller(RichTextLabel label)
+        {
+            this.label = label;
+        }
+
+        public void Clear()
+        {
+            queue.Clear();
+            label.Clear();
+        }
+
+        public void AddText(string text)
+        {
+            // Using a fixed-length chunk size can cause text to jump from one line to the next.
+            // (For example, "arbit" might fit on line 1 but in the next update, "arbitrary" teleports the whole word to line 2.)
+            // Avoid this problem by chunking on word breaks instead.
+            chunk.Clear();
+            for (int i = 0; i < text.Length; i++)
+            {
+                char c = text[i];
+                chunk.Append(c);
+
+                if (c == ' ' || i == text.Length - 1)
+                {
+                    string word = chunk.ToString();
+                    chunk.Clear();
+                    queue.Enqueue(lbl => lbl.AddText(word));
+                }
+            }
+        }
+
+        public void AddImage(Texture texture, int width = 0, int height = 0)
+        {
+            queue.Enqueue(lbl => lbl.AddImage(texture, width, height));
+        }
+
+        public bool Scroll()
+        {
+            if (queue.Count > 0)
+            {
+                var action = queue.Dequeue();
+                action(label);
+                return true;
+            }
+            return false;
+        }
     }
 }

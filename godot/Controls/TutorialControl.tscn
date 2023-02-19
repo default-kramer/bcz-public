@@ -1,4 +1,4 @@
-[gd_scene load_steps=5 format=2]
+[gd_scene load_steps=6 format=2]
 
 [ext_resource path="res://Controls/GameViewerControl.tscn" type="PackedScene" id=1]
 [ext_resource path="res://Controls/TutorialControl.cs" type="Script" id=2]
@@ -8,54 +8,87 @@
 size = 22
 font_data = ExtResource( 3 )
 
+[sub_resource type="DynamicFont" id=2]
+size = 18
+font_data = ExtResource( 3 )
+
 [node name="Control" type="Control"]
 anchor_right = 1.0
 anchor_bottom = 1.0
 script = ExtResource( 2 )
 
-[node name="VBoxContainer" type="VBoxContainer" parent="."]
-anchor_left = 0.5
-anchor_right = 0.5
+[node name="HBoxContainer" type="HBoxContainer" parent="."]
+anchor_right = 1.0
 anchor_bottom = 1.0
-margin_left = -300.0
-margin_right = 300.0
-
-[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer"]
-margin_right = 624.0
-margin_bottom = 452.0
-size_flags_vertical = 3
 alignment = 1
 
-[node name="GameViewerControl" parent="VBoxContainer/HBoxContainer" instance=ExtResource( 1 )]
-anchor_right = 0.0
-anchor_bottom = 0.0
-margin_left = 312.0
-margin_right = 312.0
-margin_bottom = 452.0
-
-[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer"]
-margin_top = 456.0
-margin_right = 624.0
+[node name="VBoxContainer" type="VBoxContainer" parent="HBoxContainer"]
+margin_left = 360.0
+margin_right = 660.0
 margin_bottom = 600.0
+rect_min_size = Vector2( 300, 0 )
 
-[node name="ColorRect" type="ColorRect" parent="VBoxContainer/MarginContainer"]
-margin_right = 624.0
-margin_bottom = 144.0
+[node name="MarginContainer" type="MarginContainer" parent="HBoxContainer/VBoxContainer"]
+margin_right = 300.0
+margin_bottom = 298.0
+size_flags_vertical = 3
+
+[node name="ColorRect" type="ColorRect" parent="HBoxContainer/VBoxContainer/MarginContainer"]
+margin_right = 300.0
+margin_bottom = 298.0
 color = Color( 0, 0, 0, 1 )
 
-[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/MarginContainer"]
-margin_right = 624.0
-margin_bottom = 144.0
+[node name="MarginContainer" type="MarginContainer" parent="HBoxContainer/VBoxContainer/MarginContainer"]
+margin_right = 300.0
+margin_bottom = 298.0
 custom_constants/margin_right = 12
 custom_constants/margin_top = 12
 custom_constants/margin_left = 12
 custom_constants/margin_bottom = 12
 
-[node name="RichTextLabel" type="RichTextLabel" parent="VBoxContainer/MarginContainer/MarginContainer"]
+[node name="MessageLabel" type="RichTextLabel" parent="HBoxContainer/VBoxContainer/MarginContainer/MarginContainer"]
 margin_left = 12.0
 margin_top = 12.0
-margin_right = 612.0
-margin_bottom = 132.0
-rect_min_size = Vector2( 600, 120 )
+margin_right = 288.0
+margin_bottom = 286.0
 custom_fonts/normal_font = SubResource( 1 )
 text = "This is the Rich Text Label... let's try it out!"
+
+[node name="MarginContainer2" type="MarginContainer" parent="HBoxContainer/VBoxContainer"]
+margin_top = 302.0
+margin_right = 300.0
+margin_bottom = 600.0
+size_flags_vertical = 3
+
+[node name="ColorRect" type="ColorRect" parent="HBoxContainer/VBoxContainer/MarginContainer2"]
+margin_right = 300.0
+margin_bottom = 298.0
+color = Color( 0.180392, 0.2, 0.180392, 1 )
+
+[node name="MarginContainer" type="MarginContainer" parent="HBoxContainer/VBoxContainer/MarginContainer2"]
+margin_right = 300.0
+margin_bottom = 298.0
+custom_constants/margin_right = 12
+custom_constants/margin_top = 12
+custom_constants/margin_left = 12
+custom_constants/margin_bottom = 12
+
+[node name="RichTextLabel" type="RichTextLabel" parent="HBoxContainer/VBoxContainer/MarginContainer2/MarginContainer"]
+margin_left = 12.0
+margin_top = 12.0
+margin_right = 288.0
+margin_bottom = 286.0
+custom_fonts/normal_font = SubResource( 2 )
+text = "Default Keybindings:
+  A - Left
+  D - Right
+  TBD - Rotate Anti-Clockwise
+  TBD - Rotate Clockwise
+  TBD - Drop (hold to Burst)"
+
+[node name="GameViewerControl" parent="HBoxContainer" instance=ExtResource( 1 )]
+anchor_right = 0.0
+anchor_bottom = 0.0
+margin_left = 664.0
+margin_right = 664.0
+margin_bottom = 600.0
