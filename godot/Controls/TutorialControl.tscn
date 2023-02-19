@@ -84,7 +84,9 @@ text = "Default Keybindings:
   D - Right
   TBD - Rotate Anti-Clockwise
   TBD - Rotate Clockwise
-  TBD - Drop (hold to Burst)"
+  TBD - Drop (hold to Burst)
+
+Most game controllers should work automatically."
 
 [node name="GameViewerControl" parent="HBoxContainer" instance=ExtResource( 1 )]
 anchor_right = 0.0
