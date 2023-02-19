@@ -28,7 +28,7 @@ public class QueueViewerControl : Control
             return;
         }
 
-        DrawRect(new Rect2(0, 0, this.RectSize), new Godot.Color(0.03f, 0.03f, 0.03f));
+        DrawRect(new Rect2(0, 0, this.RectSize), new Godot.Color(0.33f, 0.33f, 0.33f));
 
         float cellSize = GridViewer.CurrentCellSize;
         float marginLeft = (RectSize.x - cellSize - cellSize) / 2f;

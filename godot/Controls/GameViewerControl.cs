@@ -132,15 +132,18 @@ public class GameViewerControl : Control
 
         minWidth = 0;
 
-        members.HealthViewer.RectMinSize = new Vector2(ladderWidth, 0);
-        minWidth += ladderWidth;
+        if (members.HealthViewer.Visible)
+        {
+            members.HealthViewer.RectMinSize = new Vector2(ladderWidth, 0);
+            minWidth += ladderWidth;
+        }
 
         float gridWidth = members.GridViewer.DesiredWidth(RectSize.y);
         members.GridViewer.RectMinSize = new Vector2(gridWidth, 0);
         minWidth += gridWidth;
 
-        members.QueueViewer.RectMinSize = new Vector2(ladderWidth, availHeight / 2f);
-        members.CountdownViewer.RectMinSize = new Vector2(ladderWidth, availHeight / 2f);
+        members.QueueViewer.RectMinSize = new Vector2(ladderWidth, 0);
+        members.CountdownViewer.RectMinSize = new Vector2(ladderWidth, 0);
         minWidth += ladderWidth;
 
         // I don't know why this is needed... but who cares?

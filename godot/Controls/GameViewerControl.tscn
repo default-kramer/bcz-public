@@ -41,12 +41,14 @@ margin_bottom = 600.0
 
 [node name="QueueViewer" parent="HBoxContainer/VBoxContainer" instance=ExtResource( 4 )]
 margin_right = 0.0
-margin_bottom = 0.0
+margin_bottom = 298.0
+size_flags_vertical = 3
 
 [node name="CountdownViewer" parent="HBoxContainer/VBoxContainer" instance=ExtResource( 3 )]
 anchor_right = 0.0
 anchor_bottom = 0.0
-margin_top = 4.0
-margin_bottom = 4.0
+margin_top = 302.0
+margin_bottom = 600.0
+size_flags_vertical = 3
 
 [node name="GameOverMenu" parent="." instance=ExtResource( 5 )]
