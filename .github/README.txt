@@ -1,3 +1,5 @@
+NOTE TO SELF: Review requirements of /godot/licensed before deploying publicly.
+
 Getting this autobuild working was not easy.
 Read this carefully before trying to change it.
 
