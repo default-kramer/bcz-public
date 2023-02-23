@@ -1,52 +1,119 @@
-[gd_scene load_steps=2 format=2]
+[gd_scene load_steps=7 format=2]
 
 [ext_resource path="res://Controls/SinglePlayerMenu.tscn" type="PackedScene" id=1]
+[ext_resource path="res://licensed/Yulong_Font_1_0/OpenType (.otf)/Yulong-Italic.otf" type="DynamicFontData" id=2]
+[ext_resource path="res://Controls/GameViewerControl.tscn" type="PackedScene" id=3]
+[ext_resource path="res://licensed/Qaz_Font_0_7/OpenType (.otf)/Qaz-Italic.otf" type="DynamicFontData" id=4]
+
+[sub_resource type="DynamicFont" id=1]
+size = 120
+font_data = ExtResource( 2 )
+
+[sub_resource type="DynamicFont" id=3]
+size = 180
+extra_spacing_bottom = -25
+font_data = ExtResource( 4 )
 
 [node name="Control" type="Control"]
 anchor_right = 1.0
 anchor_bottom = 1.0
 
-[node name="MainContainer" type="CenterContainer" parent="."]
+[node name="HBoxContainer" type="HBoxContainer" parent="."]
 anchor_right = 1.0
 anchor_bottom = 1.0
+custom_constants/separation = 80
+alignment = 1
 
-[node name="VBoxContainer" type="VBoxContainer" parent="MainContainer"]
-margin_left = 454.0
-margin_top = 242.0
-margin_right = 569.0
-margin_bottom = 358.0
+[node name="VBoxContainer" type="VBoxContainer" parent="HBoxContainer"]
+margin_left = 112.0
+margin_right = 431.0
+margin_bottom = 600.0
 
-[node name="ButtonSinglePlayer" type="Button" parent="MainContainer/VBoxContainer"]
+[node name="HBoxContainer2" type="HBoxContainer" parent="HBoxContainer/VBoxContainer"]
+margin_right = 319.0
+margin_bottom = 291.0
+
+[node name="Label" type="Label" parent="HBoxContainer/VBoxContainer/HBoxContainer2"]
+margin_top = 24.0
+margin_right = 220.0
+margin_bottom = 267.0
+custom_fonts/font = SubResource( 1 )
+text = "Block
+Cipher"
+align = 2
+
+[node name="MarginContainer" type="MarginContainer" parent="HBoxContainer/VBoxContainer/HBoxContainer2"]
+margin_left = 224.0
+margin_right = 319.0
+margin_bottom = 291.0
+custom_constants/margin_top = 110
+custom_constants/margin_left = -15
+
+[node name="Label2" type="Label" parent="HBoxContainer/VBoxContainer/HBoxContainer2/MarginContainer"]
+margin_left = -15.0
+margin_top = 110.0
+margin_right = 95.0
+margin_bottom = 291.0
+custom_colors/font_color = Color( 0.235294, 0.686275, 0.141176, 1 )
+custom_fonts/font = SubResource( 3 )
+text = "Z"
+align = 2
+
+[node name="MenuSinglePlayer" parent="HBoxContainer/VBoxContainer" instance=ExtResource( 1 )]
+visible = false
+anchor_right = 0.0
+anchor_bottom = 0.0
+margin_top = 247.0
+margin_right = 270.0
+margin_bottom = 247.0
+
+[node name="MainContainer" type="CenterContainer" parent="HBoxContainer/VBoxContainer"]
+margin_top = 295.0
+margin_right = 319.0
+margin_bottom = 387.0
+
+[node name="VBoxContainer" type="VBoxContainer" parent="HBoxContainer/VBoxContainer/MainContainer"]
+margin_left = 102.0
+margin_right = 217.0
+margin_bottom = 92.0
+
+[node name="ButtonSinglePlayer" type="Button" parent="HBoxContainer/VBoxContainer/MainContainer/VBoxContainer"]
 margin_right = 115.0
 margin_bottom = 20.0
-text = "Single Player"
+text = "Play"
 
-[node name="ButtonMultiplayer" type="Button" parent="MainContainer/VBoxContainer"]
+[node name="ButtonMultiplayer" type="Button" parent="HBoxContainer/VBoxContainer/MainContainer/VBoxContainer"]
+visible = false
 margin_top = 24.0
 margin_right = 115.0
 margin_bottom = 44.0
 text = "Multiplayer"
 
-[node name="ButtonControllerSetup" type="Button" parent="MainContainer/VBoxContainer"]
+[node name="ButtonControllerSetup" type="Button" parent="HBoxContainer/VBoxContainer/MainContainer/VBoxContainer"]
+margin_top = 24.0
+margin_right = 115.0
+margin_bottom = 44.0
+text = "Controller Setup"
+
+[node name="ButtonWatchReplay" type="Button" parent="HBoxContainer/VBoxContainer/MainContainer/VBoxContainer"]
 margin_top = 48.0
 margin_right = 115.0
 margin_bottom = 68.0
-text = "Controller Setup"
+text = "Watch Replay"
 
-[node name="ButtonWatchReplay" type="Button" parent="MainContainer/VBoxContainer"]
+[node name="ButtonSolvePuzzles" type="Button" parent="HBoxContainer/VBoxContainer/MainContainer/VBoxContainer"]
 margin_top = 72.0
 margin_right = 115.0
 margin_bottom = 92.0
-text = "Watch Replay"
-
-[node name="ButtonSolvePuzzles" type="Button" parent="MainContainer/VBoxContainer"]
-margin_top = 96.0
-margin_right = 115.0
-margin_bottom = 116.0
 text = "Solve Puzzles"
 
-[node name="MenuSinglePlayer" parent="." instance=ExtResource( 1 )]
-visible = false
+[node name="GameViewerControl" parent="HBoxContainer" instance=ExtResource( 3 )]
+anchor_right = 0.0
+anchor_bottom = 0.0
+margin_left = 511.0
+margin_right = 911.0
+margin_bottom = 600.0
+rect_min_size = Vector2( 400, 600 )
 
 [node name="FileDialog" type="FileDialog" parent="."]
 margin_right = 315.0

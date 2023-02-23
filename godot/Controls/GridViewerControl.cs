@@ -21,11 +21,6 @@ public class GridViewerControl : Control
         this.Logic = new StandardLogic(ticker);
     }
 
-    public void SetLogicForMover(Ticker ticker)
-    {
-        this.Logic = new MoverLogic(ticker.state);
-    }
-
     private TrackedSprite[] activeSprites = new TrackedSprite[400]; // should be way more than we need
 
     private SpritePool spritePool = null!;
@@ -48,17 +43,13 @@ public class GridViewerControl : Control
         return Math.Min(maxSize.x / gridSize.Width, maxSize.y / gridSize.Height);
     }
 
-    public (Vector2 mainSize, Vector2 moverSize) DesiredSize(Vector2 maxSize)
+    const int yPadding = 0; // No longer needed... but maybe it will be needed in the future.
+
+    public float DesiredWidth(float height)
     {
-        var gridSize = Logic.Grid.Size;
-
-        // reserve 2 rows for mover
-        maxSize = new Vector2(maxSize.x, maxSize.y * gridSize.Height / (gridSize.Height + MoverLogic.GridHeight));
-
-        float cellSize = GetCellSize(maxSize, gridSize);
-        var mainSize = new Vector2(cellSize * gridSize.Width, cellSize * gridSize.Height);
-        var moverSize = new Vector2(cellSize * gridSize.Width, cellSize * MoverLogic.GridHeight);
-        return (mainSize, moverSize);
+        var size = Logic.Grid.Size;
+        var cellSize = GetCellSize(new Vector2(9999, height - yPadding * 2), size);
+        return cellSize * size.Width;
     }
 
     internal Vector2 CurrentSpriteScale { get; set; }
@@ -86,12 +77,9 @@ public class GridViewerControl : Control
             flicker = FlickerState.Initial;
         }
 
-        var (borderLight, borderDark) = Logic.BorderColor;
-
-        const int padding = 2;
-
         DrawRect(new Rect2(default(Vector2), this.RectSize), bgColor);
-        var fullSize = this.RectSize - new Vector2(padding, padding);
+
+        var fullSize = this.RectSize - new Vector2(0, yPadding * 2);
 
         float screenCellSize = GetCellSize(fullSize, gridSize);
         float extraX = Math.Max(0, fullSize.x - screenCellSize * gridSize.Width);
@@ -127,8 +115,8 @@ public class GridViewerControl : Control
                     occ = destroyedOcc;
                 }
 
-                var canvasY = gridSize.Height - (y + 1);
-                var screenY = canvasY * screenCellSize + extraY / 2;
+                var gridY = gridSize.Height - (y + 1);
+                var screenY = gridY * screenCellSize + extraY / 2 + yPadding;
                 var screenX = x * screenCellSize + extraX / 2 + 1f;
 
                 float adder = 0f;
@@ -141,10 +129,12 @@ public class GridViewerControl : Control
 
                 if (flicker.ShowGrid && !previewOcc.HasValue)
                 {
-                    var YY = canvasY;
-                    DrawRect(new Rect2(screenX - 1, YY * screenCellSize, screenCellSize + 2, screenCellSize + 2), borderDark);
-                    DrawRect(new Rect2(screenX, YY * screenCellSize + 1, screenCellSize, screenCellSize), borderLight);
-                    DrawRect(new Rect2(screenX + 1, YY * screenCellSize + 2, screenCellSize - 2, screenCellSize - 2), bgColor);
+                    var (borderLight, borderDark) = Logic.BorderColor(loc);
+
+                    var YY = gridY;
+                    DrawRect(new Rect2(screenX - 1, YY * screenCellSize + yPadding, screenCellSize + 2, screenCellSize + 2), borderDark);
+                    DrawRect(new Rect2(screenX, YY * screenCellSize + 1 + yPadding, screenCellSize, screenCellSize), borderLight);
+                    DrawRect(new Rect2(screenX + 1, YY * screenCellSize + 2 + yPadding, screenCellSize - 2, screenCellSize - 2), bgColor);
                 }
 
                 if (!Logic.OverrideSpriteKind(occ, loc, out var kind))
@@ -225,6 +215,9 @@ public class GridViewerControl : Control
             var height = Logic.LastChanceProgress * RectSize.y;
             DrawRect(new Rect2(0, 0, RectSize.x, height), shroudColor, filled: true);
         }
+
+        // help debug size
+        //DrawRect(new Rect2(5, 5, this.RectSize - new Vector2(10, 10)), Godot.Colors.LightGreen, filled: false);
     }
 
     internal static SpriteKind GetSpriteKind(Occupant occ)
@@ -325,7 +318,7 @@ public class GridViewerControl : Control
             return false;
         }
 
-        public virtual (Godot.Color light, Godot.Color dark) BorderColor => (defaultBorderLight, defaultBorderDark);
+        public virtual (Godot.Color light, Godot.Color dark) BorderColor(Loc loc) => (defaultBorderLight, defaultBorderDark);
 
         /// <summary>
         /// Allows the implementation to collect/cache data to be used during the Draw() routine.
@@ -335,7 +328,7 @@ public class GridViewerControl : Control
 
     public sealed class NullLogic : ILogic
     {
-        private static readonly IReadOnlyGridSlim defaultGrid = FF2.Core.Grid.Create(FF2.Core.Grid.DefaultWidth, FF2.Core.Grid.DefaultHeight);
+        private static readonly IReadOnlyGridSlim defaultGrid = FF2.Core.Grid.Create();
 
         private NullLogic() { }
 
@@ -349,15 +342,18 @@ public class GridViewerControl : Control
         private readonly Ticker ticker;
         private readonly State state;
         private readonly ITickCalculations tickCalculations;
+        private readonly IReadOnlyGridSlim grid;
 
         public StandardLogic(Ticker ticker)
         {
             this.ticker = ticker;
             this.state = ticker.state;
             this.tickCalculations = state.TickCalculations;
+
+            grid = new GridWithMover(state);
         }
 
-        public override IReadOnlyGridSlim Grid => state.Grid;
+        public override IReadOnlyGridSlim Grid => grid;
 
         public override bool ShouldFlicker => state.LastGaspProgress() > 0;
 
@@ -376,7 +372,11 @@ public class GridViewerControl : Control
 
         public override Occupant GetDestroyedOccupant(Loc loc)
         {
-            return tickCalculations.GetDestroyedOccupant(loc, state.Grid);
+            if (state.Grid.InBounds(loc))
+            {
+                return tickCalculations.GetDestroyedOccupant(loc, state.Grid);
+            }
+            return Occupant.None;
         }
 
         public override float DestructionProgress(Loc loc)
@@ -385,27 +385,29 @@ public class GridViewerControl : Control
             {
                 return ticker.DestructionProgress();
             }
+            else if (!state.Grid.InBounds(loc))
+            {
+                return MoverDestructionProgress(loc.Add(0, 0 - state.Grid.Height));
+            }
             else
             {
                 return 0;
             }
         }
-    }
 
-    sealed class MoverLogic : ILogic
-    {
-        private readonly MoverGrid grid;
-        private readonly State state;
-
-        public const int GridHeight = 2;
-
-        public MoverLogic(State state)
+        public override (Godot.Color light, Godot.Color dark) BorderColor(Loc loc)
         {
-            this.grid = new MoverGrid(state);
-            this.state = state;
+            if (state.Grid.InBounds(loc))
+            {
+                return base.BorderColor(loc);
+            }
+            return (moverBorderLight, moverBorderDark);
         }
 
-        public override float DestructionProgress(Loc loc)
+        private static readonly Godot.Color moverBorderLight = Godot.Color.Color8(215, 215, 215);
+        private static readonly Godot.Color moverBorderDark = Godot.Color.Color8(160, 160, 160);
+
+        private float MoverDestructionProgress(Loc loc)
         {
             var x = state.GetMover;
             if (x == null)
@@ -430,47 +432,45 @@ public class GridViewerControl : Control
             return 0;
         }
 
-        public override IReadOnlyGridSlim Grid => grid;
+        const int MoverRows = 2;
 
-        class MoverGrid : IReadOnlyGridSlim
+        class GridWithMover : IReadOnlyGridSlim
         {
             private readonly State state;
-            public MoverGrid(State state)
+
+            public GridWithMover(State state)
             {
                 this.state = state;
             }
 
-            public int Width => state.Grid.Width;
-
-            public int Height => GridHeight;
-
-            public GridSize Size => new GridSize(Width, Height);
+            public GridSize Size => new GridSize(state.Grid.Width, state.Grid.Height + MoverRows);
 
             public Occupant Get(Loc loc)
             {
-                var x = state.GetMover;
-                if (x == null)
+                if (!state.Grid.InBounds(loc))
                 {
+                    loc = loc.Add(0, 0 - state.Grid.Height);
+
+                    var x = state.GetMover;
+                    if (x == null)
+                    {
+                        return Occupant.None;
+                    }
+
+                    var mover = x.Value;
+                    if (loc == mover.LocA)
+                    {
+                        return mover.OccA;
+                    }
+                    if (loc == mover.LocB)
+                    {
+                        return mover.OccB;
+                    }
                     return Occupant.None;
                 }
 
-                var mover = x.Value;
-                if (loc == mover.LocA)
-                {
-                    return mover.OccA;
-                }
-                if (loc == mover.LocB)
-                {
-                    return mover.OccB;
-                }
-
-                return Occupant.None;
+                return state.Grid.Get(loc);
             }
         }
-
-        public override (Godot.Color light, Godot.Color dark) BorderColor => (borderLight, borderDark);
-
-        private static readonly Godot.Color borderLight = Godot.Color.Color8(215, 215, 215);
-        private static readonly Godot.Color borderDark = Godot.Color.Color8(160, 160, 160);
     }
 }

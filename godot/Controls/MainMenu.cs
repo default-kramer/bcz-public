@@ -18,6 +18,7 @@ public class MainMenu : Control
         public readonly Control MainContainer;
         public readonly Control MenuSinglePlayer;
         public readonly Control FileDialog;
+        public readonly GameViewerControl GameViewerControl;
 
         public Members(Control me)
         {
@@ -29,6 +30,7 @@ public class MainMenu : Control
             me.FindNode(out MainContainer, nameof(MainContainer));
             me.FindNode(out MenuSinglePlayer, nameof(MenuSinglePlayer));
             me.FindNode(out FileDialog, nameof(FileDialog));
+            me.FindNode(out GameViewerControl, nameof(GameViewerControl));
         }
     }
 
@@ -51,6 +53,15 @@ public class MainMenu : Control
     public override void _Ready()
     {
         members = new Members(this);
+
+        try
+        {
+            members.GameViewerControl.WatchReplay(@"C:\fission-flare-recordings\raw\20230212_161427_1990999595-197713288-3821534300-4226900136-1326336242-3242883821.ffr");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.ToString());
+        }
 
         members.ButtonSinglePlayer.Connect("pressed", this, nameof(PressedSinglePlayer));
         members.ButtonMultiplayer.Connect("pressed", this, nameof(PressedMultiplayer));

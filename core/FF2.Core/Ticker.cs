@@ -134,8 +134,20 @@ namespace FF2.Core
 
         public Moment Now { get { return now; } }
 
+        float startDelay = 0;
+        public void DelayStart(float seconds)
+        {
+            startDelay = seconds;
+        }
+
         public void _Process(float delta)
         {
+            if (startDelay > 0)
+            {
+                startDelay -= delta;
+                return;
+            }
+
             if (startTime == default(DateTime))
             {
                 startTime = DateTime.UtcNow;
@@ -148,6 +160,10 @@ namespace FF2.Core
 
         public bool HandleCommand(Command command)
         {
+            if (startDelay > 0)
+            {
+                return false;
+            }
             return HandleCommand(command, now);
         }
     }

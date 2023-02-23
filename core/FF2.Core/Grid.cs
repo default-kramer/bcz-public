@@ -366,6 +366,11 @@ namespace FF2.Core
             return new Grid(width, height);
         }
 
+        public static Grid Create()
+        {
+            return Create(DefaultWidth, DefaultHeight);
+        }
+
         public const int DefaultWidth = 8;
         public const int DefaultHeight = 20;
 

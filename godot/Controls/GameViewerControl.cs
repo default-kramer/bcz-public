@@ -61,8 +61,8 @@ public class GameViewerControl : Control
         public readonly QueueViewerControl QueueViewer;
         public readonly CountdownViewerControl CountdownViewer;
         public readonly HealthViewerControl HealthViewer;
-        public readonly GridViewerControl MoverGridViewer;
         public readonly GameOverMenu GameOverMenu;
+        public readonly HBoxContainer HBoxContainer;
 
         public Members(Control me)
         {
@@ -70,8 +70,8 @@ public class GameViewerControl : Control
             me.FindNode(out QueueViewer, nameof(QueueViewer));
             me.FindNode(out CountdownViewer, nameof(CountdownViewer));
             me.FindNode(out HealthViewer, nameof(HealthViewer));
-            me.FindNode(out MoverGridViewer, nameof(MoverGridViewer));
             me.FindNode(out GameOverMenu, nameof(GameOverMenu));
+            me.FindNode(out HBoxContainer, nameof(HBoxContainer));
 
             QueueViewer.GridViewer = GridViewer;
         }
@@ -88,73 +88,80 @@ public class GameViewerControl : Control
     public override void _Ready()
     {
         this.members = new Members(this);
-        GetTree().Root.Connect("size_changed", this, nameof(OnSizeChanged));
         OnSizeChanged();
+    }
+
+    public override void _Notification(int what)
+    {
+        base._Notification(what);
+
+        if (what == NotificationResized)
+        {
+            OnSizeChanged();
+        }
+    }
+
+    /// <summary>
+    /// We need to set our min width to match our contents.
+    /// I tried letting the HBox calculate the width and using that, but it got squirrelly.
+    /// </summary>
+    private float minWidth = 0;
+
+    public override Vector2 _GetMinimumSize()
+    {
+        return new Vector2(minWidth, 0);
     }
 
     public void OnSizeChanged()
     {
+        // SIZING NOTES:
+        // We want this control to be full-height, minus a little bit dictated by the outermost MarginContainer.
+        // This y-margin is important because the drawing code is not super-precise and I think it draws beyond
+        // its bounds by a few pixels.
+        //
+        // The width should be dynamically controlled based on the height.
+        // The AspectRatioContainer does not seem to work the way I want.
+        // So instead we calculate how wide each component should be given the height,
+        // and we specify a RectMinSize.x for each component (but never RectMinSize.y because we want full-height).
+        //
+        // The HBoxContainer.Alignment property will take care of centering the components.
+        // I overlooked this property for way too long. Thanks to lewiji on the Godot Discord!
+
+        // WARNING - These must match what you set in the editor. (Of course, I could grab the values here, but meh...)
+        const float yMargin = 20f;
+        const float xSeparation = 13;
+
+        float availHeight = this.RectSize.y - yMargin;
+        if (availHeight < 0)
+        {
+            return;
+        }
+
         float ladderWidth = RectSize.y * 0.16f;
-        const float ladderPadding = 10;
-        float queueWidth = ladderWidth;
-        const float queuePadding = ladderPadding;
 
-        const bool ShowLadder = true;
+        minWidth = 0;
+        int separationCount = 0;
 
-        float availWidth = RectSize.x;
-
-        float nonGridWidth = 0;
-        if (ShowLadder)
+        if (members.HealthViewer.Visible)
         {
-            nonGridWidth += (ladderWidth + ladderPadding);
-        }
-        if (ShowQueue)
-        {
-            nonGridWidth += (queueWidth + queuePadding);
+            members.HealthViewer.RectMinSize = new Vector2(ladderWidth, 0);
+            minWidth += ladderWidth;
+            separationCount++;
         }
 
-        availWidth -= nonGridWidth;
+        float gridWidth = members.GridViewer.DesiredWidth(availHeight);
+        members.GridViewer.RectMinSize = new Vector2(gridWidth, 0);
+        minWidth += gridWidth;
+        separationCount++;
 
-        // Divide by 2 for both gridviewers
-        var (gvSize, moverSize) = members.GridViewer.DesiredSize(new Vector2(availWidth / 2, RectSize.y));
+        members.QueueViewer.RectMinSize = new Vector2(ladderWidth, 0);
+        members.CountdownViewer.RectMinSize = new Vector2(ladderWidth, 0);
+        minWidth += ladderWidth;
 
-        float neededWidth = gvSize.x + nonGridWidth;
-
-        float meCenter = RectSize.x / 2f;
-        float left = meCenter - neededWidth / 2f;
-
-
-        if (ShowLadder)
-        {
-            members.HealthViewer.RectSize = new Vector2(ladderWidth, RectSize.y);
-            members.HealthViewer.RectPosition = new Vector2(left, 0);
-            left += ladderWidth;
-            left += ladderPadding;
-        }
-
-        // show main Grid
-        members.MoverGridViewer.RectSize = moverSize;
-        members.MoverGridViewer.RectPosition = new Vector2(left, 0);
-
-        members.GridViewer.RectSize = gvSize;
-        members.GridViewer.RectPosition = new Vector2(left, moverSize.y);
-
-        left += gvSize.x;
-
-        if (ShowQueue)
-        {
-            left += queuePadding;
-
-            var queueBottom = RectSize.y / 2f;// * 2f;
-            members.QueueViewer.RectSize = new Vector2(queueWidth, queueBottom);
-            members.QueueViewer.RectPosition = new Vector2(left, 0);
-
-            members.CountdownViewer.RectSize = new Vector2(queueWidth, RectSize.y - queueBottom);
-            members.CountdownViewer.RectPosition = new Vector2(left, queueBottom);
-            members.CountdownViewer.Visible = true;
-
-            left += queueWidth;
-        }
+        // I don't know why this is needed... but who cares?
+        // (Maybe some margins hiding somewhere in the tree?)
+        const float fudge = 20f;
+        minWidth += fudge + separationCount * xSeparation;
     }
 
     private bool _firstDraw = true;
@@ -179,7 +186,6 @@ public class GameViewerControl : Control
         members.QueueViewer.Update();
         members.CountdownViewer.Update();
         members.HealthViewer.Update();
-        members.MoverGridViewer.Update();
 
         this.logic.CheckGameOver();
     }
@@ -227,8 +233,6 @@ public class GameViewerControl : Control
 
         members.GridViewer.Visible = true;
         members.QueueViewer.Visible = true;
-
-        members.MoverGridViewer.SetLogicForMover(ticker);
 
         members.CountdownViewer.SetModel(state.CountdownViewmodel);
 
