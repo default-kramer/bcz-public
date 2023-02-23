@@ -21,6 +21,12 @@ public class QueueViewerControl : Control
         spritePool = NewRoot.GetSpritePool(this);
     }
 
+    public static void DrawBorder(CanvasItem me, Rect2 box)
+    {
+        me.DrawRect(box, Godot.Colors.LightGray, filled: false, width: 1);
+        me.DrawRect(new Rect2(box.Position + new Vector2(1, 1), box.Size - new Vector2(2, 2)), Godot.Colors.WhiteSmoke, filled: false, width: 1);
+    }
+
     private void DrawBorder(float bottomY)
     {
         DrawRect(new Rect2(0, 0, RectSize.x, bottomY), Godot.Colors.LightGray, filled: false, width: 1);
@@ -46,7 +52,7 @@ public class QueueViewerControl : Control
         var bottomY = GetScreenY(cellSize, Math.Max(1, itemsToDraw)) - cellSize / 2;
 
         DrawRect(new Rect2(0, 0, RectSize.x, bottomY), Godot.Colors.Black);
-        DrawBorder(bottomY);
+        DrawBorder(this, new Rect2(RectPosition, RectSize.x, bottomY));
 
         for (int i = 0; i < itemsToDraw; i++)
         {
