@@ -184,6 +184,8 @@ namespace FF2.Core
                 return StateEvent.GameEnded;
             }
 
+            hook.PreSpawn(NumCatalystsSpawned);
+
             if (pendingDumps > 0)
             {
                 Dump();

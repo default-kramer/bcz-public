@@ -42,6 +42,12 @@ namespace FF2.Core
             a.OnComboUpdated(previous, current, scheduler);
             b.OnComboUpdated(previous, current, scheduler);
         }
+
+        public void PreSpawn(int spawnCount)
+        {
+            a.PreSpawn(spawnCount);
+            b.PreSpawn(spawnCount);
+        }
     }
 
     enum SwitchStatus
@@ -207,8 +213,14 @@ namespace FF2.Core
 
         public void Elapse(IScheduler scheduler) { }
 
-        public void OnCatalystSpawned(SpawnItem catalyst)
+        public void OnCatalystSpawned(SpawnItem catalyst) { }
+
+        private int lastSpawnCount = -1;
+        public void PreSpawn(int spawnCount)
         {
+            if (spawnCount == lastSpawnCount) { return; }
+            lastSpawnCount = spawnCount;
+
             if (freeze > 0)
             {
                 freeze--;
@@ -409,6 +421,8 @@ namespace FF2.Core
         public bool GameOver => hitPoints <= 0 || countdown.HasArrived();
 
         public void Elapse(IScheduler scheduler) { }
+
+        public void PreSpawn(int spawnCount) { }
 
         public void OnCatalystSpawned(SpawnItem catalyst)
         {
