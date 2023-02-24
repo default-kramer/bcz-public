@@ -7,6 +7,304 @@ using FF2.Core.Viewmodels;
 
 namespace FF2.Core
 {
+    sealed class CompositeHook : IStateHook
+    {
+        private readonly IStateHook a;
+        private readonly IStateHook b;
+        public CompositeHook(IStateHook a, IStateHook b)
+        {
+            this.a = a;
+            this.b = b;
+        }
+
+        public bool GameOver => a.GameOver || b.GameOver;
+
+        public void Elapse(IScheduler scheduler)
+        {
+            a.Elapse(scheduler);
+            b.Elapse(scheduler);
+        }
+
+        public void OnCatalystSpawned(SpawnItem catalyst)
+        {
+            a.OnCatalystSpawned(catalyst);
+            b.OnCatalystSpawned(catalyst);
+        }
+
+        public void OnComboCompleted(ComboInfo combo, IScheduler scheduler)
+        {
+            a.OnComboCompleted(combo, scheduler);
+            b.OnComboCompleted(combo, scheduler);
+        }
+
+        public void OnComboUpdated(ComboInfo previous, ComboInfo current, IScheduler scheduler)
+        {
+            a.OnComboUpdated(previous, current, scheduler);
+            b.OnComboUpdated(previous, current, scheduler);
+        }
+    }
+
+    enum SwitchStatus
+    {
+        Middle,
+        Safe,
+        Unsafe,
+    }
+
+    sealed class Switches : ISwitchesViewmodel
+    {
+        public const int MinRank = 2;
+        public const int MaxRank = 12;
+        public const int ArraySize = MaxRank - MinRank + 1; // +1 for inclusive
+
+        private readonly SwitchStatus[] switches = new SwitchStatus[ArraySize];
+
+        public SwitchStatus this[int rank] => switches[rank - MinRank];
+
+        /// <summary>
+        /// Flips switches as needed. Populates the <paramref name="attackBuffer"/>
+        /// (which must have length <see cref="ArraySize"/>) with true values for each
+        /// rank for which an attack was generated. Returns count of attacks.
+        /// </summary>
+        public int OnFriendlyComboSinglePlayer(int rank, bool[] attackBuffer)
+        {
+            // Against a simulated opponent, outgoing attacks really aren't that potent.
+            // So we keep the switch green even after the player attacks.
+            return Process(rank, attackBuffer, SwitchStatus.Safe, SwitchStatus.Safe);
+        }
+
+        public int OnFriendlyComboPvP(int rank, bool[] attackBuffer)
+        {
+            return Process(rank, attackBuffer, SwitchStatus.Safe, SwitchStatus.Middle);
+        }
+
+        /// <summary>
+        /// Same as <see cref="OnFriendlyComboSinglePlayer"/>
+        /// </summary>
+        public int OnEnemyCombo(int rank, bool[] attackBuffer)
+        {
+            return Process(rank, attackBuffer, SwitchStatus.Unsafe, SwitchStatus.Middle);
+        }
+
+        private int Process(int rank, bool[] attackBuffer, SwitchStatus attackIf, SwitchStatus resetTo)
+        {
+            int limit = rank - MinRank;
+            int attackCount = 0;
+
+            for (int i = 0; i < ArraySize; i++)
+            {
+                attackBuffer[i] = false;
+
+                if (i <= limit)
+                {
+                    if (switches[i] == attackIf)
+                    {
+                        attackBuffer[i] = true;
+                        switches[i] = resetTo;
+                        attackCount++;
+                    }
+                    else
+                    {
+                        switches[i] = attackIf;
+                    }
+                }
+            }
+
+            if (attackCount > 0)
+            {
+                switches.AsSpan().Fill(resetTo);
+            }
+
+            return attackCount;
+        }
+
+        int ISwitchesViewmodel.MinRank => MinRank;
+
+        int ISwitchesViewmodel.MaxRank => MaxRank;
+
+        bool ISwitchesViewmodel.IsGreen(int rank)
+        {
+            return this[rank] != SwitchStatus.Unsafe;
+        }
+    }
+
+    interface IDumpCallback // TODO figure out what to do
+    {
+        void Dump(int numAttacks);
+    }
+
+    sealed class SimulatedAttacker : IStateHook
+    {
+        readonly struct Attack
+        {
+            public readonly int Rank;
+            public readonly int Frozen;
+
+            public Attack(int rank, int frozen)
+            {
+                this.Rank = rank;
+                this.Frozen = frozen;
+            }
+
+            public bool IsSomething => Rank > 0;
+            public static readonly Attack Nothing = default(Attack);
+
+            public Attack Freeze(int amount)
+            {
+                int frozen = this.Frozen + amount;
+                return new Attack(Rank, Math.Min(Rank, frozen));
+            }
+        }
+
+        /// <summary>
+        /// Mutates the contents of the given array, advancing each attack one step.
+        /// Returns the Rank of the attack that just landed, or zero.
+        /// </summary>
+        private static int Advance(Attack[] Attacks, ref int distance)
+        {
+            int rank = 0;
+
+            for (int x = 0; x < Attacks.Length; x++)
+            {
+                var attack = Attacks[x];
+                if (attack.IsSomething)
+                {
+                    distance = Math.Min(x, distance);
+                    if (attack.Frozen > 0)
+                    {
+                        Attacks[x] = attack.Freeze(-1);
+                        return rank;
+                    }
+                    else if (x > 0)
+                    {
+                        Attacks[x - 1] = attack;
+                        Attacks[x] = Attack.Nothing;
+                    }
+                    else
+                    {
+                        Attacks[x] = Attack.Nothing;
+                        rank = attack.Rank;
+                    }
+                }
+            }
+
+            return rank;
+        }
+
+        const int Width = 12;
+        private readonly Attack[] Attacks = new Attack[Width];
+        private readonly Switches switches;
+        private readonly bool[] attackBuffer = new bool[Switches.ArraySize];
+        private readonly IDumpCallback dumper;
+        private (int delay, int rank) nextAttack;
+        public readonly IReadOnlyGridSlim GRID;
+
+        public SimulatedAttacker(Switches switches, IDumpCallback dumper)
+        {
+            this.switches = switches;
+            this.dumper = dumper;
+            Attacks[4] = new Attack(2, 0);
+            Attacks[10] = new Attack(3, 0);
+            nextAttack = (3, 5);
+            GRID = new GridRep(this);
+        }
+
+        public bool GameOver => false;
+
+        public void Elapse(IScheduler scheduler) { }
+
+        public void OnCatalystSpawned(SpawnItem catalyst)
+        {
+            int distance = 999;
+            int attackRank = Advance(Attacks, ref distance);
+            Console.WriteLine($"Attack is now {distance} away");
+            if (attackRank > 0)
+            {
+                Console.WriteLine("Attack landed! " + attackRank);
+                int numAttacks = switches.OnEnemyCombo(attackRank, attackBuffer);
+                WriteSwitches();
+                if (numAttacks > 0)
+                {
+                    Console.WriteLine("DUMPING!");
+                    dumper.Dump(numAttacks);
+                }
+            }
+
+            var (delay, rank) = nextAttack;
+            if (delay <= 0)
+            {
+                Attacks[Width - 1] = new Attack(rank, 0);
+                if (false && rank < 7)
+                {
+                    nextAttack = (rank * 2, rank);
+                }
+                else
+                {
+                    nextAttack = (10, 4);
+                }
+            }
+            else
+            {
+                nextAttack = (delay - 1, rank);
+            }
+        }
+
+        public void OnComboCompleted(ComboInfo combo, IScheduler scheduler)
+        {
+            int rank = combo.PermissiveCombo.AdjustedGroupCount;
+            int numAttacks = switches.OnFriendlyComboSinglePlayer(rank, attackBuffer);
+            WriteSwitches();
+
+            if (numAttacks > 0)
+            {
+                for (int x = 0; x < Width; x++)
+                {
+                    var attack = Attacks[x];
+                    if (attack.IsSomething)
+                    {
+                        Attacks[x] = attack.Freeze(numAttacks);
+                    }
+                }
+            }
+        }
+
+        private void WriteSwitches()
+        {
+            Console.Write("Switch status: ");
+            for (int i = Switches.MinRank; i <= Switches.MaxRank; i++)
+            {
+                Console.Write($"{i}{switches[i].ToString().Substring(0, 1)} ");
+            }
+            Console.WriteLine();
+        }
+
+        public void OnComboUpdated(ComboInfo previous, ComboInfo current, IScheduler scheduler) { }
+
+        sealed class GridRep : IReadOnlyGridSlim
+        {
+            private readonly SimulatedAttacker data;
+            const int Width = SimulatedAttacker.Width;
+            const int Height = Switches.MaxRank;
+
+            public GridRep(SimulatedAttacker data)
+            {
+                this.data = data;
+            }
+
+            public GridSize Size => new GridSize(Width, Height);
+
+            public Occupant Get(Loc loc)
+            {
+                var attack = data.Attacks[loc.X];
+                if (attack.Rank > loc.Y)
+                {
+                    return Occupant.IndestructibleEnemy;
+                }
+                return Occupant.None;
+            }
+        }
+    }
+
     class PenaltySchedule
     {
         readonly struct PenaltyItem

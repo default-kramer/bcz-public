@@ -130,7 +130,6 @@ public class SinglePlayerMenu : Control
         var level = LevelChoices.SelectedItem;
         // TODO would be nice to show a preview grid so you know how big the level is...
         // For now just placeholder code
-        Console.WriteLine("Chosen level: " + level);
     }
 
     private void StartGame()

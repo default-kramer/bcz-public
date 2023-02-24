@@ -63,6 +63,8 @@ public class GameViewerControl : Control
         public readonly HealthViewerControl HealthViewer;
         public readonly GameOverMenu GameOverMenu;
         public readonly HBoxContainer HBoxContainer;
+        public readonly SwitchViewerControl SwitchViewerControl;
+        public readonly GridViewerControl AttackGridViewer;
 
         public Members(Control me)
         {
@@ -72,6 +74,8 @@ public class GameViewerControl : Control
             me.FindNode(out HealthViewer, nameof(HealthViewer));
             me.FindNode(out GameOverMenu, nameof(GameOverMenu));
             me.FindNode(out HBoxContainer, nameof(HBoxContainer));
+            me.FindNode(out SwitchViewerControl, nameof(SwitchViewerControl));
+            me.FindNode(out AttackGridViewer, nameof(AttackGridViewer));
 
             QueueViewer.GridViewer = GridViewer;
         }
@@ -158,6 +162,21 @@ public class GameViewerControl : Control
         members.CountdownViewer.RectMinSize = new Vector2(ladderWidth, 0);
         minWidth += ladderWidth;
 
+        if (members.SwitchViewerControl.Visible)
+        {
+            separationCount++;
+            // We set this via the editor
+            minWidth += members.SwitchViewerControl.RectMinSize.x;
+        }
+
+        if (members.AttackGridViewer.Visible)
+        {
+            separationCount++;
+            float attackGridWidth = gridWidth * 1.5f;
+            members.AttackGridViewer.RectMinSize = new Vector2(attackGridWidth, 0);
+            minWidth += attackGridWidth;
+        }
+
         // I don't know why this is needed... but who cares?
         // (Maybe some margins hiding somewhere in the tree?)
         const float fudge = 20f;
@@ -186,6 +205,8 @@ public class GameViewerControl : Control
         members.QueueViewer.Update();
         members.CountdownViewer.Update();
         members.HealthViewer.Update();
+        members.SwitchViewerControl.Update();
+        members.AttackGridViewer.Update();
 
         this.logic.CheckGameOver();
     }
@@ -245,6 +266,26 @@ public class GameViewerControl : Control
         {
             members.HealthViewer.SetNullModel();
             members.HealthViewer.Visible = false;
+        }
+
+        if (state.SwitchesViewmodel != null)
+        {
+            members.SwitchViewerControl.SetModel(state.SwitchesViewmodel);
+            members.SwitchViewerControl.Visible = true;
+        }
+        else
+        {
+            members.SwitchViewerControl.Visible = false;
+        }
+
+        if (state.AttackGridViewmodel != null)
+        {
+            members.AttackGridViewer.SetLogicForAttackGrid(state.AttackGridViewmodel);
+            members.AttackGridViewer.Visible = true;
+        }
+        else
+        {
+            members.AttackGridViewer.Visible = false;
         }
     }
 

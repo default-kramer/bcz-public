@@ -8,7 +8,7 @@ using FF2.Core.Viewmodels;
 
 namespace FF2.Core
 {
-    public sealed class State
+    public sealed class State : IDumpCallback
     {
         private readonly Grid grid;
         private readonly FallAnimationSampler fallSampler;
@@ -22,6 +22,7 @@ namespace FF2.Core
         private readonly StateEvent.Factory eventFactory;
         private readonly Timekeeper timekeeper;
         private readonly IScheduler scheduler;
+        private readonly Switches switches;
         private StateEvent __currentEvent = StateEvent.StateConstructed;
         public StateEvent CurrentEvent => __currentEvent;
 
@@ -55,6 +56,7 @@ namespace FF2.Core
             this.eventFactory = new();
             this.timekeeper = timekeeper;
             this.scheduler = timekeeper;
+            this.switches = new Switches();
             mover = null;
             currentCombo = ComboInfo.Empty;
             this.hook = hook;
@@ -62,11 +64,17 @@ namespace FF2.Core
             {
                 CountdownViewmodel = h3;
                 PenaltyViewmodel = h3;
+                var TODO = new SimulatedAttacker(switches, this);
+                this.hook = new CompositeHook(this.hook, TODO);
+                this.AttackGridViewmodel = TODO.GRID;
+                this.SwitchesViewmodel = this.switches;
             }
         }
 
-        public readonly Viewmodels.ICountdownViewmodel? CountdownViewmodel;
-        public readonly Viewmodels.ISlidingPenaltyViewmodel? PenaltyViewmodel;
+        public readonly ICountdownViewmodel? CountdownViewmodel;
+        public readonly ISlidingPenaltyViewmodel? PenaltyViewmodel;
+        public readonly IReadOnlyGridSlim? AttackGridViewmodel;
+        public readonly ISwitchesViewmodel? SwitchesViewmodel;
 
         public IReadOnlyGrid Grid { get { return grid; } }
 
@@ -176,6 +184,11 @@ namespace FF2.Core
                 return StateEvent.GameEnded;
             }
 
+            if (pendingDumps > 0)
+            {
+                Dump();
+            }
+
             Slowmo = false;
             var spawnItem = spawnDeck.Pop();
             if (spawnItem.IsCatalyst(out var _))
@@ -189,6 +202,41 @@ namespace FF2.Core
             else
             {
                 throw new Exception($"Cannot spawn: {spawnItem}");
+            }
+        }
+
+        int pendingDumps = 0;
+        void IDumpCallback.Dump(int numAttacks)
+        {
+            pendingDumps += numAttacks;
+        }
+
+        private void Dump()
+        {
+            pendingDumps = 0;
+            for (int x = 0; x < grid.Width; x++)
+            {
+                DumpColumn(x);
+            }
+        }
+
+        private void DumpColumn(int x)
+        {
+            for (int y = grid.Height - 2; y >= 0; y--)
+            {
+                var loc = new Loc(x, y);
+                var item = grid.Get(loc);
+                if (item != Occupant.None)
+                {
+                    var nextColor = item.Color switch
+                    {
+                        Color.Red => Color.Yellow,
+                        Color.Yellow => Color.Blue,
+                        _ => Color.Red,
+                    };
+                    grid.Set(loc.Add(0, 1), Occupant.MakeCatalyst(nextColor, Direction.None));
+                    return;
+                }
             }
         }
 

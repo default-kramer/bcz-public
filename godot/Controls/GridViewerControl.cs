@@ -21,6 +21,11 @@ public class GridViewerControl : Control
         this.Logic = new StandardLogic(ticker);
     }
 
+    public void SetLogicForAttackGrid(IReadOnlyGridSlim grid)
+    {
+        this.Logic = new AttackGridLogic(grid);
+    }
+
     private TrackedSprite[] activeSprites = new TrackedSprite[400]; // should be way more than we need
 
     private SpritePool spritePool = null!;
@@ -84,6 +89,7 @@ public class GridViewerControl : Control
         float screenCellSize = GetCellSize(fullSize, gridSize);
         float extraX = Math.Max(0, fullSize.x - screenCellSize * gridSize.Width);
         float extraY = Math.Max(0, fullSize.y - screenCellSize * gridSize.Height);
+        float spriteWTF = -extraY / 2; // not sure why this is needed, but it works
 
         // For debugging, show the excess width/height as brown:
         //DrawRect(new Rect2(0, 0, fullSize), Colors.Brown);
@@ -170,7 +176,8 @@ public class GridViewerControl : Control
 
                     var sprite = currentSprite.Sprite;
                     var offset = screenCellSize / 2;
-                    sprite.Position = new Vector2(screenX + offset, screenY + offset);
+
+                    sprite.Position = new Vector2(screenX + offset, screenY + offset + spriteWTF);
                     sprite.Scale = spriteScale2;
                     if (previewOcc.HasValue)
                     {
@@ -471,6 +478,17 @@ public class GridViewerControl : Control
 
                 return state.Grid.Get(loc);
             }
+        }
+    }
+
+    sealed class AttackGridLogic : ILogic
+    {
+        private readonly IReadOnlyGridSlim grid;
+        public override IReadOnlyGridSlim Grid => grid;
+
+        public AttackGridLogic(IReadOnlyGridSlim grid)
+        {
+            this.grid = grid;
         }
     }
 }
