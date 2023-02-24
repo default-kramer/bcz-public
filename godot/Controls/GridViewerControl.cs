@@ -21,9 +21,9 @@ public class GridViewerControl : Control
         this.Logic = new StandardLogic(ticker);
     }
 
-    public void SetLogicForAttackGrid(IReadOnlyGridSlim grid)
+    public void SetLogicForAttackGrid(IAttackGridViewmodel vm)
     {
-        this.Logic = new AttackGridLogic(grid);
+        this.Logic = new AttackGridLogic(vm);
     }
 
     private TrackedSprite[] activeSprites = new TrackedSprite[400]; // should be way more than we need
@@ -483,12 +483,21 @@ public class GridViewerControl : Control
 
     sealed class AttackGridLogic : ILogic
     {
-        private readonly IReadOnlyGridSlim grid;
-        public override IReadOnlyGridSlim Grid => grid;
+        private readonly IAttackGridViewmodel vm;
+        public override IReadOnlyGridSlim Grid => vm.Grid;
 
-        public AttackGridLogic(IReadOnlyGridSlim grid)
+        public AttackGridLogic(IAttackGridViewmodel vm)
         {
-            this.grid = grid;
+            this.vm = vm;
+        }
+
+        public override float DestructionProgress(Loc loc)
+        {
+            if (vm.IsFrozen(loc))
+            {
+                return 0.5f;
+            }
+            return 0;
         }
     }
 }

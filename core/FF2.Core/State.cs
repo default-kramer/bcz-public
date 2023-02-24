@@ -66,14 +66,14 @@ namespace FF2.Core
                 PenaltyViewmodel = h3;
                 var TODO = new SimulatedAttacker(switches, this);
                 this.hook = new CompositeHook(this.hook, TODO);
-                this.AttackGridViewmodel = TODO.GRID;
+                this.AttackGridViewmodel = TODO.VM;
                 this.SwitchesViewmodel = this.switches;
             }
         }
 
         public readonly ICountdownViewmodel? CountdownViewmodel;
         public readonly ISlidingPenaltyViewmodel? PenaltyViewmodel;
-        public readonly IReadOnlyGridSlim? AttackGridViewmodel;
+        public readonly IAttackGridViewmodel? AttackGridViewmodel;
         public readonly ISwitchesViewmodel? SwitchesViewmodel;
 
         public IReadOnlyGrid Grid { get { return grid; } }

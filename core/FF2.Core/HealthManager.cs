@@ -138,29 +138,21 @@ namespace FF2.Core
         readonly struct Attack
         {
             public readonly int Rank;
-            public readonly int Frozen;
 
-            public Attack(int rank, int frozen)
+            public Attack(int rank)
             {
                 this.Rank = rank;
-                this.Frozen = frozen;
             }
 
             public bool IsSomething => Rank > 0;
             public static readonly Attack Nothing = default(Attack);
-
-            public Attack Freeze(int amount)
-            {
-                int frozen = this.Frozen + amount;
-                return new Attack(Rank, Math.Min(Rank, frozen));
-            }
         }
 
         /// <summary>
         /// Mutates the contents of the given array, advancing each attack one step.
         /// Returns the Rank of the attack that just landed, or zero.
         /// </summary>
-        private static int Advance(Attack[] Attacks, ref int distance)
+        private static int Advance(Attack[] Attacks)
         {
             int rank = 0;
 
@@ -169,13 +161,7 @@ namespace FF2.Core
                 var attack = Attacks[x];
                 if (attack.IsSomething)
                 {
-                    distance = Math.Min(x, distance);
-                    if (attack.Frozen > 0)
-                    {
-                        Attacks[x] = attack.Freeze(-1);
-                        return rank;
-                    }
-                    else if (x > 0)
+                    if (x > 0)
                     {
                         Attacks[x - 1] = attack;
                         Attacks[x] = Attack.Nothing;
@@ -197,16 +183,24 @@ namespace FF2.Core
         private readonly bool[] attackBuffer = new bool[Switches.ArraySize];
         private readonly IDumpCallback dumper;
         private (int delay, int rank) nextAttack;
-        public readonly IReadOnlyGridSlim GRID;
+        public readonly IAttackGridViewmodel VM;
+
+        /// <summary>
+        /// Without freeze, it is confusing when your combo and an attack arrive at the same time.
+        /// Both elements want to flip the switches, what should happen?
+        /// The solution is to generate freeze on all combos (rank > 1).
+        /// This way, an attack can never arrive at the same time as your combo.
+        /// </summary>
+        private int freeze = 0;
 
         public SimulatedAttacker(Switches switches, IDumpCallback dumper)
         {
             this.switches = switches;
             this.dumper = dumper;
-            Attacks[4] = new Attack(2, 0);
-            Attacks[10] = new Attack(3, 0);
+            Attacks[4] = new Attack(2);
+            Attacks[10] = new Attack(3);
             nextAttack = (3, 5);
-            GRID = new GridRep(this);
+            this.VM = new Viewmodel(this);
         }
 
         public bool GameOver => false;
@@ -215,17 +209,18 @@ namespace FF2.Core
 
         public void OnCatalystSpawned(SpawnItem catalyst)
         {
-            int distance = 999;
-            int attackRank = Advance(Attacks, ref distance);
-            Console.WriteLine($"Attack is now {distance} away");
+            if (freeze > 0)
+            {
+                freeze--;
+                return;
+            }
+
+            int attackRank = Advance(Attacks);
             if (attackRank > 0)
             {
-                Console.WriteLine("Attack landed! " + attackRank);
                 int numAttacks = switches.OnEnemyCombo(attackRank, attackBuffer);
-                WriteSwitches();
                 if (numAttacks > 0)
                 {
-                    Console.WriteLine("DUMPING!");
                     dumper.Dump(numAttacks);
                 }
             }
@@ -233,7 +228,7 @@ namespace FF2.Core
             var (delay, rank) = nextAttack;
             if (delay <= 0)
             {
-                Attacks[Width - 1] = new Attack(rank, 0);
+                Attacks[Width - 1] = new Attack(rank);
                 if (false && rank < 7)
                 {
                     nextAttack = (rank * 2, rank);
@@ -253,45 +248,31 @@ namespace FF2.Core
         {
             int rank = combo.PermissiveCombo.AdjustedGroupCount;
             int numAttacks = switches.OnFriendlyComboSinglePlayer(rank, attackBuffer);
-            WriteSwitches();
 
-            if (numAttacks > 0)
+            if (rank > 1)
             {
-                for (int x = 0; x < Width; x++)
-                {
-                    var attack = Attacks[x];
-                    if (attack.IsSomething)
-                    {
-                        Attacks[x] = attack.Freeze(numAttacks);
-                    }
-                }
+                var maxRankAttack = Attacks.Max(x => x.Rank);
+                freeze += rank;
+                freeze = Math.Min(freeze, maxRankAttack + 1);
             }
-        }
-
-        private void WriteSwitches()
-        {
-            Console.Write("Switch status: ");
-            for (int i = Switches.MinRank; i <= Switches.MaxRank; i++)
-            {
-                Console.Write($"{i}{switches[i].ToString().Substring(0, 1)} ");
-            }
-            Console.WriteLine();
         }
 
         public void OnComboUpdated(ComboInfo previous, ComboInfo current, IScheduler scheduler) { }
 
-        sealed class GridRep : IReadOnlyGridSlim
+        sealed class Viewmodel : IAttackGridViewmodel, IReadOnlyGridSlim
         {
             private readonly SimulatedAttacker data;
             const int Width = SimulatedAttacker.Width;
             const int Height = Switches.MaxRank;
 
-            public GridRep(SimulatedAttacker data)
+            public Viewmodel(SimulatedAttacker data)
             {
                 this.data = data;
             }
 
             public GridSize Size => new GridSize(Width, Height);
+
+            public IReadOnlyGridSlim Grid => this;
 
             public Occupant Get(Loc loc)
             {
@@ -301,6 +282,12 @@ namespace FF2.Core
                     return Occupant.IndestructibleEnemy;
                 }
                 return Occupant.None;
+            }
+
+            public bool IsFrozen(Loc loc)
+            {
+                var attack = data.Attacks[loc.X];
+                return data.freeze > loc.Y;
             }
         }
     }

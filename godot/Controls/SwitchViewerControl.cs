@@ -61,8 +61,7 @@ public class SwitchViewerControl : Control
 
         for (int rank = minRank; rank <= maxRank; rank++)
         {
-            int index = maxRank - rank;// rank - minRank;
-            float y = yPadding + foo * index;
+            float y = yPadding + foo * (maxRank - rank);
             var upperLeft = new Vector2(1.5f, y);
             bool green = model.IsGreen(rank);
             var color = green ? Godot.Colors.Green : Godot.Colors.Orange;
