@@ -257,7 +257,7 @@ public class GameViewerControl : Control
 
         members.CountdownViewer.SetModel(state.CountdownViewmodel);
 
-        if (state.PenaltyViewmodel != null)
+        if (false && state.PenaltyViewmodel != null)
         {
             members.HealthViewer.SetModel(state.PenaltyViewmodel);
             members.HealthViewer.Visible = true;
@@ -281,11 +281,13 @@ public class GameViewerControl : Control
         if (state.AttackGridViewmodel != null)
         {
             members.AttackGridViewer.SetLogicForAttackGrid(state.AttackGridViewmodel);
+            members.SwitchViewerControl.AttackViewer = members.AttackGridViewer;
             members.AttackGridViewer.Visible = true;
         }
         else
         {
             members.AttackGridViewer.Visible = false;
+            members.SwitchViewerControl.AttackViewer = null;
         }
     }
 

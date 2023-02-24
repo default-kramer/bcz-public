@@ -12,6 +12,8 @@ public class SwitchViewerControl : Control
     private float numeralWidth = 1;
     private float numeralHeight = 1;
 
+    public GridViewerControl? AttackViewer { get; set; }
+
     public override void _Ready()
     {
         numerals = new Sprite[numeralCount];
@@ -40,22 +42,26 @@ public class SwitchViewerControl : Control
     {
         if (numerals == null) { return; }
 
-        QueueViewerControl.DrawBorder(this, new Rect2(0, 0, RectSize));
-
         int minRank = model.MinRank;
         int maxRank = model.MaxRank;
         int numSquares = 1 + maxRank - minRank;
 
+        float attackGridHeight = ((maxRank - 1) * AttackViewer?.CurrentCellSize) ?? 999f;
+        var size = new Vector2(RectSize.x, Math.Min(RectSize.y, attackGridHeight));
+
+        QueueViewerControl.DrawBorder(this, new Rect2(0, 0, size));
+
         const float yPadRatio = 0.1f;
-        float foo = RectSize.y / (numSquares + yPadRatio);
+        float foo = size.y / (numSquares + yPadRatio);
 
         float yPadding = foo * yPadRatio;
         float boxHeight = foo * (1 - yPadRatio);
-        var boxSize = new Vector2(RectSize.x - 3, boxHeight);
+        boxHeight = Math.Min(boxHeight, AttackViewer?.CurrentCellSize ?? 999f);
+        var boxSize = new Vector2(size.x - 3, boxHeight);
 
         for (int rank = minRank; rank <= maxRank; rank++)
         {
-            int index = rank - minRank;
+            int index = maxRank - rank;// rank - minRank;
             float y = yPadding + foo * index;
             var upperLeft = new Vector2(1.5f, y);
             bool green = model.IsGreen(rank);
