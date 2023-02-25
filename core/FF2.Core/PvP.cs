@@ -47,6 +47,13 @@ using FF2.Core.Viewmodels;
 // * Freeze is not needed at all. When an attack hits an undefended switch,
 //   your queue no longer shows the next 5 catalysts, it shows a dump indicator.
 //   Your next spawn will dump instead.
+//
+// == Cosmetic Improvement ==
+// Only show orange when there is an attack on the grid that will hit, otherwise show gray/neutral
+// * Green - defended
+// * Gray - undefended but not threatened
+// * Orange - undefended and threatened
+// And of course, the Orange should flash when the attack is imminent.
 
 namespace FF2.Core
 {
