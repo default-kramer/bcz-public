@@ -94,7 +94,7 @@ namespace FF2.Core
     {
         private const int maxCountdownMillis = 1000 * 60;
         private const int millisRestoredPerEnemy = 1000 * 5;
-        private const int MaxHP = 99;
+        private const int MaxHP = 3;
         private readonly PenaltySchedule penaltySchedule;
         // These ^^ should be parameterized
 

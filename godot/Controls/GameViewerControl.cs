@@ -257,7 +257,7 @@ public class GameViewerControl : Control
 
         members.CountdownViewer.SetModel(state.CountdownViewmodel);
 
-        if (false && state.PenaltyViewmodel != null)
+        if (state.PenaltyViewmodel != null)
         {
             members.HealthViewer.SetModel(state.PenaltyViewmodel);
             members.HealthViewer.Visible = true;

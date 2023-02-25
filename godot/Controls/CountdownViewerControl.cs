@@ -22,7 +22,7 @@ public class CountdownViewerControl : Control
         members = new Members(this);
     }
 
-    public void SetModel(ICountdownViewmodel viewmodel)
+    public void SetModel(ICountdownViewmodel? viewmodel)
     {
         this.vm = viewmodel ?? NullModel.Instance;
         this.position = CalcPosition(vm);
