@@ -92,6 +92,11 @@ namespace FF2.Core
             return Process(rank, attackBuffer, SwitchStatus.Unsafe, SwitchStatus.Middle);
         }
 
+        public void OnDump()
+        {
+            switches.AsSpan().Fill(SwitchStatus.Safe);
+        }
+
         private int Process(int rank, bool[] attackBuffer, SwitchStatus attackIf, SwitchStatus resetTo)
         {
             int limit = rank - MinRank;
@@ -114,11 +119,6 @@ namespace FF2.Core
                         switches[i] = attackIf;
                     }
                 }
-            }
-
-            if (attackCount > 0)
-            {
-                switches.AsSpan().Fill(resetTo);
             }
 
             return attackCount;
@@ -233,6 +233,7 @@ namespace FF2.Core
                 int numAttacks = switches.OnEnemyCombo(attackRank, attackBuffer);
                 if (numAttacks > 0)
                 {
+                    switches.OnDump();
                     dumper.Dump(numAttacks);
                 }
             }
