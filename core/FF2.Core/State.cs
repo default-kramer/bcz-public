@@ -23,6 +23,8 @@ namespace FF2.Core
         private readonly Timekeeper timekeeper;
         private readonly IScheduler scheduler;
         private readonly Switches switches;
+        private readonly DumpAnimator dumpAnimator;
+        internal IFallAnimator TheDumpAnimator => dumpAnimator;
         private StateEvent __currentEvent = StateEvent.StateConstructed;
         public StateEvent CurrentEvent => __currentEvent;
 
@@ -57,6 +59,7 @@ namespace FF2.Core
             this.timekeeper = timekeeper;
             this.scheduler = timekeeper;
             this.switches = new Switches();
+            dumpAnimator = new DumpAnimator(grid.Width, grid.Height + 2); // dump from the mover area
             mover = null;
             currentCombo = ComboInfo.Empty;
             this.hook = hook;
@@ -188,7 +191,8 @@ namespace FF2.Core
 
             if (pendingDumps > 0)
             {
-                Dump();
+                pendingDumps = 0; // TODO need to decide how dump volume will be controlled...
+                return Dump();
             }
 
             Slowmo = false;
@@ -213,13 +217,17 @@ namespace FF2.Core
             pendingDumps += numAttacks;
         }
 
-        private void Dump()
+        private StateEvent Dump()
         {
-            pendingDumps = 0;
+            var appt = scheduler.CreateAppointment(Constants.DumpMillis);
+            dumpAnimator.Reset(appt);
+
             for (int x = 0; x < grid.Width; x++)
             {
                 DumpColumn(x);
             }
+
+            return eventFactory.Dumped(appt);
         }
 
         private void DumpColumn(int x)
@@ -236,9 +244,47 @@ namespace FF2.Core
                         Color.Yellow => Color.Blue,
                         _ => Color.Red,
                     };
-                    grid.Set(loc.Add(0, 1), Occupant.MakeCatalyst(nextColor, Direction.None));
+                    var dumpLoc = loc.Add(0, 1);
+                    dumpAnimator.SetDumpLoc(dumpLoc);
+                    grid.Set(dumpLoc, Occupant.MakeCatalyst(nextColor, Direction.None));
                     return;
                 }
+            }
+        }
+
+        private class DumpAnimator : IFallAnimator
+        {
+            const int NoDump = -1; // this Y coordinate does not exist
+            private readonly int[] dumpLocs; // for each column, hold the Y coordinate that the dump lands in
+            private readonly int height;
+            private Appointment animation;
+
+            public DumpAnimator(int width, int height)
+            {
+                dumpLocs = new int[width];
+                this.height = height;
+                Reset(Appointment.Frame0);
+            }
+
+            public void Reset(Appointment animation)
+            {
+                this.animation = animation;
+                dumpLocs.AsSpan().Fill(NoDump);
+            }
+
+            public void SetDumpLoc(Loc loc)
+            {
+                dumpLocs[loc.X] = loc.Y;
+            }
+
+            public float GetAdder(Loc loc)
+            {
+                if (dumpLocs[loc.X] == loc.Y)
+                {
+                    var drop = height - loc.Y;
+                    return drop - drop * animation.Progress();
+                }
+                return 0;
             }
         }
 
@@ -315,6 +361,7 @@ namespace FF2.Core
                 case StateEventKind.Fell:
                 case StateEventKind.Destroyed:
                 case StateEventKind.Plummeted:
+                case StateEventKind.Dumped:
                     return Update(FallOrDestroyOrSpawn());
                 case StateEventKind.GameEnded:
                     return false;

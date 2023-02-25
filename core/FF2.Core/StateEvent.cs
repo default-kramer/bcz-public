@@ -28,6 +28,7 @@ namespace FF2.Core
         Destroyed = 4,
         GameEnded = 5,
         PenaltyAdded = 6,
+        Dumped = 7,
 
         // Results of user actions
         BurstBegan = 101,
@@ -111,6 +112,11 @@ namespace FF2.Core
             {
                 return new StateEvent(StateEventKind.PenaltyAdded, completion, penaltyAdded.Reset(payload));
             }
+
+            public StateEvent Dumped(Appointment completion)
+            {
+                return new StateEvent(StateEventKind.Dumped, completion, Singletons.Dumped);
+            }
         }
 
         abstract class StateTransitionSumType
@@ -188,6 +194,7 @@ namespace FF2.Core
             public static readonly Singletons GameEnded = new("GameEnded");
             public static readonly Singletons Plummeted = new("Plummeted");
             public static readonly Singletons BurstBegan = new("BurstBegan");
+            public static readonly Singletons Dumped = new("Dumped");
         }
     }
 }

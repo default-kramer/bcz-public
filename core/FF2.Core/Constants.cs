@@ -11,5 +11,7 @@ namespace FF2.Core
         public const int DestructionMillis = 550;
 
         public const int FallingMillisPerCell = 150;
+
+        public const int DumpMillis = 750;
     }
 }

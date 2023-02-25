@@ -241,9 +241,9 @@ namespace FF2.Core
             if (delay <= 0)
             {
                 Attacks[Width - 1] = new Attack(rank);
-                if (false && rank < 7)
+                if (rank < 7)
                 {
-                    nextAttack = (rank * 2, rank);
+                    nextAttack = (rank * 2, rank + 1);
                 }
                 else
                 {

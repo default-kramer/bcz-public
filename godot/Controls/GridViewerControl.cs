@@ -105,7 +105,7 @@ public class GridViewerControl : Control
 
         float burstProgress = Logic.BurstProgress();
 
-        var fallSampler = Logic.GetFallSample();
+        var fallAnimator = Logic.GetFallAnimator();
 
         for (int x = 0; x < gridSize.Width; x++)
         {
@@ -125,11 +125,7 @@ public class GridViewerControl : Control
                 var screenY = gridY * screenCellSize + extraY / 2 + yPadding;
                 var screenX = x * screenCellSize + extraX / 2 + 1f;
 
-                float adder = 0f;
-                if (fallSampler.HasValue)
-                {
-                    adder += fallSampler.Value.GetAdder(loc);
-                }
+                float adder = fallAnimator.GetAdder(loc);
                 adder += Logic.FallSampleOverride(loc);
                 screenY -= adder * screenCellSize;
 
@@ -315,7 +311,7 @@ public class GridViewerControl : Control
 
         public virtual Occupant GetDestroyedOccupant(Loc loc) => Occupant.None;
 
-        public virtual FallSample? GetFallSample() => null;
+        public virtual IFallAnimator GetFallAnimator() => NullFallAnimator.Instance;
 
         public virtual float FallSampleOverride(Loc loc) => 0;
 
@@ -373,7 +369,7 @@ public class GridViewerControl : Control
 
         public override float BurstProgress() => ticker.BurstProgress();
 
-        public override FallSample? GetFallSample() => ticker.GetFallSample();
+        public override IFallAnimator GetFallAnimator() => ticker.GetFallAnimator();
 
         public override float FallSampleOverride(Loc loc) => 0;
 

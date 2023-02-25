@@ -29,15 +29,21 @@ namespace FF2.Core
         // When does destruction intensity exit the max value?
         const float DestructionPeakEnd = 300f / 550f;
 
-        public FallSample? GetFallSample(Moment? now = null)
+        public IFallAnimator GetFallAnimator()
         {
-            if (state.CurrentEvent.Kind == StateEventKind.Fell)
+            var ev = state.CurrentEvent;
+            var kind = ev.Kind;
+            if (kind == StateEventKind.Fell)
             {
-                float progress = state.CurrentEvent.Completion.Progress();
-                var sampler = state.CurrentEvent.FellPayload();
+                float progress = ev.Completion.Progress();
+                var sampler = ev.FellPayload();
                 return new FallSample(sampler, progress);
             }
-            return null;
+            else if (kind == StateEventKind.Dumped)
+            {
+                return state.TheDumpAnimator;
+            }
+            return NullFallAnimator.Instance;
         }
 
         public float DestructionIntensity()
