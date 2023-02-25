@@ -103,18 +103,24 @@ public class NewRoot : Control
         c.GetParent()?.RemoveChild(c);
     }
 
+    // It's difficult to remove children without leaking them at shutdown.
+    // This seems to work just as well:
+    private static void SetEnabled(Control c, bool enabled)
+    {
+        c.Visible = enabled;
+        c.SetProcess(enabled);
+        c.SetProcessInput(enabled);
+    }
+
     private void SwitchTo(Control control)
     {
-        // Removing children is better than just hiding them, probably for many reasons.
-        // One reason is so that the input events aren't constantly routing to the Controller Setup code.
-        Remove(members.GameViewer);
-        Remove(members.PuzzleControl);
-        Remove(members.MainMenu);
-        Remove(members.ControllerSetupControl);
-        Remove(members.TutorialControl);
+        SetEnabled(members.GameViewer, false);
+        SetEnabled(members.PuzzleControl, false);
+        SetEnabled(members.MainMenu, false);
+        SetEnabled(members.ControllerSetupControl, false);
+        SetEnabled(members.TutorialControl, false);
 
-        control.Visible = true;
-        this.AddChild(control);
+        SetEnabled(control, true);
     }
 
     private void StartGame(SeededSettings ss)
