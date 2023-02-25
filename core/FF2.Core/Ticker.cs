@@ -31,19 +31,7 @@ namespace FF2.Core
 
         public IFallAnimator GetFallAnimator()
         {
-            var ev = state.CurrentEvent;
-            var kind = ev.Kind;
-            if (kind == StateEventKind.Fell)
-            {
-                float progress = ev.Completion.Progress();
-                var sampler = ev.FellPayload();
-                return new FallSample(sampler, progress);
-            }
-            else if (kind == StateEventKind.Dumped)
-            {
-                return state.TheDumpAnimator;
-            }
-            return NullFallAnimator.Instance;
+            return state.GetFallAnimator();
         }
 
         public float DestructionIntensity()

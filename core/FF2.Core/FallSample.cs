@@ -27,12 +27,18 @@ namespace FF2.Core
         }
     }
 
-    public readonly struct FallSample : IFallAnimator // TODO might as well make this a class to avoid boxing
+    sealed class FallAnimator : IFallAnimator
     {
-        private readonly FallAnimationSampler sampler;
-        private readonly float animationProgress;
+        private FallAnimationSampler sampler;
+        private float animationProgress;
 
-        public FallSample(FallAnimationSampler sampler, float animationProgress)
+        public FallAnimator(FallAnimationSampler sampler, float animationProgress)
+        {
+            this.sampler = sampler;
+            this.animationProgress = animationProgress;
+        }
+
+        public void Resample(FallAnimationSampler sampler, float animationProgress)
         {
             this.sampler = sampler;
             this.animationProgress = animationProgress;

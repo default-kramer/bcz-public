@@ -24,7 +24,8 @@ namespace FF2.Core
         private readonly IScheduler scheduler;
         private readonly Switches switches;
         private readonly DumpAnimator dumpAnimator;
-        internal IFallAnimator TheDumpAnimator => dumpAnimator;
+        private readonly FallAnimator fallAnimator;
+
         private StateEvent __currentEvent = StateEvent.StateConstructed;
         public StateEvent CurrentEvent => __currentEvent;
 
@@ -60,6 +61,7 @@ namespace FF2.Core
             this.scheduler = timekeeper;
             this.switches = new Switches();
             dumpAnimator = new DumpAnimator(grid.Width, grid.Height + 2); // dump from the mover area
+            fallAnimator = new FallAnimator(fallSampler, 0f);
             mover = null;
             currentCombo = ComboInfo.Empty;
             this.hook = hook;
@@ -286,6 +288,24 @@ namespace FF2.Core
                 }
                 return 0;
             }
+        }
+
+        public IFallAnimator GetFallAnimator()
+        {
+            var ev = CurrentEvent;
+            var kind = ev.Kind;
+            if (kind == StateEventKind.Fell)
+            {
+                float progress = ev.Completion.Progress();
+                var sampler = ev.FellPayload();
+                fallAnimator.Resample(sampler, progress);
+                return fallAnimator;
+            }
+            else if (kind == StateEventKind.Dumped)
+            {
+                return dumpAnimator;
+            }
+            return NullFallAnimator.Instance;
         }
 
         public Command? Approach(Orientation o)
