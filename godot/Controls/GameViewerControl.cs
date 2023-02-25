@@ -360,7 +360,7 @@ public class GameViewerControl : Control
 
     sealed class LiveGameLogic : LogicBase
     {
-        private readonly ReplayWriter? replayWriter;
+        private ReplayWriter? replayWriter;
         private readonly Members members;
 
         public LiveGameLogic(ReplayWriter? replayWriter, DotnetTicker ticker, Members members)
@@ -377,6 +377,7 @@ public class GameViewerControl : Control
                 replayWriter.Flush();
                 replayWriter.Close();
                 replayWriter.Dispose();
+                replayWriter = null;
             }
         }
 
@@ -385,6 +386,7 @@ public class GameViewerControl : Control
             var state = ticker.state;
             if (state.IsGameOver && !members.GameOverMenu.Visible)
             {
+                Cleanup();
                 members.GameOverMenu.OnGameOver(state);
             }
         }
