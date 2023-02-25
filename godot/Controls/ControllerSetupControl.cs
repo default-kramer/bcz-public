@@ -10,7 +10,6 @@ public class ControllerSetupControl : Control
     private readonly InputEvent[] capturedEvents = new InputEvent[RepeatCount];
     private int capturedEventIndex = 0;
     private int PromptIndex = 0;
-    private Font font = null!;
 
     readonly struct Members
     {
@@ -28,7 +27,6 @@ public class ControllerSetupControl : Control
 
     public override void _Ready()
     {
-        font = GetFont("");
         members = new Members(this);
         Reset();
     }
