@@ -6,6 +6,47 @@ using System.Threading.Tasks;
 using FF2.Core.Viewmodels;
 
 // Prototyping some PvP ideas here...
+//
+// I haven't really figured out if I want a Middle switch or not...
+// I believe my thinking at the time was that the switches would be shared for both
+// players and dumps would generate immediately (insted of putting on a grid).
+// By resetting to Middle the player who just attacked would still be defended,
+// but could not immediately attack again.
+// But shared switches is a flawed design I think; perverse incentives ("you combo first please!")
+// seem very hard to avoid in a way that makes any sense to the players.
+//
+// Instead, what I have now is that each player has their own set of switches.
+// A switch is either "defended" (Safe) or "undefended" (Unsafe).
+// A combo always puts an attack onto the other player's "attack grid".
+// (The attack currently advances per spawn, but I think per millis will solve everything!)
+// A combo of rank N also flips all your switches up to rank N to Defended.
+// When an attack hits an undefended switch, you get dumped on and ALL your switches
+// reset to Defended status, to give you some time to recover.
+// I like this because it allows single-player PvP simulation easily.
+// It also avoids all the perverse incentives I can think of, thanks mostly to the delay
+// between the time an attack is generated and when it lands.
+// Now if you and your opponent both have a combo ready:
+// * If your switches are Undefended, you want to combo ASAP; waiting is useless.
+// * If they are Defended, you would have to waste a lot of time waiting for your opponent's
+//   attack to arrive.
+//
+// == On Freezing ==
+// Without freeze, it is confusing when your combo and an attack arrive at the same time.
+// Both elements want to flip the switches, what should happen?
+// The solution is to generate freeze on all combos (rank > 1).
+// This way, an attack can never arrive at the same time as your combo.
+//
+// TODO - But when attacks are generated "live" rather than per catalyst spent,
+// freezing does not really help the player. It would cause attacks to bunch
+// together which is harder to defend against.
+// Idea: Only apply +1 freeze regardless of combo rank.
+// Better Idea??: The attack grid advances per millis, not per spawn.
+// * Oh hell yeah, now a new skill is: When your switches are green and an attack
+//   is T seconds away, is it worth sitting on your combo waiting for that attack
+//   to land so you can immediately counter it? It depends on a lot of factors!
+// * Freeze is not needed at all. When an attack hits an undefended switch,
+//   your queue no longer shows the next 5 catalysts, it shows a dump indicator.
+//   Your next spawn will dump instead.
 
 namespace FF2.Core
 {
@@ -152,19 +193,7 @@ namespace FF2.Core
         private readonly IDumpCallback dumper;
         private (int delay, int rank) nextAttack;
         public readonly IAttackGridViewmodel VM;
-
-        /// <summary>
-        /// Without freeze, it is confusing when your combo and an attack arrive at the same time.
-        /// Both elements want to flip the switches, what should happen?
-        /// The solution is to generate freeze on all combos (rank > 1).
-        /// This way, an attack can never arrive at the same time as your combo.
-        /// 
-        /// TODO - But when attacks arrive per millis rather than per catalyst spent,
-        /// freezing does not really help the player. It would cause attacks to bunch
-        /// together which is harder to defend against.
-        /// Idea: Only apply +1 freeze regardless of combo rank.
-        /// </summary>
-        private int freeze = 0;
+        private int freeze = 0; // See notes on Freezing above
 
         public SimulatedAttacker(Switches switches, IDumpCallback dumper)
         {
