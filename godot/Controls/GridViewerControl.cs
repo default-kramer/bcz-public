@@ -26,15 +26,20 @@ public class GridViewerControl : Control
         this.Logic = new AttackGridLogic(vm);
     }
 
-    private TrackedSprite[] activeSprites = new TrackedSprite[400]; // should be way more than we need
+    /// <summary>
+    /// Loc -> Index -> Sprite, allowing us to detect a sprite that has not moved
+    /// since the last Draw()
+    /// </summary>
+    private PooledSprite?[] activeSprites = new PooledSprite?[400]; // should be way more than we need
 
-    private SpritePool spritePool = null!;
+    private SpritePoolV2 spritePool = null!;
 
     private FlickerState flicker = FlickerState.Initial;
 
     public override void _Ready()
     {
-        spritePool = NewRoot.GetSpritePool(this);
+        spritePool = new SpritePoolV2(this, SpriteKind.Single, SpriteKind.Joined,
+            SpriteKind.BlankJoined, SpriteKind.BlankSingle, SpriteKind.Enemy);
     }
 
     float elapsedSeconds = 0;
@@ -145,10 +150,10 @@ public class GridViewerControl : Control
                 }
 
                 var index = loc.ToIndex(gridSize);
-                TrackedSprite previousSprite = activeSprites[index];
-                TrackedSprite currentSprite = default(TrackedSprite);
+                var previousSprite = activeSprites[index];
+                PooledSprite? currentSprite = null;
 
-                if (previousSprite.IsSomething)
+                if (previousSprite != null)
                 {
                     if (previousSprite.Kind == kind)
                     {
@@ -156,21 +161,21 @@ public class GridViewerControl : Control
                     }
                     else
                     {
-                        spritePool.Return(previousSprite);
-                        activeSprites[index] = default(TrackedSprite);
+                        previousSprite.Return();
+                        activeSprites[index] = null;
                     }
                 }
 
-                if (kind != SpriteKind.None && kind != currentSprite.Kind)
+                if (kind != SpriteKind.None && kind != currentSprite?.Kind)
                 {
-                    currentSprite = spritePool.Rent(kind, this);
+                    currentSprite = spritePool.Rent(kind);
                 }
 
-                if (currentSprite.IsSomething && currentSprite.Sprite != null)
+                if (currentSprite != null)
                 {
                     activeSprites[index] = currentSprite;
 
-                    var sprite = currentSprite.Sprite;
+                    var sprite = currentSprite;
                     var offset = screenCellSize / 2;
 
                     sprite.Position = new Vector2(screenX + offset, screenY + offset + spriteWTF);

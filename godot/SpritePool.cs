@@ -133,3 +133,130 @@ sealed class SpritePool
         }
     }
 }
+
+abstract class PooledSprite : Sprite
+{
+    public abstract SpriteKind Kind { get; }
+    public abstract void Return();
+}
+
+sealed class SpritePoolV2
+{
+    private readonly int offset;
+    private SpriteManager[] managers;
+
+    public SpritePoolV2(Control owner, params SpriteKind[] kinds)
+    {
+        offset = (int)kinds[0];
+        managers = new SpriteManager[kinds.Length];
+        for (int i = 0; i < kinds.Length; i++)
+        {
+            var kind = kinds[i];
+            if ((int)kind != i + offset)
+            {
+                throw new Exception("TODO cannot currently handle non-consecutive kinds here");
+            }
+            managers[i] = new SpriteManager(owner, kind);
+        }
+    }
+
+    private int Index(SpriteKind kind) => (int)kind - offset;
+
+    public PooledSprite Rent(SpriteKind kind)
+    {
+        return managers[Index(kind)].GetSprite();
+    }
+
+    sealed class SpriteManager
+    {
+        private readonly Control owner;
+        private readonly SpriteKind kind;
+        private readonly Texture texture;
+        private readonly Stack<PooledSprite> pool = new Stack<PooledSprite>();
+
+        public SpriteManager(Control owner, SpriteKind kind)
+        {
+            this.owner = owner;
+            this.kind = kind;
+            this.texture = ResourceLoader.Load<Texture>(TexturePath(kind));
+        }
+
+        private static string TexturePath(SpriteKind kind)
+        {
+            switch (kind)
+            {
+                case SpriteKind.Joined:
+                    return "res://Sprites/joined.bmp";
+                case SpriteKind.Single:
+                    return "res://Sprites/single.bmp";
+                case SpriteKind.BlankJoined:
+                    return "res://Sprites/blank-joined.bmp";
+                case SpriteKind.BlankSingle:
+                    return "res://Sprites/blank-single.bmp";
+                case SpriteKind.Enemy:
+                    return "res://Sprites/enemy.bmp";
+                default:
+                    throw new Exception("Need texture for " + kind);
+            }
+        }
+
+        public PooledSprite GetSprite()
+        {
+            if (pool.Count > 0)
+            {
+                var pooled = pool.Pop();
+                pooled.Visible = true;
+                return pooled;
+            }
+
+            var sprite = new ManagedSprite();
+            sprite.OnCreated(kind, this);
+            sprite.Texture = texture;
+
+            switch (kind)
+            {
+                case SpriteKind.BlankJoined:
+                case SpriteKind.BlankSingle:
+                case SpriteKind.Joined:
+                case SpriteKind.Single:
+                    SetShader(sprite, "res://Shaders/catalyst.shader");
+                    break;
+                case SpriteKind.Enemy:
+                    SetShader(sprite, "res://Shaders/enemy.shader");
+                    break;
+            }
+
+            owner.AddChild(sprite);
+            return sprite;
+        }
+
+        private static void SetShader(Sprite sprite, string path)
+        {
+            var shader = ResourceLoader.Load(path).Duplicate(true) as Shader
+                ?? throw new Exception("Failed to load shader: " + path);
+            var material = new ShaderMaterial();
+            material.Shader = shader;
+            sprite.Material = material;
+        }
+
+        class ManagedSprite : PooledSprite
+        {
+            private SpriteKind kind;
+            private SpriteManager manager = null!;
+
+            public void OnCreated(SpriteKind kind, SpriteManager manager)
+            {
+                this.kind = kind;
+                this.manager = manager;
+            }
+
+            public override SpriteKind Kind => kind;
+
+            public override void Return()
+            {
+                Visible = false;
+                manager.pool.Push(this);
+            }
+        }
+    }
+}
