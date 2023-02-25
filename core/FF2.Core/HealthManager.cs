@@ -125,6 +125,8 @@ namespace FF2.Core
 
         public void Elapse(IScheduler scheduler) { }
 
+        public void PreSpawn(int spawnCount) { }
+
         public void OnCatalystSpawned(SpawnItem catalyst)
         {
             if (penaltyProgress[0] > 0)

@@ -22,6 +22,7 @@ namespace FF2.Core.ReplayModel
 
             writer.WriteLine("version -1"); // use negative numbers until I am ready to promise forward compatibility
             writer.WriteLine("s seed {0}", ss.Seed.Serialize());
+            writer.WriteLine("s mode {0}", settings.GameMode);
             writer.WriteLine("s enemyCount {0}", settings.EnemyCount);
             writer.WriteLine("s spawnBlanks {0}", settings.SpawnBlanks);
             writer.WriteLine("s gridWidth {0}", settings.GridWidth);

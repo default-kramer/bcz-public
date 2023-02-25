@@ -8,11 +8,12 @@ using System.Linq;
 public class SinglePlayerMenu : Control
 {
     private readonly ChoiceModel<string> GameModeChoices = new ChoiceModel<string>()
-        .AddChoices(ModeTutorial, ModeNormal, ModeScoreAttack, ModeTraining);
+        .AddChoices(ModeTutorial, ModeNormal, ModeScoreAttack, ModeTraining, ModePvPSim);
     const string ModeTutorial = "Tutorial";
     const string ModeNormal = "Normal";
     const string ModeScoreAttack = "Score Attack";
     const string ModeTraining = "Training";
+    const string ModePvPSim = "PvP Simulator";
 
     private static readonly FF2.Core.ISettingsCollection levelDefs = FF2.Core.SinglePlayerSettings.NormalSettings;
 
@@ -117,6 +118,7 @@ public class SinglePlayerMenu : Control
         switch (GameModeChoices.SelectedItem)
         {
             case ModeNormal:
+            case ModePvPSim:
                 Show(members.NormalModeOptions);
                 break;
             case ModeScoreAttack:
@@ -130,7 +132,6 @@ public class SinglePlayerMenu : Control
         var level = LevelChoices.SelectedItem;
         // TODO would be nice to show a preview grid so you know how big the level is...
         // For now just placeholder code
-        Console.WriteLine("Chosen level: " + level);
     }
 
     private void StartGame()
@@ -139,6 +140,13 @@ public class SinglePlayerMenu : Control
         if (mode == ModeTutorial)
         {
             NewRoot.FindRoot(this).StartTutorial();
+        }
+        else if (mode == ModePvPSim)
+        {
+            var collection = FF2.Core.SinglePlayerSettings.PvPSimSettings;
+            int level = LevelChoices.SelectedItem;
+            var token = new LevelToken(level, collection);
+            NewRoot.FindRoot(this).StartGame(token);
         }
         else
         {

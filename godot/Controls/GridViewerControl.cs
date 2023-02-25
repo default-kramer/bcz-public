@@ -21,6 +21,11 @@ public class GridViewerControl : Control
         this.Logic = new StandardLogic(ticker);
     }
 
+    public void SetLogicForAttackGrid(IAttackGridViewmodel vm)
+    {
+        this.Logic = new AttackGridLogic(vm);
+    }
+
     private TrackedSprite[] activeSprites = new TrackedSprite[400]; // should be way more than we need
 
     private SpritePool spritePool = null!;
@@ -84,6 +89,7 @@ public class GridViewerControl : Control
         float screenCellSize = GetCellSize(fullSize, gridSize);
         float extraX = Math.Max(0, fullSize.x - screenCellSize * gridSize.Width);
         float extraY = Math.Max(0, fullSize.y - screenCellSize * gridSize.Height);
+        float spriteWTF = -extraY / 2; // not sure why this is needed, but it works
 
         // For debugging, show the excess width/height as brown:
         //DrawRect(new Rect2(0, 0, fullSize), Colors.Brown);
@@ -99,7 +105,7 @@ public class GridViewerControl : Control
 
         float burstProgress = Logic.BurstProgress();
 
-        var fallSampler = Logic.GetFallSample();
+        var fallAnimator = Logic.GetFallAnimator();
 
         for (int x = 0; x < gridSize.Width; x++)
         {
@@ -119,11 +125,7 @@ public class GridViewerControl : Control
                 var screenY = gridY * screenCellSize + extraY / 2 + yPadding;
                 var screenX = x * screenCellSize + extraX / 2 + 1f;
 
-                float adder = 0f;
-                if (fallSampler.HasValue)
-                {
-                    adder += fallSampler.Value.GetAdder(loc);
-                }
+                float adder = fallAnimator.GetAdder(loc);
                 adder += Logic.FallSampleOverride(loc);
                 screenY -= adder * screenCellSize;
 
@@ -170,7 +172,8 @@ public class GridViewerControl : Control
 
                     var sprite = currentSprite.Sprite;
                     var offset = screenCellSize / 2;
-                    sprite.Position = new Vector2(screenX + offset, screenY + offset);
+
+                    sprite.Position = new Vector2(screenX + offset, screenY + offset + spriteWTF);
                     sprite.Scale = spriteScale2;
                     if (previewOcc.HasValue)
                     {
@@ -308,7 +311,7 @@ public class GridViewerControl : Control
 
         public virtual Occupant GetDestroyedOccupant(Loc loc) => Occupant.None;
 
-        public virtual FallSample? GetFallSample() => null;
+        public virtual IFallAnimator GetFallAnimator() => NullFallAnimator.Instance;
 
         public virtual float FallSampleOverride(Loc loc) => 0;
 
@@ -366,7 +369,7 @@ public class GridViewerControl : Control
 
         public override float BurstProgress() => ticker.BurstProgress();
 
-        public override FallSample? GetFallSample() => ticker.GetFallSample();
+        public override IFallAnimator GetFallAnimator() => ticker.GetFallAnimator();
 
         public override float FallSampleOverride(Loc loc) => 0;
 
@@ -471,6 +474,26 @@ public class GridViewerControl : Control
 
                 return state.Grid.Get(loc);
             }
+        }
+    }
+
+    sealed class AttackGridLogic : ILogic
+    {
+        private readonly IAttackGridViewmodel vm;
+        public override IReadOnlyGridSlim Grid => vm.Grid;
+
+        public AttackGridLogic(IAttackGridViewmodel vm)
+        {
+            this.vm = vm;
+        }
+
+        public override float DestructionProgress(Loc loc)
+        {
+            if (vm.IsFrozen(loc))
+            {
+                return 0.5f;
+            }
+            return 0;
         }
     }
 }

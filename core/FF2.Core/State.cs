@@ -8,7 +8,7 @@ using FF2.Core.Viewmodels;
 
 namespace FF2.Core
 {
-    public sealed class State
+    public sealed class State : IDumpCallback
     {
         private readonly Grid grid;
         private readonly FallAnimationSampler fallSampler;
@@ -22,6 +22,9 @@ namespace FF2.Core
         private readonly StateEvent.Factory eventFactory;
         private readonly Timekeeper timekeeper;
         private readonly IScheduler scheduler;
+        private readonly DumpAnimator dumpAnimator;
+        private readonly FallAnimator fallAnimator;
+
         private StateEvent __currentEvent = StateEvent.StateConstructed;
         public StateEvent CurrentEvent => __currentEvent;
 
@@ -44,10 +47,10 @@ namespace FF2.Core
 
         public static State CreateWithInfiniteHealth(Grid grid, ISpawnDeck deck)
         {
-            return new State(grid, deck, NullStateHook.Instance, new Timekeeper());
+            return new State(grid, deck, s => NullStateHook.Instance, new Timekeeper());
         }
 
-        internal State(Grid grid, ISpawnDeck spawnDeck, IStateHook hook, Timekeeper timekeeper)
+        internal State(Grid grid, ISpawnDeck spawnDeck, Func<State, IStateHook> makeHook, Timekeeper timekeeper)
         {
             this.grid = grid;
             this.fallSampler = new FallAnimationSampler(grid);
@@ -55,18 +58,27 @@ namespace FF2.Core
             this.eventFactory = new();
             this.timekeeper = timekeeper;
             this.scheduler = timekeeper;
+            dumpAnimator = new DumpAnimator(grid.Width, grid.Height + 2); // dump from the mover area
+            fallAnimator = new FallAnimator(fallSampler, 0f);
             mover = null;
             currentCombo = ComboInfo.Empty;
-            this.hook = hook;
+            this.hook = makeHook(this);
             if (hook is NewHealth h3)
             {
                 CountdownViewmodel = h3;
                 PenaltyViewmodel = h3;
             }
+            else if (hook is SimulatedAttacker atk)
+            {
+                this.AttackGridViewmodel = atk.VM;
+                this.SwitchesViewmodel = atk.SwitchVM;
+            }
         }
 
-        public readonly Viewmodels.ICountdownViewmodel? CountdownViewmodel;
-        public readonly Viewmodels.ISlidingPenaltyViewmodel? PenaltyViewmodel;
+        public readonly ICountdownViewmodel? CountdownViewmodel;
+        public readonly ISlidingPenaltyViewmodel? PenaltyViewmodel;
+        public readonly IAttackGridViewmodel? AttackGridViewmodel;
+        public readonly ISwitchesViewmodel? SwitchesViewmodel;
 
         public IReadOnlyGrid Grid { get { return grid; } }
 
@@ -79,9 +91,18 @@ namespace FF2.Core
             var grid = Core.Grid.Create(ss.Settings, new PRNG(ss.Seed));
             var timekeeper = new Timekeeper();
 
-            var hook = new NewHealth(timekeeper);
-
-            return new State(grid, deck, hook, timekeeper);
+            var mode = ss.Settings.GameMode;
+            if (mode == GameMode.PvPSim)
+            {
+                var switches = new Switches();
+                var hook = (State s) => new SimulatedAttacker(switches, s);
+                return new State(grid, deck, hook, timekeeper);
+            }
+            else
+            {
+                var hook = (State s) => new NewHealth(timekeeper);
+                return new State(grid, deck, hook, timekeeper);
+            }
         }
 
         public Viewmodels.QueueModel MakeQueueModel()
@@ -176,6 +197,14 @@ namespace FF2.Core
                 return StateEvent.GameEnded;
             }
 
+            hook.PreSpawn(NumCatalystsSpawned);
+
+            if (pendingDumps > 0)
+            {
+                pendingDumps = 0; // TODO need to decide how dump volume will be controlled...
+                return Dump();
+            }
+
             Slowmo = false;
             var spawnItem = spawnDeck.Pop();
             if (spawnItem.IsCatalyst(out var _))
@@ -190,6 +219,101 @@ namespace FF2.Core
             {
                 throw new Exception($"Cannot spawn: {spawnItem}");
             }
+        }
+
+        int pendingDumps = 0;
+        void IDumpCallback.Dump(int numAttacks)
+        {
+            pendingDumps += numAttacks;
+        }
+
+        private StateEvent Dump()
+        {
+            var appt = scheduler.CreateAppointment(Constants.DumpMillis);
+            dumpAnimator.Reset(appt);
+
+            for (int x = 0; x < grid.Width; x++)
+            {
+                DumpColumn(x);
+            }
+
+            return eventFactory.Dumped(appt);
+        }
+
+        private void DumpColumn(int x)
+        {
+            for (int y = grid.Height - 2; y >= 0; y--)
+            {
+                var loc = new Loc(x, y);
+                var item = grid.Get(loc);
+                if (item != Occupant.None)
+                {
+                    var nextColor = item.Color switch
+                    {
+                        Color.Red => Color.Yellow,
+                        Color.Yellow => Color.Blue,
+                        _ => Color.Red,
+                    };
+                    var dumpLoc = loc.Add(0, 1);
+                    dumpAnimator.SetDumpLoc(dumpLoc);
+                    grid.Set(dumpLoc, Occupant.MakeCatalyst(nextColor, Direction.None));
+                    return;
+                }
+            }
+        }
+
+        private class DumpAnimator : IFallAnimator
+        {
+            const int NoDump = -1; // this Y coordinate does not exist
+            private readonly int[] dumpLocs; // for each column, hold the Y coordinate that the dump lands in
+            private readonly int height;
+            private Appointment animation;
+
+            public DumpAnimator(int width, int height)
+            {
+                dumpLocs = new int[width];
+                this.height = height;
+                Reset(Appointment.Frame0);
+            }
+
+            public void Reset(Appointment animation)
+            {
+                this.animation = animation;
+                dumpLocs.AsSpan().Fill(NoDump);
+            }
+
+            public void SetDumpLoc(Loc loc)
+            {
+                dumpLocs[loc.X] = loc.Y;
+            }
+
+            public float GetAdder(Loc loc)
+            {
+                if (dumpLocs[loc.X] == loc.Y)
+                {
+                    var drop = height - loc.Y;
+                    return drop - drop * animation.Progress();
+                }
+                return 0;
+            }
+        }
+
+        public IFallAnimator GetFallAnimator()
+        {
+            var ev = CurrentEvent;
+            var kind = ev.Kind;
+            if (kind == StateEventKind.Fell)
+            {
+                float progress = ev.Completion.Progress();
+                var sampler = ev.FellPayload();
+                fallAnimator.Resample(sampler, progress);
+                return fallAnimator;
+            }
+            else if (kind == StateEventKind.Dumped)
+            {
+                return dumpAnimator;
+            }
+            return NullFallAnimator.Instance;
         }
 
         public Command? Approach(Orientation o)
@@ -265,6 +389,7 @@ namespace FF2.Core
                 case StateEventKind.Fell:
                 case StateEventKind.Destroyed:
                 case StateEventKind.Plummeted:
+                case StateEventKind.Dumped:
                     return Update(FallOrDestroyOrSpawn());
                 case StateEventKind.GameEnded:
                     return false;

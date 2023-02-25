@@ -53,6 +53,12 @@ namespace FF2.Core
 
         void OnCatalystSpawned(SpawnItem catalyst);
 
+        /// <summary>
+        /// Can be called multiple times per spawn. Use the <paramref name="spawnCount"/>
+        /// if you need to detect these "duplicate" calls.
+        /// </summary>
+        void PreSpawn(int spawnCount);
+
         bool GameOver { get; }
     }
 
@@ -70,5 +76,7 @@ namespace FF2.Core
         public void OnComboUpdated(ComboInfo previous, ComboInfo current, IScheduler scheduler) { }
 
         public void OnCatalystSpawned(SpawnItem catalyst) { }
+
+        public void PreSpawn(int spawnCount) { }
     }
 }
