@@ -6,6 +6,14 @@ using System.Threading.Tasks;
 
 namespace FF2.Core
 {
+    public enum GameMode
+    {
+        // WARNING - changing these names could break replays
+        Levels = 0,
+        ScoreAttack = 1,
+        PvPSim = 100,
+    }
+
     public readonly struct SeededSettings
     {
         public readonly PRNG.State Seed;
@@ -35,6 +43,8 @@ namespace FF2.Core
         /// </summary>
         int RowsPerStripe { get; }
 
+        GameMode GameMode { get; }
+
         SeededSettings AddRandomSeed();
     }
 
@@ -46,6 +56,7 @@ namespace FF2.Core
         public int GridHeight { get; set; } = Grid.DefaultHeight;
         public int EnemiesPerStripe { get; set; } = 5;
         public int RowsPerStripe { get; set; } = 2;
+        public GameMode GameMode { get; set; } = GameMode.Levels;
 
         public static readonly SinglePlayerSettings Default = new SinglePlayerSettings();
 
@@ -66,10 +77,13 @@ namespace FF2.Core
 
         public static readonly ISettingsCollection BeginnerSettings = new BeginnerSettingsCollection();
         public static readonly ISettingsCollection NormalSettings = new NormalSettingsCollection();
+        public static readonly ISettingsCollection PvPSimSettings = new PvPSimSettingsCollection();
 
         abstract class SettingsCollection : ISettingsCollection
         {
             protected readonly ISinglePlayerSettings[] array;
+
+            protected virtual GameMode GameMode => GameMode.Levels;
 
             public SettingsCollection(int maxLevel)
             {
@@ -97,6 +111,7 @@ namespace FF2.Core
                     EnemiesPerStripe = perStripe,
                     RowsPerStripe = 2,
                     SpawnBlanks = SpawnBlanks(Level),
+                    GameMode = this.GameMode,
                 };
 
                 if (settings.CalculateEnemyHeight() != expectedHeight)
@@ -173,6 +188,21 @@ namespace FF2.Core
             {
                 return true;
             }
+        }
+
+        class PvPSimSettingsCollection : SettingsCollection
+        {
+            public PvPSimSettingsCollection() : base(20)
+            {
+                AddAll();
+            }
+
+            protected override bool SpawnBlanks(int level)
+            {
+                return true;
+            }
+
+            protected override GameMode GameMode => GameMode.PvPSim;
         }
     }
 }

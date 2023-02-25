@@ -22,7 +22,6 @@ namespace FF2.Core
         private readonly StateEvent.Factory eventFactory;
         private readonly Timekeeper timekeeper;
         private readonly IScheduler scheduler;
-        private readonly Switches switches;
         private readonly DumpAnimator dumpAnimator;
         private readonly FallAnimator fallAnimator;
 
@@ -48,10 +47,10 @@ namespace FF2.Core
 
         public static State CreateWithInfiniteHealth(Grid grid, ISpawnDeck deck)
         {
-            return new State(grid, deck, NullStateHook.Instance, new Timekeeper());
+            return new State(grid, deck, s => NullStateHook.Instance, new Timekeeper());
         }
 
-        internal State(Grid grid, ISpawnDeck spawnDeck, IStateHook hook, Timekeeper timekeeper)
+        internal State(Grid grid, ISpawnDeck spawnDeck, Func<State, IStateHook> makeHook, Timekeeper timekeeper)
         {
             this.grid = grid;
             this.fallSampler = new FallAnimationSampler(grid);
@@ -59,20 +58,20 @@ namespace FF2.Core
             this.eventFactory = new();
             this.timekeeper = timekeeper;
             this.scheduler = timekeeper;
-            this.switches = new Switches();
             dumpAnimator = new DumpAnimator(grid.Width, grid.Height + 2); // dump from the mover area
             fallAnimator = new FallAnimator(fallSampler, 0f);
             mover = null;
             currentCombo = ComboInfo.Empty;
-            this.hook = hook;
+            this.hook = makeHook(this);
             if (hook is NewHealth h3)
             {
                 CountdownViewmodel = h3;
                 PenaltyViewmodel = h3;
-                var TODO = new SimulatedAttacker(switches, this);
-                this.hook = new CompositeHook(this.hook, TODO);
-                this.AttackGridViewmodel = TODO.VM;
-                this.SwitchesViewmodel = this.switches;
+            }
+            else if (hook is SimulatedAttacker atk)
+            {
+                this.AttackGridViewmodel = atk.VM;
+                this.SwitchesViewmodel = atk.SwitchVM;
             }
         }
 
@@ -92,9 +91,18 @@ namespace FF2.Core
             var grid = Core.Grid.Create(ss.Settings, new PRNG(ss.Seed));
             var timekeeper = new Timekeeper();
 
-            var hook = new NewHealth(timekeeper);
-
-            return new State(grid, deck, hook, timekeeper);
+            var mode = ss.Settings.GameMode;
+            if (mode == GameMode.PvPSim)
+            {
+                var switches = new Switches();
+                var hook = (State s) => new SimulatedAttacker(switches, s);
+                return new State(grid, deck, hook, timekeeper);
+            }
+            else
+            {
+                var hook = (State s) => new NewHealth(timekeeper);
+                return new State(grid, deck, hook, timekeeper);
+            }
         }
 
         public Viewmodels.QueueModel MakeQueueModel()

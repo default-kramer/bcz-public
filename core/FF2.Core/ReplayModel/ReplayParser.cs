@@ -60,6 +60,7 @@ namespace FF2.Core.ReplayModel
 
         int? version = null;
         private PRNG.State? seed = null;
+        private GameMode? mode;
         private int? enemyCount;
         private bool? spawnBlanks;
         private int? gridWidth;
@@ -76,6 +77,8 @@ namespace FF2.Core.ReplayModel
             settings.GridHeight = this.gridHeight ?? settings.GridHeight;
             settings.EnemiesPerStripe = this.enemiesPerStripe ?? settings.EnemiesPerStripe;
             settings.RowsPerStripe = this.rowsPerStripe ?? settings.RowsPerStripe;
+            // TODO before going public, should make game mode required with no default...
+            settings.GameMode = this.mode ?? GameMode.Levels;
             if (seed == null)
             {
                 throw new InvalidReplayException("Missing random seed");
@@ -101,6 +104,16 @@ namespace FF2.Core.ReplayModel
             if (setting.Name == "seed")
             {
                 seed = PRNG.State.Deserialize(setting.Value);
+            }
+            if (setting.Name == "mode")
+            {
+                mode = setting.Value switch
+                {
+                    nameof(GameMode.Levels) => GameMode.Levels,
+                    nameof(GameMode.ScoreAttack) => GameMode.ScoreAttack,
+                    nameof(GameMode.PvPSim) => GameMode.PvPSim,
+                    _ => throw new InvalidReplayException($"Unsupported mode: {setting.Value}"),
+                };
             }
             if (setting.Name == "enemyCount")
             {

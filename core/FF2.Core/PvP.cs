@@ -212,6 +212,8 @@ namespace FF2.Core
             this.VM = new Viewmodel(this);
         }
 
+        public ISwitchesViewmodel SwitchVM => switches;
+
         public bool GameOver => false;
 
         public void Elapse(IScheduler scheduler) { }
