@@ -97,14 +97,10 @@ sealed class SpritePoolV2
         {
             if (pool.Count > 0)
             {
-                var pooled = pool.Pop();
-                pooled.Rented = true;
-                pooled.Visible = true;
-                return pooled;
+                return pool.Pop().Rent();
             }
 
-            var sprite = new ManagedSprite();
-            sprite.OnCreated(kind, this);
+            var sprite = new ManagedSprite(kind, this);
             allSprites.Add(sprite);
             if (allSprites.Count > 200)
             {
@@ -128,9 +124,7 @@ sealed class SpritePoolV2
 
             owner.AddChild(sprite);
 
-            sprite.Rented = true;
-            sprite.Visible = true;
-            return sprite;
+            return sprite.Rent();
         }
 
         public void ReturnAll()
@@ -152,11 +146,11 @@ sealed class SpritePoolV2
 
         class ManagedSprite : PooledSprite
         {
-            private SpriteKind kind;
-            private SpriteManager manager = null!;
-            public bool Rented = false;
+            private readonly SpriteKind kind;
+            private readonly SpriteManager manager = null!;
+            private bool Rented = false;
 
-            public void OnCreated(SpriteKind kind, SpriteManager manager)
+            public ManagedSprite(SpriteKind kind, SpriteManager manager)
             {
                 this.kind = kind;
                 this.manager = manager;
@@ -172,6 +166,13 @@ sealed class SpritePoolV2
                     Rented = false;
                     manager.pool.Push(this);
                 }
+            }
+
+            public ManagedSprite Rent()
+            {
+                Visible = true;
+                Rented = true;
+                return this;
             }
         }
     }
