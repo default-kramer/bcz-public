@@ -2,6 +2,7 @@ using FF2.Core;
 using FF2.Core.Viewmodels;
 using Godot;
 using System;
+using System.Linq;
 using System.Collections.Generic;
 
 #nullable enable
@@ -12,10 +13,9 @@ public class HealthViewerControl : Control
     private Font font = null!;
     private static readonly Godot.Color BoxColor = Godot.Colors.Orange;
     private static readonly Godot.Color TextColor = Godot.Colors.Black;
-    private SpritePool spritePool = null!;
-    private Sprites sprites = null!;
+    private SpritePoolV2 numeralPool = null!;
+    private Hearts hearts = null!;
     private const int MaxHearts = 3;
-    private readonly List<TrackedSprite> slidingSprites = new List<TrackedSprite>();
 
     public void SetNullModel()
     {
@@ -27,11 +27,16 @@ public class HealthViewerControl : Control
         this.vm = viewmodel ?? NullViewmodel.Instance;
     }
 
+    const int skNum1 = (int)SpriteKind.Num1;
+    const int skNumLast = (int)SpriteKind.Num16;
+    private static readonly SpriteKind[] numerals = Enumerable.Range(skNum1, 1 + skNumLast - skNum1)
+        .Cast<SpriteKind>().ToArray();
+
     public override void _Ready()
     {
         font = this.GetFont("");
-        spritePool = NewRoot.GetSpritePool(this);
-        sprites = new Sprites(spritePool, this);
+        numeralPool = new SpritePoolV2(this, numerals);
+        hearts = new Hearts(this);
     }
 
     private const float slowBlinkRate = 0.5f;
@@ -49,7 +54,8 @@ public class HealthViewerControl : Control
 
     public override void _Draw()
     {
-        sprites.HideAll();
+        hearts.HideAll();
+        numeralPool.ReturnAll();
 
         bool hasHealth = vm.GetHealth(out var health);
         int healthAdder = hasHealth ? 1 : 0;
@@ -57,11 +63,6 @@ public class HealthViewerControl : Control
 
         float boxHeight = RectSize.y / numSlots;
         float boxWidth = RectSize.x;
-
-        while (slidingSprites.Count < vm.NumSlots)
-        {
-            slidingSprites.Add(TrackedSprite.Nothing);
-        }
 
         for (int i = 0; i < numSlots; i++)
         {
@@ -81,58 +82,34 @@ public class HealthViewerControl : Control
 
     private void DrawPenalty(int index, Rect2 rect)
     {
-        var penalty = vm.GetPenalty(index);
-        var neededKind = SpriteKind.None;
-        bool draw = false;
+        bool draw = true;
+        if (index == 0)
+        {
+            draw = FastBlinkOn;
+        }
+        else if (index == 1)
+        {
+            draw = SlowBlinkOn;
+        }
 
+        if (!draw)
+        {
+            return;
+        }
+
+        var penalty = vm.GetPenalty(index);
         if (penalty.Size > 0)
         {
-            neededKind = SpriteKind.Num1 - 1 + penalty.Size;
-            draw = true;
-        }
-
-        if (slidingSprites[index].Kind != neededKind)
-        {
-            if (slidingSprites[index].IsSomething)
-            {
-                spritePool.Return(slidingSprites[index]);
-                slidingSprites[index] = TrackedSprite.Nothing;
-            }
-            if (neededKind != SpriteKind.None)
-            {
-                slidingSprites[index] = spritePool.Rent(neededKind, this);
-            }
-        }
-
-        if (draw)
-        {
-            if (index == 0)
-            {
-                draw = FastBlinkOn;
-            }
-            else if (index == 1)
-            {
-                draw = SlowBlinkOn;
-            }
-        }
-
-        var ts = slidingSprites[index];
-
-        if (draw)
-        {
+            var neededKind = SpriteKind.Num1 - 1 + penalty.Size;
+            var sprite = numeralPool.Rent(neededKind);
             DrawRect(rect, BoxColor, filled: true);
             DrawString(font, rect.Position + new Vector2(8, 15), penalty.Size.ToString(), TextColor);
-            ts.Sprite.Visible = true;
-            ts.Sprite.ScaleAndCenter(rect);
-            var shader = ts.Sprite.Material as ShaderMaterial;
+            sprite.ScaleAndCenter(rect);
+            var shader = sprite.Material as ShaderMaterial;
             if (shader != null)
             {
                 shader.SetShaderParam("destructionProgress", penalty.DestructionProgress);
             }
-        }
-        else if (ts.IsSomething)
-        {
-            ts.Sprite.Visible = false;
         }
     }
 
@@ -143,18 +120,17 @@ public class HealthViewerControl : Control
         float availX = box.Size.x - padding * 2;
         float availY = box.Size.y - padding * 2;
 
-        float xScale = (availX / health.MaxHealth) / sprites.SpriteWidth;
-        float yScale = availY / sprites.SpriteHeight;
+        float xScale = (availX / health.MaxHealth) / hearts.SpriteWidth;
+        float yScale = availY / hearts.SpriteHeight;
         float scale = Math.Min(xScale, yScale);
 
-        float spriteW = scale * sprites.SpriteWidth;
-        float spriteH = scale * sprites.SpriteHeight;
+        float spriteW = scale * hearts.SpriteWidth;
+        float spriteH = scale * hearts.SpriteHeight;
         float yOffset = padding + spriteH / 2;
 
         for (int i = 0; i < health.MaxHealth; i++)
         {
-            var item = i < health.CurrentHealth ? sprites.FullHearts[i] : sprites.EmptyHearts[i];
-            var sprite = item.Sprite;
+            var sprite = i < health.CurrentHealth ? hearts.FullHearts[i] : hearts.EmptyHearts[i];
             sprite.Visible = true;
             sprite.Scale = new Vector2(scale, scale);
 
@@ -182,30 +158,26 @@ public class HealthViewerControl : Control
         }
     }
 
-    // TODO: Sprites will leak if this control is ever created+destroyed dynamically.
-    // There is no reason to use the SpritePool here anyway.
-    private class Sprites
+    private class Hearts
     {
-        public readonly SpritePool Pool;
-        public readonly TrackedSprite[] FullHearts;
-        public readonly TrackedSprite[] EmptyHearts;
+        public readonly PooledSprite[] FullHearts;
+        public readonly PooledSprite[] EmptyHearts;
         public readonly int SpriteWidth;
         public readonly int SpriteHeight;
 
-        public Sprites(SpritePool pool, Control owner)
+        public Hearts(Control owner)
         {
-            this.Pool = pool;
-            FullHearts = new TrackedSprite[MaxHearts];
-            EmptyHearts = new TrackedSprite[MaxHearts];
+            var pool = new SpritePoolV2(owner, SpriteKind.Heart, SpriteKind.Heart0);
 
+            FullHearts = new PooledSprite[MaxHearts];
+            EmptyHearts = new PooledSprite[MaxHearts];
             for (int i = 0; i < MaxHearts; i++)
             {
-                FullHearts[i] = pool.Rent(FF2.Core.SpriteKind.Heart, owner);
-                EmptyHearts[i] = pool.Rent(FF2.Core.SpriteKind.Heart0, owner);
+                FullHearts[i] = pool.Rent(SpriteKind.Heart);
+                EmptyHearts[i] = pool.Rent(SpriteKind.Heart0);
             }
-
             // Assume both sprites are the same size
-            var tex = FullHearts[0].Sprite.Texture;
+            var tex = FullHearts[0].Texture;
             SpriteWidth = tex.GetWidth();
             SpriteHeight = tex.GetHeight();
         }
@@ -214,17 +186,8 @@ public class HealthViewerControl : Control
         {
             for (int i = 0; i < MaxHearts; i++)
             {
-                FullHearts[i].Sprite.Visible = false;
-                EmptyHearts[i].Sprite.Visible = false;
-            }
-        }
-
-        public void ReturnAll()
-        {
-            for (int i = 0; i < MaxHearts; i++)
-            {
-                Pool.Return(FullHearts[i]);
-                Pool.Return(EmptyHearts[i]);
+                FullHearts[i].Visible = false;
+                EmptyHearts[i].Visible = false;
             }
         }
     }

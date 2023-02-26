@@ -39,13 +39,6 @@ public class NewRoot : Control
         BackToMainMenu();
     }
 
-    internal static SpritePool GetSpritePool(Node child)
-    {
-        var obj = child.GetNode("/root/TheSpritePool");
-        var sp = (TheSpritePool)obj;
-        return sp.Pool;
-    }
-
     internal static NewRoot FindRoot(Node child)
     {
         if (child == null)

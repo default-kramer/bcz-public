@@ -9,16 +9,16 @@ public class QueueViewerControl : Control
 {
     public QueueModel Model { get; set; } = null!;
     public GridViewerControl GridViewer { get; set; } = null!;
-    private SpritePool spritePool = null!;
+    private SpritePoolV2 spritePool = null!;
 
     const int count = 5;
-    private readonly TrackedSprite[] sprites = new TrackedSprite[count * 2];
+    private readonly PooledSprite?[] sprites = new PooledSprite?[count * 2];
     private static int Index1(int i) { return i; }
     private static int Index2(int i) { return i + count; }
 
     public override void _Ready()
     {
-        spritePool = NewRoot.GetSpritePool(this);
+        spritePool = new SpritePoolV2(this, SpriteKind.Single, SpriteKind.Joined, SpriteKind.BlankJoined, SpriteKind.BlankSingle);
     }
 
     public static void DrawBorder(CanvasItem me, Rect2 box)
@@ -91,7 +91,7 @@ public class QueueViewerControl : Control
 
     private void HideSprite(int index)
     {
-        var sprite = sprites[index].Sprite;
+        var sprite = sprites[index];
         if (sprite != null)
         {
             sprite.Visible = false;
@@ -102,21 +102,17 @@ public class QueueViewerControl : Control
     {
         var kind = GridViewerControl.GetSpriteKind(occ);
 
-        var ts = sprites[index];
+        var sprite = sprites[index];
 
-        if (ts.Kind != kind)
+        if (sprite?.Kind != kind)
         {
-            if (ts.IsSomething)
-            {
-                spritePool.Return(ts);
-            }
-            ts = spritePool.Rent(kind, this);
-            sprites[index] = ts;
+            sprite?.Return();
+            sprite = spritePool.Rent(kind);
+            sprites[index] = sprite;
         }
 
-        if (ts.Sprite == null) { return; }
+        if (sprite == null) { return; }
 
-        var sprite = ts.Sprite;
         sprite.Visible = true;
         sprite.Position = new Vector2(x, y);
         sprite.Scale = GridViewer.CurrentSpriteScale;
