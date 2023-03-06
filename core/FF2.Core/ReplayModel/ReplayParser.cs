@@ -67,6 +67,7 @@ namespace FF2.Core.ReplayModel
         private int? gridHeight;
         private int? enemiesPerStripe;
         private int? rowsPerStripe;
+        private int[]? barriers = null;
 
         private State BuildState()
         {
@@ -112,6 +113,7 @@ namespace FF2.Core.ReplayModel
                     nameof(GameMode.Levels) => GameMode.Levels,
                     nameof(GameMode.ScoreAttack) => GameMode.ScoreAttack,
                     nameof(GameMode.PvPSim) => GameMode.PvPSim,
+                    nameof(GameMode.Levels2) => GameMode.Levels2,
                     _ => throw new InvalidReplayException($"Unsupported mode: {setting.Value}"),
                 };
             }
@@ -139,6 +141,7 @@ namespace FF2.Core.ReplayModel
             {
                 rowsPerStripe = int.Parse(setting.Value);
             }
+            // TODO need to read barriers
         }
 
         public void Parse(CommandElement command)

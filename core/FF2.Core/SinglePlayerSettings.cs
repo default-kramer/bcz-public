@@ -4,14 +4,17 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
+#nullable enable
+
 namespace FF2.Core
 {
     public enum GameMode
     {
         // WARNING - changing these names could break replays
-        Levels = 0,
-        ScoreAttack = 1,
-        PvPSim = 100,
+        Levels,
+        ScoreAttack,
+        PvPSim,
+        Levels2,
     }
 
     public readonly struct SeededSettings
@@ -45,6 +48,11 @@ namespace FF2.Core
 
         GameMode GameMode { get; }
 
+        /// <summary>
+        /// Y-coordinates of barriers
+        /// </summary>
+        ReadOnlySpan<int> Barriers { get; }
+
         SeededSettings AddRandomSeed();
     }
 
@@ -57,6 +65,16 @@ namespace FF2.Core
         public int EnemiesPerStripe { get; set; } = 5;
         public int RowsPerStripe { get; set; } = 2;
         public GameMode GameMode { get; set; } = GameMode.Levels;
+        public ReadOnlySpan<int> Barriers => barriers;
+
+        private int[] barriers = noBarriers;
+        private static int[] noBarriers = new int[] { };
+
+        public SinglePlayerSettings SetBarriers(params int[] barriers)
+        {
+            this.barriers = barriers;
+            return this;
+        }
 
         public static readonly SinglePlayerSettings Default = new SinglePlayerSettings();
 
@@ -78,6 +96,7 @@ namespace FF2.Core
         public static readonly ISettingsCollection BeginnerSettings = new BeginnerSettingsCollection();
         public static readonly ISettingsCollection NormalSettings = new NormalSettingsCollection();
         public static readonly ISettingsCollection PvPSimSettings = new PvPSimSettingsCollection();
+        public static readonly ISettingsCollection WIP = new TODO();
 
         abstract class SettingsCollection : ISettingsCollection
         {
@@ -101,15 +120,15 @@ namespace FF2.Core
                 return array[level - 1];
             }
 
-            protected abstract bool SpawnBlanks(int level);
+            protected virtual bool SpawnBlanks(int level) => true;
 
-            protected void Add(int perStripe, int expectedHeight, int Level)
+            protected SinglePlayerSettings Add(int perStripe, int expectedHeight, int Level, int? enemyCount = null, int rowsPerStripe = 2)
             {
                 var settings = new SinglePlayerSettings()
                 {
-                    EnemyCount = Level * 4,
+                    EnemyCount = enemyCount ?? (Level * 4),
                     EnemiesPerStripe = perStripe,
-                    RowsPerStripe = 2,
+                    RowsPerStripe = rowsPerStripe,
                     SpawnBlanks = SpawnBlanks(Level),
                     GameMode = this.GameMode,
                 };
@@ -120,15 +139,16 @@ namespace FF2.Core
                 }
 
                 array[Level - 1] = settings;
+                return settings;
             }
 
             private int LevelCounter;
 
-            private void Add(int a, int b)
+            private void Add(int perStripe, int expectedHeight)
             {
                 if (LevelCounter <= array.Length)
                 {
-                    Add(a, b, LevelCounter);
+                    Add(perStripe, expectedHeight, LevelCounter);
                 }
                 LevelCounter++;
             }
@@ -203,6 +223,33 @@ namespace FF2.Core
             }
 
             protected override GameMode GameMode => GameMode.PvPSim;
+        }
+
+        class TODO : SettingsCollection
+        {
+            protected override GameMode GameMode => GameMode.Levels2;
+
+            public TODO() : base(12)
+            {
+                MyAdd(1);
+                MyAdd(2);
+                MyAdd(3);
+                MyAdd(4).SetBarriers(2);
+                MyAdd(5).SetBarriers(2);
+                MyAdd(6).SetBarriers(2);
+                MyAdd(7).SetBarriers(2, 6);
+                MyAdd(8).SetBarriers(2, 6);
+                MyAdd(9).SetBarriers(2, 7);
+                MyAdd(10).SetBarriers(2, 7);
+                MyAdd(11).SetBarriers(2, 10);
+                MyAdd(12).SetBarriers(2, 10);
+            }
+
+            private SinglePlayerSettings MyAdd(int level)
+            {
+                const int enemiesPerStripe = 5;
+                return Add(enemiesPerStripe, level, level, enemyCount: level * 5, rowsPerStripe: 1);
+            }
         }
     }
 }

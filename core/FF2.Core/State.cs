@@ -75,7 +75,7 @@ namespace FF2.Core
             }
         }
 
-        public readonly ICountdownViewmodel? CountdownViewmodel;
+        public ICountdownViewmodel? CountdownViewmodel { get; private set; }
         public readonly ISlidingPenaltyViewmodel? PenaltyViewmodel;
         public readonly IAttackGridViewmodel? AttackGridViewmodel;
         public readonly ISwitchesViewmodel? SwitchesViewmodel;
@@ -98,6 +98,15 @@ namespace FF2.Core
                 var hook = (State s) => new SimulatedAttacker(switches, s);
                 return new State(grid, deck, hook, timekeeper);
             }
+            if (mode == GameMode.Levels2)
+            {
+                var countdown = new CountdownHook(timekeeper);
+                var barrier = new BarrierHook(grid);
+                var hook = new CompositeHook(countdown, barrier);
+                var state = new State(grid, deck, s => hook, timekeeper);
+                state.CountdownViewmodel = countdown;
+                return state;
+            }
             else
             {
                 var hook = (State s) => new NewHealth(timekeeper);
@@ -119,8 +128,6 @@ namespace FF2.Core
         // ... and this should become non-TEMP code.
         internal void TEMP_TimekeeperHook(IScheduler scheduler)
         {
-            hook.Elapse(scheduler);
-
             Transition();
 
             if (hook.GameOver)

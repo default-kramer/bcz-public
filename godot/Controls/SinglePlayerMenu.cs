@@ -15,10 +15,10 @@ public class SinglePlayerMenu : Control
     const string ModeTraining = "Training";
     const string ModePvPSim = "PvP Simulator";
 
-    private static readonly FF2.Core.ISettingsCollection levelDefs = FF2.Core.SinglePlayerSettings.NormalSettings;
+    private static readonly FF2.Core.ISettingsCollection TODO = FF2.Core.SinglePlayerSettings.WIP;
 
     private readonly ChoiceModel<int> LevelChoices = new ChoiceModel<int>()
-        .AddChoices(Enumerable.Range(1, levelDefs.MaxLevel));
+        .AddChoices(Enumerable.Range(1, TODO.MaxLevel));
 
     private readonly ChoiceModel<string> TutorialChoices = new ChoiceModel<string>()
         .AddChoices(TutorialsOn, TutorialsOff);
@@ -150,7 +150,7 @@ public class SinglePlayerMenu : Control
         }
         else
         {
-            var collection = FF2.Core.SinglePlayerSettings.NormalSettings;
+            var collection = TODO;
             int level = LevelChoices.SelectedItem;
             var token = new LevelToken(level, collection);
             NewRoot.FindRoot(this).StartGame(token);

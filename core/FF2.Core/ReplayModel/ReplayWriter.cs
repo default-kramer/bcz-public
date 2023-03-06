@@ -29,6 +29,7 @@ namespace FF2.Core.ReplayModel
             writer.WriteLine("s gridHeight {0}", settings.GridHeight);
             writer.WriteLine("s enemiesPerStripe {0}", settings.EnemiesPerStripe);
             writer.WriteLine("s rowsPerStripe {0}", settings.RowsPerStripe);
+            // TODO need to write barriers
 
             return new ReplayWriter(writer);
         }

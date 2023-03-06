@@ -216,8 +216,6 @@ namespace FF2.Core
 
         public bool GameOver => false;
 
-        public void Elapse(IScheduler scheduler) { }
-
         public void OnCatalystSpawned(SpawnItem catalyst) { }
 
         private int lastSpawnCount = -1;

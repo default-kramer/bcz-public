@@ -21,9 +21,9 @@ namespace FF2.Core
         None = 0,
         Enemy = 1,
         Catalyst = 2,
-        Health = 3,
-        // reserve up to F for the future
-        All = Enemy | Catalyst,
+        Barrier = 3,
+        Last = 0xF, // reserve up to F for the future
+        All = Enemy | Catalyst | Barrier,
     }
 
     public enum Color : Bits

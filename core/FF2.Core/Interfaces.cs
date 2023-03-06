@@ -45,8 +45,6 @@ namespace FF2.Core
 
     interface IStateHook
     {
-        void Elapse(IScheduler scheduler);
-
         void OnComboUpdated(ComboInfo previous, ComboInfo current, IScheduler scheduler);
 
         void OnComboCompleted(ComboInfo combo, IScheduler scheduler);
@@ -68,8 +66,6 @@ namespace FF2.Core
         public static readonly NullStateHook Instance = new NullStateHook();
 
         public bool GameOver => false;
-
-        public void Elapse(IScheduler scheduler) { }
 
         public void OnComboCompleted(ComboInfo combo, IScheduler scheduler) { }
 

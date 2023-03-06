@@ -65,6 +65,7 @@ public class GameViewerControl : Control
         public readonly HBoxContainer HBoxContainer;
         public readonly SwitchViewerControl SwitchViewerControl;
         public readonly GridViewerControl AttackGridViewer;
+        public readonly BarrierTogglesControl BarrierTogglesControl;
 
         public Members(Control me)
         {
@@ -76,6 +77,7 @@ public class GameViewerControl : Control
             me.FindNode(out HBoxContainer, nameof(HBoxContainer));
             me.FindNode(out SwitchViewerControl, nameof(SwitchViewerControl));
             me.FindNode(out AttackGridViewer, nameof(AttackGridViewer));
+            me.FindNode(out BarrierTogglesControl, nameof(BarrierTogglesControl));
 
             QueueViewer.GridViewer = GridViewer;
         }
@@ -162,6 +164,14 @@ public class GameViewerControl : Control
         members.CountdownViewer.RectMinSize = new Vector2(ladderWidth, 0);
         minWidth += ladderWidth;
 
+        if (true)
+        {
+            separationCount++;
+            members.BarrierTogglesControl.Visible = true;
+            members.BarrierTogglesControl.RectMinSize = new Vector2(100, 0);
+            minWidth += 100;
+        }
+
         if (members.SwitchViewerControl.Visible)
         {
             separationCount++;
@@ -207,6 +217,7 @@ public class GameViewerControl : Control
         members.HealthViewer.Update();
         members.SwitchViewerControl.Update();
         members.AttackGridViewer.Update();
+        members.BarrierTogglesControl.Update();
 
         this.logic.CheckGameOver();
     }

@@ -137,5 +137,32 @@ namespace FF2.Core
                 _ => color,
             };
         }
+
+        public static void InsertBarriers(Grid grid, ReadOnlySpan<int> barrierRows)
+        {
+            for (int i = 0; i < barrierRows.Length; i++)
+            {
+                InsertBarrier(grid, barrierRows[i]);
+            }
+        }
+
+        private static void InsertBarrier(Grid grid, int barrierY)
+        {
+            for (int y = grid.Height - 1; y > barrierY; y--)
+            {
+                for (int x = 0; x < grid.Width; x++)
+                {
+                    var loc = new Loc(x, y);
+                    var below = loc.Add(0, -1);
+                    grid.Set(loc, grid.Get(below));
+                    grid.Set(below, Occupant.None);
+                }
+            }
+
+            for (int x = 0; x < grid.Width; x++)
+            {
+                grid.Set(new Loc(x, barrierY), Occupant.IndestructibleEnemy);
+            }
+        }
     }
 }

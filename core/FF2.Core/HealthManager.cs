@@ -7,6 +7,78 @@ using FF2.Core.Viewmodels;
 
 namespace FF2.Core
 {
+    sealed class BarrierHook : IStateHook
+    {
+        private readonly Grid grid;
+
+        public BarrierHook(Grid grid)
+        {
+            this.grid = grid;
+        }
+
+        public void OnComboUpdated(ComboInfo previous, ComboInfo current, IScheduler scheduler) { CheckIt(current); }
+        public void OnComboCompleted(ComboInfo combo, IScheduler scheduler) { }
+
+        // TODO - I think this needs to determine what the completed combo will be so that it can know
+        // which lock will actually be unlocked. Then OnComboUpdated needs to do that as soon as that
+        // rank is reached, and then set a flag "AlreadyRewarded=true" which will be set to false OnComboCompleted.
+        // Also should probably coordinate the destruction through the State...
+        //
+        // Where to store ranks needed to unlock each barrier? Probably right here, in this class.
+        private void CheckIt(ComboInfo combo)
+        {
+            if (combo.PermissiveCombo.AdjustedGroupCount > 3)
+            {
+                for (int y = grid.Height - 1; y >= 0; y--)
+                {
+                    if (grid.Get(new Loc(0, y)) == Occupant.IndestructibleEnemy)
+                    {
+                        for (int x = 0; x < grid.Width; x++)
+                        {
+                            grid.Set(new Loc(x, y), Occupant.None);
+                        }
+                        return;
+                    }
+                }
+            }
+        }
+
+        public bool GameOver => false;
+        public void OnCatalystSpawned(SpawnItem catalyst) { }
+        public void PreSpawn(int spawnCount) { }
+    }
+
+    sealed class CountdownHook : IStateHook, ICountdownViewmodel
+    {
+        private const int maxCountdownMillis = 1000 * 60;
+        private const int millisRestoredPerEnemy = 1000 * 5;
+
+        private Appointment countdown;
+
+        public CountdownHook(IScheduler scheduler)
+        {
+            countdown= scheduler.CreateWaitingAppointment(maxCountdownMillis);
+        }
+
+        int ICountdownViewmodel.MaxMillis => maxCountdownMillis;
+
+        int ICountdownViewmodel.CurrentMillis => countdown.MillisRemaining();
+
+        public bool GameOver => countdown.HasArrived();
+
+        public void OnComboCompleted(ComboInfo combo, IScheduler scheduler)
+        {
+            int millisRemaining = countdown.MillisRemaining();
+            millisRemaining += combo.NumEnemiesDestroyed * millisRestoredPerEnemy;
+            millisRemaining = Math.Min(millisRemaining, maxCountdownMillis);
+            countdown = scheduler.CreateWaitingAppointment(millisRemaining);
+        }
+
+        public void OnCatalystSpawned(SpawnItem catalyst) { }
+        public void OnComboUpdated(ComboInfo previous, ComboInfo current, IScheduler scheduler) { }
+        public void PreSpawn(int spawnCount) { }
+    }
+
     class PenaltySchedule
     {
         readonly struct PenaltyItem
@@ -122,8 +194,6 @@ namespace FF2.Core
         }
 
         public bool GameOver => hitPoints <= 0 || countdown.HasArrived();
-
-        public void Elapse(IScheduler scheduler) { }
 
         public void PreSpawn(int spawnCount) { }
 

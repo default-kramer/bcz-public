@@ -18,12 +18,6 @@ namespace FF2.Core
 
         public bool GameOver => a.GameOver || b.GameOver;
 
-        public void Elapse(IScheduler scheduler)
-        {
-            a.Elapse(scheduler);
-            b.Elapse(scheduler);
-        }
-
         public void OnCatalystSpawned(SpawnItem catalyst)
         {
             a.OnCatalystSpawned(catalyst);
