@@ -7,17 +7,25 @@ using FF2.Core.Viewmodels;
 
 namespace FF2.Core
 {
-    sealed class BarrierHook : IStateHook
+    sealed class BarrierHook : EmptyStateHook
     {
         private readonly Grid grid;
+        private bool stopRewards = false;
 
         public BarrierHook(Grid grid)
         {
             this.grid = grid;
         }
 
-        public void OnComboUpdated(ComboInfo previous, ComboInfo current, IScheduler scheduler) { CheckIt(current); }
-        public void OnComboCompleted(ComboInfo combo, IScheduler scheduler) { }
+        public override void OnCatalystSpawned(SpawnItem catalyst)
+        {
+            stopRewards = false;
+        }
+
+        public override void OnComboLikelyCompleted(State state, ComboInfo combo, IScheduler scheduler)
+        {
+            CheckIt(combo, state);
+        }
 
         // TODO - I think this needs to determine what the completed combo will be so that it can know
         // which lock will actually be unlocked. Then OnComboUpdated needs to do that as soon as that
@@ -25,30 +33,29 @@ namespace FF2.Core
         // Also should probably coordinate the destruction through the State...
         //
         // Where to store ranks needed to unlock each barrier? Probably right here, in this class.
-        private void CheckIt(ComboInfo combo)
+        private void CheckIt(ComboInfo combo, State state)
         {
+            if (stopRewards)
+            {
+                return;
+            }
+
             if (combo.PermissiveCombo.AdjustedGroupCount > 3)
             {
                 for (int y = grid.Height - 1; y >= 0; y--)
                 {
-                    if (grid.Get(new Loc(0, y)) == Occupant.IndestructibleEnemy)
+                    if (grid.Get(new Loc(0, y)) == Occupant.Barrier)
                     {
-                        for (int x = 0; x < grid.Width; x++)
-                        {
-                            grid.Set(new Loc(x, y), Occupant.None);
-                        }
+                        state.EnqueueBarrierDestruction(y);
+                        stopRewards = true;
                         return;
                     }
                 }
             }
         }
-
-        public bool GameOver => false;
-        public void OnCatalystSpawned(SpawnItem catalyst) { }
-        public void PreSpawn(int spawnCount) { }
     }
 
-    sealed class CountdownHook : IStateHook, ICountdownViewmodel
+    sealed class CountdownHook : EmptyStateHook, ICountdownViewmodel
     {
         private const int maxCountdownMillis = 1000 * 60;
         private const int millisRestoredPerEnemy = 1000 * 5;
@@ -64,19 +71,15 @@ namespace FF2.Core
 
         int ICountdownViewmodel.CurrentMillis => countdown.MillisRemaining();
 
-        public bool GameOver => countdown.HasArrived();
+        public override bool GameOver => countdown.HasArrived();
 
-        public void OnComboCompleted(ComboInfo combo, IScheduler scheduler)
+        public override void OnComboLikelyCompleted(State state, ComboInfo combo, IScheduler scheduler)
         {
             int millisRemaining = countdown.MillisRemaining();
             millisRemaining += combo.NumEnemiesDestroyed * millisRestoredPerEnemy;
             millisRemaining = Math.Min(millisRemaining, maxCountdownMillis);
             countdown = scheduler.CreateWaitingAppointment(millisRemaining);
         }
-
-        public void OnCatalystSpawned(SpawnItem catalyst) { }
-        public void OnComboUpdated(ComboInfo previous, ComboInfo current, IScheduler scheduler) { }
-        public void PreSpawn(int spawnCount) { }
     }
 
     class PenaltySchedule
@@ -162,7 +165,7 @@ namespace FF2.Core
         }
     }
 
-    sealed class NewHealth : IStateHook, ICountdownViewmodel, ISlidingPenaltyViewmodel
+    sealed class NewHealth : EmptyStateHook, ICountdownViewmodel, ISlidingPenaltyViewmodel
     {
         private const int maxCountdownMillis = 1000 * 60;
         private const int millisRestoredPerEnemy = 1000 * 5;
@@ -193,11 +196,9 @@ namespace FF2.Core
             destroyedPenalties.AsSpan().Fill((0, Appointment.Frame0));
         }
 
-        public bool GameOver => hitPoints <= 0 || countdown.HasArrived();
+        public override bool GameOver => hitPoints <= 0 || countdown.HasArrived();
 
-        public void PreSpawn(int spawnCount) { }
-
-        public void OnCatalystSpawned(SpawnItem catalyst)
+        public override void OnCatalystSpawned(SpawnItem catalyst)
         {
             if (penaltyProgress[0] > 0)
             {
@@ -216,7 +217,7 @@ namespace FF2.Core
             }
         }
 
-        public void OnComboCompleted(ComboInfo combo, IScheduler scheduler)
+        public override void OnComboLikelyCompleted(State state, ComboInfo combo, IScheduler scheduler)
         {
             int millisRemaining = countdown.MillisRemaining();
             millisRemaining += combo.NumEnemiesDestroyed * millisRestoredPerEnemy;
@@ -224,7 +225,7 @@ namespace FF2.Core
             countdown = scheduler.CreateWaitingAppointment(millisRemaining);
         }
 
-        public void OnComboUpdated(ComboInfo previous, ComboInfo current, IScheduler scheduler)
+        public override void OnComboUpdated(ComboInfo previous, ComboInfo current, IScheduler scheduler)
         {
             int agc = current.PermissiveCombo.AdjustedGroupCount;
             for (int i = 0; i < penaltyProgress.Length; i++)

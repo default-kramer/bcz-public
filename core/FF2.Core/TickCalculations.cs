@@ -6,6 +6,22 @@ using System.Threading.Tasks;
 
 namespace FF2.Core
 {
+    public interface IDestructionAnimator
+    {
+        /// <summary>
+        /// Item2 may range from 0.0 (not at all destroyed) to 1.0 (totally destroyed).
+        (Occupant, float) GetDestroyedOccupant(Loc loc);
+    }
+
+    public sealed class NullDestructionAnimator : IDestructionAnimator
+    {
+        public static readonly NullDestructionAnimator Instance = new NullDestructionAnimator();
+        public (Occupant, float) GetDestroyedOccupant(Loc loc)
+        {
+            return (Occupant.None, 0f);
+        }
+    }
+
     /// <summary>
     /// A read-only view of the <see cref="DestructionCalculations"/>.
     /// (This should probably be renamed to IDestructionCalculations...)
@@ -24,7 +40,7 @@ namespace FF2.Core
         /// </summary>
         int RowDestructionBitmap { get; }
 
-        Occupant GetDestroyedOccupant(Loc loc, IReadOnlyGrid grid);
+        Occupant GetDestroyedOccupant2(Loc loc, IReadOnlyGrid grid);
 
         int TotalNumGroupsPermissive { get; }
     }
@@ -112,7 +128,7 @@ namespace FF2.Core
             }
         }
 
-        public Occupant GetDestroyedOccupant(Loc loc, IReadOnlyGrid grid)
+        public Occupant GetDestroyedOccupant2(Loc loc, IReadOnlyGrid grid)
         {
             return destroyedOccupants[loc.ToIndex(grid)];
         }

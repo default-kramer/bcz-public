@@ -306,7 +306,7 @@ namespace FF2.Core
 
             public void GO()
             {
-                Ticker.state.OnComboCompleted += State_OnComboCompleted;
+                Ticker.state.OnComboLikelyCompleted += State_OnComboCompleted;
                 Ticker.state.OnCatalystSpawned += State_OnCatalystSpawned;
 
                 comboStartGrid = Ticker.state.Grid.MakeImmutable();

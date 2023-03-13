@@ -47,7 +47,10 @@ namespace FF2.Core
     {
         void OnComboUpdated(ComboInfo previous, ComboInfo current, IScheduler scheduler);
 
-        void OnComboCompleted(ComboInfo combo, IScheduler scheduler);
+        /// <summary>
+        /// Called when the combo is probably done, but barrier removal might allow it to continue.
+        /// </summary>
+        void OnComboLikelyCompleted(State state, ComboInfo combo, IScheduler scheduler);
 
         void OnCatalystSpawned(SpawnItem catalyst);
 
@@ -55,24 +58,27 @@ namespace FF2.Core
         /// Can be called multiple times per spawn. Use the <paramref name="spawnCount"/>
         /// if you need to detect these "duplicate" calls.
         /// </summary>
-        void PreSpawn(int spawnCount);
+        void PreSpawn(State state, int spawnCount);
 
         bool GameOver { get; }
     }
 
-    sealed class NullStateHook : IStateHook
+    abstract class EmptyStateHook : IStateHook
+    {
+        public virtual bool GameOver => false;
+
+        public virtual void OnCatalystSpawned(SpawnItem catalyst) { }
+
+        public virtual void OnComboLikelyCompleted(State state, ComboInfo combo, IScheduler scheduler) { }
+
+        public virtual void OnComboUpdated(ComboInfo previous, ComboInfo current, IScheduler scheduler) { }
+
+        public virtual void PreSpawn(State state, int spawnCount) { }
+    }
+
+    sealed class NullStateHook : EmptyStateHook
     {
         private NullStateHook() { }
         public static readonly NullStateHook Instance = new NullStateHook();
-
-        public bool GameOver => false;
-
-        public void OnComboCompleted(ComboInfo combo, IScheduler scheduler) { }
-
-        public void OnComboUpdated(ComboInfo previous, ComboInfo current, IScheduler scheduler) { }
-
-        public void OnCatalystSpawned(SpawnItem catalyst) { }
-
-        public void PreSpawn(int spawnCount) { }
     }
 }

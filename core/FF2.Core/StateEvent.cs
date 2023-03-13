@@ -29,6 +29,7 @@ namespace FF2.Core
         GameEnded = 5,
         PenaltyAdded = 6,
         Dumped = 7,
+        BarrierDestroyed = 8,
 
         // Results of user actions
         BurstBegan = 101,
@@ -117,6 +118,11 @@ namespace FF2.Core
             {
                 return new StateEvent(StateEventKind.Dumped, completion, Singletons.Dumped);
             }
+
+            public StateEvent BarrierDestroyed(Appointment completion)
+            {
+                return new StateEvent(StateEventKind.BarrierDestroyed, completion, Singletons.BarrierDestroyed);
+            }
         }
 
         abstract class StateTransitionSumType
@@ -195,6 +201,7 @@ namespace FF2.Core
             public static readonly Singletons Plummeted = new("Plummeted");
             public static readonly Singletons BurstBegan = new("BurstBegan");
             public static readonly Singletons Dumped = new("Dumped");
+            public static readonly Singletons BarrierDestroyed = new("BarrierDestroyed");
         }
     }
 }

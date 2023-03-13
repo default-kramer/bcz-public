@@ -3,6 +3,22 @@
 (module+ main
   (save-images))
 
+(define orange "orange")
+
+(define (barrier)
+  (define size 360) ; match 360-360 of other occupants
+  (define border-h 36)
+  (define (tile)
+    (define (g)
+      (let* ([x (+ 85 (random 31))]
+             [color (make-color x x x)])
+        (filled-rectangle 120 120 #:color color #:draw-border? #t #:border-width 10)))
+    (vl-append (hc-append (g) (g) (g))
+               (hc-append (g) (g) (g))
+               (hc-append (g) (g) (g))))
+  (let ([border (filled-rectangle size border-h #:color orange #:draw-border? #f)])
+    (cb-superimpose (ct-superimpose (tile) border) border)))
+
 {module barrier-stuff racket/gui
   (provide off-toggle on-toggle W H)
 
@@ -151,7 +167,7 @@
                                 (scale (numeral i) 0.15))))))
 
 (define (labelled-off-toggle i)
-  (label off-toggle i 15 "orange"))
+  (label off-toggle i 15 orange))
 
 (define (labelled-on-toggle i)
   (label on-toggle i -15 (make-color 55 55 55)))
@@ -177,6 +193,12 @@
   ;off-toggle
   )
 
+(define barrier-list
+  (let ()
+    (random-seed 42)
+    (for/list ([i (in-range 8)])
+      (barrier))))
+
 (define (save-images)
   (define results '())
   (define directory (current-directory))
@@ -192,4 +214,6 @@
   (for ([i (in-range 2 8.5)])
     (save-bitmap (labelled-off-toggle i) (format "toggle-off-~a.bmp" i))
     (save-bitmap (labelled-on-toggle i) (format "toggle-on-~a.bmp" i)))
+  (for ([i (in-range (length barrier-list))])
+    (save-bitmap (list-ref barrier-list i) (format "barrier-~a.bmp" i)))
   (format "Saved images to ~a" directory))

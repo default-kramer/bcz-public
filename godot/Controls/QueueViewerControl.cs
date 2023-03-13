@@ -100,7 +100,8 @@ public class QueueViewerControl : Control
 
     private void Draw(Occupant occ, float x, float y, int index)
     {
-        var kind = GridViewerControl.GetSpriteKind(occ);
+        // Kind of weird that we have to pass a Loc in here... but who cares for now
+        var kind = GridViewerControl.GetSpriteKind(occ, new Loc(0, 0));
 
         var sprite = sprites[index];
 

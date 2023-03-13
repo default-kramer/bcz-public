@@ -89,6 +89,7 @@ namespace FF2.Core
         private readonly Bits data;
 
         public static readonly Occupant None = new Occupant();
+        public static readonly Occupant Barrier = new Occupant(OccupantKind.Barrier, Color.Blank, Direction.None);
 
         /// <summary>
         /// Useful for distilling puzzles.

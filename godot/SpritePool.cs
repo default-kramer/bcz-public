@@ -72,6 +72,12 @@ sealed class SpritePoolV2
                 return $"res://Sprites/numerals/{i}.bmp";
             }
 
+            if (kind >= SpriteKind.Barrier0 && kind <= SpriteKind.Barrier7)
+            {
+                int i = (int)kind - (int)SpriteKind.Barrier0;
+                return $"res://Sprites/barriers/barrier-{i}.bmp";
+            }
+
             switch (kind)
             {
                 case SpriteKind.Joined:
@@ -119,6 +125,16 @@ sealed class SpritePoolV2
                     break;
                 case SpriteKind.Enemy:
                     SetShader(sprite, "res://Shaders/enemy.shader");
+                    break;
+                case SpriteKind.Barrier0:
+                case SpriteKind.Barrier1:
+                case SpriteKind.Barrier2:
+                case SpriteKind.Barrier3:
+                case SpriteKind.Barrier4:
+                case SpriteKind.Barrier5:
+                case SpriteKind.Barrier6:
+                case SpriteKind.Barrier7:
+                    SetShader(sprite, "res://Shaders/barrier.shader");
                     break;
             }
 

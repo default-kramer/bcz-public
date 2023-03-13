@@ -75,6 +75,9 @@ namespace FF2.Core
         /// </summary>
         private static bool IsBlocked(IReadOnlyGrid grid, ReadOnlySpan<BlockedFlag> results, Span<bool> assumeUnblocked, Loc loc)
         {
+            const bool BLOCKED = true;
+            const bool UNBLOCKED = false;
+
             var size = grid.Size;
 
             if (!grid.InBounds(loc))
@@ -99,11 +102,15 @@ namespace FF2.Core
 
             if (kind == OccupantKind.None)
             {
-                return false;
+                return UNBLOCKED;
+            }
+            else if (kind == OccupantKind.Barrier)
+            {
+                return BLOCKED;
             }
             else if (kind == OccupantKind.Enemy && occDir == Direction.None)
             {
-                return true;
+                return BLOCKED;
             }
             // an Enemy with Direction=Down indicates a falling enemy
             else if (kind == OccupantKind.Catalyst || (kind == OccupantKind.Enemy && occDir == Direction.Down))

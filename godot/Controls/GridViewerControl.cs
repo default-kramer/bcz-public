@@ -39,7 +39,9 @@ public class GridViewerControl : Control
     public override void _Ready()
     {
         spritePool = new SpritePoolV2(this, SpriteKind.Single, SpriteKind.Joined,
-            SpriteKind.BlankJoined, SpriteKind.BlankSingle, SpriteKind.Enemy);
+            SpriteKind.BlankJoined, SpriteKind.BlankSingle, SpriteKind.Enemy,
+            SpriteKind.Barrier0, SpriteKind.Barrier1, SpriteKind.Barrier2, SpriteKind.Barrier3,
+            SpriteKind.Barrier4, SpriteKind.Barrier5, SpriteKind.Barrier6, SpriteKind.Barrier7);
     }
 
     float elapsedSeconds = 0;
@@ -111,6 +113,7 @@ public class GridViewerControl : Control
         float burstProgress = Logic.BurstProgress();
 
         var fallAnimator = Logic.GetFallAnimator();
+        var destructionAnimator = Logic.GetDestructionAnimator();
 
         for (int x = 0; x < gridSize.Width; x++)
         {
@@ -120,7 +123,7 @@ public class GridViewerControl : Control
                 var previewOcc = temp?.GetOcc(loc);
                 var occ = previewOcc ?? grid.Get(loc);
 
-                var destroyedOcc = Logic.GetDestroyedOccupant(loc);
+                var (destroyedOcc, destructionProgress) = destructionAnimator.GetDestroyedOccupant(loc);
                 if (destroyedOcc != Occupant.None)
                 {
                     occ = destroyedOcc;
@@ -146,7 +149,7 @@ public class GridViewerControl : Control
 
                 if (!Logic.OverrideSpriteKind(occ, loc, out var kind))
                 {
-                    kind = GetSpriteKind(occ);
+                    kind = GetSpriteKind(occ, loc);
                 }
 
                 var index = loc.ToIndex(gridSize);
@@ -202,7 +205,7 @@ public class GridViewerControl : Control
                     {
                         shader.SetShaderParam("my_color", GameColors.ToVector(occ.Color));
                         shader.SetShaderParam("my_alpha", previewOcc.HasValue ? 0.75f : 1.0f);
-                        shader.SetShaderParam("destructionProgress", Logic.DestructionProgress(loc));
+                        shader.SetShaderParam("destructionProgress", destructionProgress);
 
                         if (currentSprite.Kind == SpriteKind.Enemy)
                         {
@@ -228,9 +231,10 @@ public class GridViewerControl : Control
         //DrawRect(new Rect2(5, 5, this.RectSize - new Vector2(10, 10)), Godot.Colors.LightGreen, filled: false);
     }
 
-    internal static SpriteKind GetSpriteKind(Occupant occ)
+    internal static SpriteKind GetSpriteKind(Occupant occ, Loc loc)
     {
-        if (occ.Kind == OccupantKind.Catalyst)
+        var kind = occ.Kind;
+        if (kind == OccupantKind.Catalyst)
         {
             if (occ.Direction == Direction.None)
             {
@@ -255,13 +259,22 @@ public class GridViewerControl : Control
                 }
             }
         }
-        if (occ.Kind == OccupantKind.Enemy)
+        if (kind == OccupantKind.Enemy)
         {
             return SpriteKind.Enemy;
+        }
+        if (kind == OccupantKind.Barrier)
+        {
+            int index = loc.X % NumBarriers;
+            return SpriteKind.Barrier0 + index;
         }
 
         return SpriteKind.None;
     }
+
+    private const int BarrierFirst = (int)SpriteKind.Barrier0;
+    private const int BarrierLast = (int)SpriteKind.Barrier7;
+    private const int NumBarriers = BarrierLast - BarrierFirst + 1;
 
     readonly struct FlickerState
     {
@@ -312,9 +325,7 @@ public class GridViewerControl : Control
 
         public virtual float BurstProgress() => 0;
 
-        public virtual float DestructionProgress(Loc loc) => 0;
-
-        public virtual Occupant GetDestroyedOccupant(Loc loc) => Occupant.None;
+        public virtual IDestructionAnimator GetDestructionAnimator() => NullDestructionAnimator.Instance;
 
         public virtual IFallAnimator GetFallAnimator() => NullFallAnimator.Instance;
 
@@ -378,30 +389,7 @@ public class GridViewerControl : Control
 
         public override float FallSampleOverride(Loc loc) => 0;
 
-        public override Occupant GetDestroyedOccupant(Loc loc)
-        {
-            if (state.Grid.InBounds(loc))
-            {
-                return tickCalculations.GetDestroyedOccupant(loc, state.Grid);
-            }
-            return Occupant.None;
-        }
-
-        public override float DestructionProgress(Loc loc)
-        {
-            if (GetDestroyedOccupant(loc) != Occupant.None)
-            {
-                return ticker.DestructionProgress();
-            }
-            else if (!state.Grid.InBounds(loc))
-            {
-                return MoverDestructionProgress(loc.Add(0, 0 - state.Grid.Height));
-            }
-            else
-            {
-                return 0;
-            }
-        }
+        public override IDestructionAnimator GetDestructionAnimator() => state.GetDestructionAnimator();
 
         public override (Godot.Color light, Godot.Color dark) BorderColor(Loc loc)
         {
@@ -485,20 +473,35 @@ public class GridViewerControl : Control
     sealed class AttackGridLogic : ILogic
     {
         private readonly IAttackGridViewmodel vm;
+        private readonly IDestructionAnimator destructionAnimator;
         public override IReadOnlyGridSlim Grid => vm.Grid;
 
         public AttackGridLogic(IAttackGridViewmodel vm)
         {
             this.vm = vm;
+            this.destructionAnimator = new DestructionAnimator(vm);
         }
 
-        public override float DestructionProgress(Loc loc)
+        public override IDestructionAnimator GetDestructionAnimator() => destructionAnimator;
+
+        class DestructionAnimator : IDestructionAnimator
         {
-            if (vm.IsFrozen(loc))
+            private readonly IAttackGridViewmodel vm;
+
+            public DestructionAnimator(IAttackGridViewmodel vm)
             {
-                return 0.5f;
+                this.vm = vm;
             }
-            return 0;
+
+            public (Occupant, float) GetDestroyedOccupant(Loc loc)
+            {
+                var occ = vm.Grid.Get(loc);
+                if (vm.IsFrozen(loc))
+                {
+                    return (occ, 0.5f);
+                }
+                return (occ, 0f);
+            }
         }
     }
 }

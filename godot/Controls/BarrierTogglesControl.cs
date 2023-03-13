@@ -3,7 +3,7 @@ using System;
 
 public class BarrierTogglesControl : Control
 {
-    private Sprite theSprite;
+    private Sprite theSprite = null!;
 
     public override void _Ready()
     {

@@ -161,7 +161,7 @@ namespace FF2.Core
 
             for (int x = 0; x < grid.Width; x++)
             {
-                grid.Set(new Loc(x, barrierY), Occupant.IndestructibleEnemy);
+                grid.Set(new Loc(x, barrierY), Occupant.Barrier);
             }
         }
     }

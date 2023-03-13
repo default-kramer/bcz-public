@@ -24,6 +24,8 @@ namespace FF2.Core
         private readonly IScheduler scheduler;
         private readonly DumpAnimator dumpAnimator;
         private readonly FallAnimator fallAnimator;
+        private readonly IDestructionAnimator destructionAnimator;
+        private readonly BarrierDestructionAnimator barrierDestructionAnimator;
 
         private StateEvent __currentEvent = StateEvent.StateConstructed;
         public StateEvent CurrentEvent => __currentEvent;
@@ -42,15 +44,15 @@ namespace FF2.Core
 
         // Not sure how I feel about using events here...
         // Be careful to avoid subscribing to something that will live longer than you expect.
-        public event EventHandler<ComboInfo>? OnComboCompleted;
+        public event EventHandler<ComboInfo>? OnComboLikelyCompleted;
         public event EventHandler<SpawnItem>? OnCatalystSpawned;
 
         public static State CreateWithInfiniteHealth(Grid grid, ISpawnDeck deck)
         {
-            return new State(grid, deck, s => NullStateHook.Instance, new Timekeeper());
+            return new State(grid, deck, NullStateHook.Instance, new Timekeeper());
         }
 
-        internal State(Grid grid, ISpawnDeck spawnDeck, Func<State, IStateHook> makeHook, Timekeeper timekeeper)
+        internal State(Grid grid, ISpawnDeck spawnDeck, IStateHook makeHook, Timekeeper timekeeper)
         {
             this.grid = grid;
             this.fallSampler = new FallAnimationSampler(grid);
@@ -60,9 +62,11 @@ namespace FF2.Core
             this.scheduler = timekeeper;
             dumpAnimator = new DumpAnimator(grid.Width, grid.Height + 2); // dump from the mover area
             fallAnimator = new FallAnimator(fallSampler, 0f);
+            destructionAnimator = new StandardDestructionAnimator(this);
+            barrierDestructionAnimator = new BarrierDestructionAnimator();
             mover = null;
             currentCombo = ComboInfo.Empty;
-            this.hook = makeHook(this);
+            this.hook = makeHook;
             if (hook is NewHealth h3)
             {
                 CountdownViewmodel = h3;
@@ -95,7 +99,7 @@ namespace FF2.Core
             if (mode == GameMode.PvPSim)
             {
                 var switches = new Switches();
-                var hook = (State s) => new SimulatedAttacker(switches, s);
+                var hook = new SimulatedAttacker(switches);
                 return new State(grid, deck, hook, timekeeper);
             }
             if (mode == GameMode.Levels2)
@@ -103,13 +107,13 @@ namespace FF2.Core
                 var countdown = new CountdownHook(timekeeper);
                 var barrier = new BarrierHook(grid);
                 var hook = new CompositeHook(countdown, barrier);
-                var state = new State(grid, deck, s => hook, timekeeper);
+                var state = new State(grid, deck, hook, timekeeper);
                 state.CountdownViewmodel = countdown;
                 return state;
             }
             else
             {
-                var hook = (State s) => new NewHealth(timekeeper);
+                var hook = new NewHealth(timekeeper);
                 return new State(grid, deck, hook, timekeeper);
             }
         }
@@ -187,6 +191,14 @@ namespace FF2.Core
 
         private StateEvent Spawn()
         {
+            if (currentCombo.PermissiveCombo.AdjustedGroupCount > 0)
+            {
+                var scorePayout = GetHypotheticalScore(currentCombo);
+                score += scorePayout;
+                //Console.WriteLine($"Score: {score} (+{scorePayout})");
+            }
+            currentCombo = ComboInfo.Empty;
+
             if (mover.HasValue)
             {
                 throw new Exception("State got hosed: mover already exists");
@@ -204,7 +216,7 @@ namespace FF2.Core
                 return StateEvent.GameEnded;
             }
 
-            hook.PreSpawn(NumCatalystsSpawned);
+            hook.PreSpawn(this, NumCatalystsSpawned);
 
             if (pendingDumps > 0)
             {
@@ -323,9 +335,33 @@ namespace FF2.Core
             return NullFallAnimator.Instance;
         }
 
+        public IDestructionAnimator GetDestructionAnimator()
+        {
+            var ev = CurrentEvent;
+            if (ev.Kind == StateEventKind.BarrierDestroyed)
+            {
+                return barrierDestructionAnimator;
+            }
+            return destructionAnimator;
+        }
+
         public Command? Approach(Orientation o)
         {
             return mover?.Approach(o);
+        }
+
+        private StateEvent DestroyBarriers(int y)
+        {
+            var gridSize = grid.Size;
+            for (int x = 0; x < gridSize.Width; x++)
+            {
+                var loc = new Loc(x, y);
+                grid.Set(loc, Occupant.None);
+            }
+
+            var appointment = scheduler.CreateAppointment(1000);
+            barrierDestructionAnimator.Reset(y, gridSize.Width, appointment);
+            return eventFactory.BarrierDestroyed(appointment);
         }
 
         private bool Destroy()
@@ -343,13 +379,9 @@ namespace FF2.Core
             {
                 if (currentCombo.TotalNumGroups > 0)
                 {
-                    var scorePayout = GetHypotheticalScore(currentCombo);
-                    score += scorePayout;
-                    //Console.WriteLine($"Score: {score} (+{scorePayout})");
-                    hook.OnComboCompleted(currentCombo, scheduler);
-                    OnComboCompleted?.Invoke(this, currentCombo);
+                    hook.OnComboLikelyCompleted(this, currentCombo, scheduler);
+                    OnComboLikelyCompleted?.Invoke(this, currentCombo);
                 }
-                currentCombo = ComboInfo.Empty;
             }
             Slowmo = Slowmo || result;
             return result;
@@ -397,6 +429,7 @@ namespace FF2.Core
                 case StateEventKind.Destroyed:
                 case StateEventKind.Plummeted:
                 case StateEventKind.Dumped:
+                case StateEventKind.BarrierDestroyed:
                     return Update(FallOrDestroyOrSpawn());
                 case StateEventKind.GameEnded:
                     return false;
@@ -406,6 +439,16 @@ namespace FF2.Core
                 default:
                     throw new Exception("TODO");
             }
+        }
+
+        /// <summary>
+        /// Hold y-coordinate of barriers to destroy, or subzero meaning nothing
+        /// </summary>
+        private int BarrierRowToDestroy = -1;
+
+        internal void EnqueueBarrierDestruction(int y)
+        {
+            this.BarrierRowToDestroy = y;
         }
 
         private StateEvent FallOrDestroyOrSpawn()
@@ -418,6 +461,15 @@ namespace FF2.Core
             else if (Destroy())
             {
                 return eventFactory.Destroyed(TickCalculations, scheduler.CreateAppointment(Constants.DestructionMillis));
+            }
+            else if (BarrierRowToDestroy >= 0)
+            {
+
+                // The call to Destroy() that returns false might request barrier destruction, so this code
+                // must come after the call to Destroy()
+                var y = BarrierRowToDestroy;
+                BarrierRowToDestroy = -1;
+                return DestroyBarriers(y);
             }
             else
             {
@@ -549,6 +601,70 @@ namespace FF2.Core
         public int HashGrid()
         {
             return grid.HashGrid();
+        }
+
+        class StandardDestructionAnimator : IDestructionAnimator
+        {
+            private readonly State state;
+
+            public StandardDestructionAnimator(State state)
+            {
+                this.state = state;
+            }
+
+            public (Occupant, float) GetDestroyedOccupant(Loc loc)
+            {
+                if (!state.grid.InBounds(loc))
+                {
+                    // This bounds check is currently needed because the GridViewer is calling this with Mover locs,
+                    // which do not exist on the main grid.
+                    return (Occupant.None, 0f);
+                }
+
+                var ev = state.CurrentEvent;
+                if (ev.Kind == StateEventKind.Destroyed)
+                {
+                    var occ = state.TickCalculations.GetDestroyedOccupant2(loc, state.grid);
+                    if (occ != Occupant.None)
+                    {
+                        return (occ, ev.Completion.Progress());
+                    }
+                }
+
+                return (state.grid.Get(loc), 0f);
+            }
+        }
+
+        class BarrierDestructionAnimator : IDestructionAnimator
+        {
+            private int y;
+            private int width;
+            private Appointment animation;
+
+            public void Reset(int y, int width, Appointment animation)
+            {
+                this.y = y;
+                this.width = width;
+                this.animation = animation;
+            }
+
+            // Closer to zero -> more pronounced ripple effect
+            const float durationPerOcc = 0.2f;
+
+            public (Occupant, float) GetDestroyedOccupant(Loc loc)
+            {
+                if (loc.Y == this.y)
+                {
+                    const float totalDelay = 1.0f - durationPerOcc;
+                    float delayPerX = totalDelay / width;
+                    float delay = loc.X * delayPerX;
+                    float progress = animation.Progress();
+                    float adjusted = Math.Max(0, progress - delay) / durationPerOcc;
+                    return (Occupant.Barrier, adjusted);
+                }
+
+                return (Occupant.None, 0f);
+            }
         }
     }
 }

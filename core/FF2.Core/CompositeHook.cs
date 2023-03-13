@@ -24,10 +24,10 @@ namespace FF2.Core
             b.OnCatalystSpawned(catalyst);
         }
 
-        public void OnComboCompleted(ComboInfo combo, IScheduler scheduler)
+        public void OnComboLikelyCompleted(State state, ComboInfo combo, IScheduler scheduler)
         {
-            a.OnComboCompleted(combo, scheduler);
-            b.OnComboCompleted(combo, scheduler);
+            a.OnComboLikelyCompleted(state, combo, scheduler);
+            b.OnComboLikelyCompleted(state, combo, scheduler);
         }
 
         public void OnComboUpdated(ComboInfo previous, ComboInfo current, IScheduler scheduler)
@@ -36,10 +36,10 @@ namespace FF2.Core
             b.OnComboUpdated(previous, current, scheduler);
         }
 
-        public void PreSpawn(int spawnCount)
+        public void PreSpawn(State state, int spawnCount)
         {
-            a.PreSpawn(spawnCount);
-            b.PreSpawn(spawnCount);
+            a.PreSpawn(state, spawnCount);
+            b.PreSpawn(state, spawnCount);
         }
     }
 }

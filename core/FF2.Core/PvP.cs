@@ -149,7 +149,7 @@ namespace FF2.Core
         }
     }
 
-    sealed class SimulatedAttacker : IStateHook
+    sealed class SimulatedAttacker : EmptyStateHook
     {
         readonly struct Attack
         {
@@ -197,15 +197,13 @@ namespace FF2.Core
         private readonly Attack[] Attacks = new Attack[Width];
         private readonly Switches switches;
         private readonly bool[] attackBuffer = new bool[Switches.ArraySize];
-        private readonly IDumpCallback dumper;
         private (int delay, int rank) nextAttack;
         public readonly IAttackGridViewmodel VM;
         private int freeze = 0; // See notes on Freezing above
 
-        public SimulatedAttacker(Switches switches, IDumpCallback dumper)
+        public SimulatedAttacker(Switches switches)
         {
             this.switches = switches;
-            this.dumper = dumper;
             Attacks[4] = new Attack(2);
             Attacks[10] = new Attack(3);
             nextAttack = (3, 5);
@@ -214,12 +212,13 @@ namespace FF2.Core
 
         public ISwitchesViewmodel SwitchVM => switches;
 
-        public bool GameOver => false;
-
-        public void OnCatalystSpawned(SpawnItem catalyst) { }
-
         private int lastSpawnCount = -1;
-        public void PreSpawn(int spawnCount)
+        public override void PreSpawn(State state, int spawnCount)
+        {
+            Go(state, spawnCount);
+        }
+
+        private void Go(IDumpCallback state, int spawnCount)
         {
             if (spawnCount == lastSpawnCount) { return; }
             lastSpawnCount = spawnCount;
@@ -237,7 +236,7 @@ namespace FF2.Core
                 if (numAttacks > 0)
                 {
                     switches.OnDump();
-                    dumper.Dump(numAttacks);
+                    state.Dump(numAttacks);
                 }
             }
 
@@ -260,7 +259,7 @@ namespace FF2.Core
             }
         }
 
-        public void OnComboCompleted(ComboInfo combo, IScheduler scheduler)
+        public override void OnComboLikelyCompleted(State state, ComboInfo combo, IScheduler scheduler)
         {
             int rank = combo.PermissiveCombo.AdjustedGroupCount;
             int numAttacks = switches.OnFriendlyComboSinglePlayer(rank, attackBuffer);
@@ -272,8 +271,6 @@ namespace FF2.Core
                 freeze = Math.Min(freeze, maxRankAttack + 1);
             }
         }
-
-        public void OnComboUpdated(ComboInfo previous, ComboInfo current, IScheduler scheduler) { }
 
         sealed class Viewmodel : IAttackGridViewmodel, IReadOnlyGridSlim
         {
