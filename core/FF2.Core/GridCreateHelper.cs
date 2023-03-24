@@ -138,11 +138,11 @@ namespace FF2.Core
             };
         }
 
-        public static void InsertBarriers(Grid grid, ReadOnlySpan<int> barrierRows)
+        public static void InsertBarriers(Grid grid, IReadOnlyList<BarrierDefinition> barriers)
         {
-            for (int i = 0; i < barrierRows.Length; i++)
+            for (int i = 0; i < barriers.Count; i++)
             {
-                InsertBarrier(grid, barrierRows[i]);
+                InsertBarrier(grid, barriers[i].RowY);
             }
         }
 

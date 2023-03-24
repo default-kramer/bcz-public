@@ -263,6 +263,8 @@ public class GameViewerControl : Control
         var state = ticker.state;
         members.QueueViewer.Model = state.MakeQueueModel();
 
+        members.BarrierTogglesControl.SetModel(state.BarrierTogglesViewmodel);
+
         members.GridViewer.Visible = true;
         members.QueueViewer.Visible = true;
 

@@ -83,6 +83,7 @@ namespace FF2.Core
         public readonly ISlidingPenaltyViewmodel? PenaltyViewmodel;
         public readonly IAttackGridViewmodel? AttackGridViewmodel;
         public readonly ISwitchesViewmodel? SwitchesViewmodel;
+        public IBarrierTogglesViewmodel? BarrierTogglesViewmodel { get; private set; }
 
         public IReadOnlyGrid Grid { get { return grid; } }
 
@@ -105,10 +106,11 @@ namespace FF2.Core
             if (mode == GameMode.Levels2)
             {
                 var countdown = new CountdownHook(timekeeper);
-                var barrier = new BarrierHook(grid);
+                var barrier = new BarrierHook(ss.Settings.Barriers);
                 var hook = new CompositeHook(countdown, barrier);
                 var state = new State(grid, deck, hook, timekeeper);
                 state.CountdownViewmodel = countdown;
+                state.BarrierTogglesViewmodel = barrier;
                 return state;
             }
             else

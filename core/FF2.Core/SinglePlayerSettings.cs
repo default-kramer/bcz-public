@@ -48,10 +48,7 @@ namespace FF2.Core
 
         GameMode GameMode { get; }
 
-        /// <summary>
-        /// Y-coordinates of barriers
-        /// </summary>
-        ReadOnlySpan<int> Barriers { get; }
+        IReadOnlyList<BarrierDefinition> Barriers { get; }
 
         SeededSettings AddRandomSeed();
     }
@@ -65,14 +62,13 @@ namespace FF2.Core
         public int EnemiesPerStripe { get; set; } = 5;
         public int RowsPerStripe { get; set; } = 2;
         public GameMode GameMode { get; set; } = GameMode.Levels;
-        public ReadOnlySpan<int> Barriers => barriers;
+        public IReadOnlyList<BarrierDefinition> Barriers => barriers;
 
-        private int[] barriers = noBarriers;
-        private static int[] noBarriers = new int[] { };
+        private readonly List<BarrierDefinition> barriers = new();
 
-        public SinglePlayerSettings SetBarriers(params int[] barriers)
+        public SinglePlayerSettings AddBarrier(int y, params int[] ranks)
         {
-            this.barriers = barriers;
+            barriers.Add(new BarrierDefinition(y, ranks));
             return this;
         }
 
@@ -234,15 +230,27 @@ namespace FF2.Core
                 MyAdd(1);
                 MyAdd(2);
                 MyAdd(3);
-                MyAdd(4).SetBarriers(2);
-                MyAdd(5).SetBarriers(2);
-                MyAdd(6).SetBarriers(2);
-                MyAdd(7).SetBarriers(2, 6);
-                MyAdd(8).SetBarriers(2, 6);
-                MyAdd(9).SetBarriers(2, 7);
-                MyAdd(10).SetBarriers(2, 7);
-                MyAdd(11).SetBarriers(2, 10);
-                MyAdd(12).SetBarriers(2, 10);
+                MyAdd(4).AddBarrier(2, 2);
+                MyAdd(5).AddBarrier(2, 3);
+                MyAdd(6).AddBarrier(2, 2, 3);
+                MyAdd(7)
+                    .AddBarrier(2, 4)
+                    .AddBarrier(6, 2);
+                MyAdd(8)
+                    .AddBarrier(2, 3, 4)
+                    .AddBarrier(6, 2, 3);
+                MyAdd(9)
+                    .AddBarrier(2, 3, 3, 5)
+                    .AddBarrier(6, 2, 2, 3);
+                MyAdd(10)
+                    .AddBarrier(2, 4, 5, 6)
+                    .AddBarrier(7, 2, 3, 4);
+                MyAdd(11)
+                    .AddBarrier(2, 3, 3, 5, 6)
+                    .AddBarrier(10, 3, 3, 4);
+                MyAdd(12)
+                    .AddBarrier(2, 4, 5, 6, 7)
+                    .AddBarrier(10, 2, 3, 3, 4);
             }
 
             private SinglePlayerSettings MyAdd(int level)

@@ -12,13 +12,13 @@ public class QueueViewerControl : Control
     private SpritePoolV2 spritePool = null!;
 
     const int count = 5;
-    private readonly PooledSprite?[] sprites = new PooledSprite?[count * 2];
+    private readonly PooledSprite<SpriteKind>?[] sprites = new PooledSprite<SpriteKind>?[count * 2];
     private static int Index1(int i) { return i; }
     private static int Index2(int i) { return i + count; }
 
     public override void _Ready()
     {
-        spritePool = new SpritePoolV2(this, SpriteKind.Single, SpriteKind.Joined, SpriteKind.BlankJoined, SpriteKind.BlankSingle);
+        spritePool = SpritePoolV2.Make(this, SpriteKind.Single, SpriteKind.Joined, SpriteKind.BlankJoined, SpriteKind.BlankSingle);
     }
 
     public static void DrawBorder(CanvasItem me, Rect2 box)

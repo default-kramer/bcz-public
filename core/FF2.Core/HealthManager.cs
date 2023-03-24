@@ -7,54 +7,6 @@ using FF2.Core.Viewmodels;
 
 namespace FF2.Core
 {
-    sealed class BarrierHook : EmptyStateHook
-    {
-        private readonly Grid grid;
-        private bool stopRewards = false;
-
-        public BarrierHook(Grid grid)
-        {
-            this.grid = grid;
-        }
-
-        public override void OnCatalystSpawned(SpawnItem catalyst)
-        {
-            stopRewards = false;
-        }
-
-        public override void OnComboLikelyCompleted(State state, ComboInfo combo, IScheduler scheduler)
-        {
-            CheckIt(combo, state);
-        }
-
-        // TODO - I think this needs to determine what the completed combo will be so that it can know
-        // which lock will actually be unlocked. Then OnComboUpdated needs to do that as soon as that
-        // rank is reached, and then set a flag "AlreadyRewarded=true" which will be set to false OnComboCompleted.
-        // Also should probably coordinate the destruction through the State...
-        //
-        // Where to store ranks needed to unlock each barrier? Probably right here, in this class.
-        private void CheckIt(ComboInfo combo, State state)
-        {
-            if (stopRewards)
-            {
-                return;
-            }
-
-            if (combo.PermissiveCombo.AdjustedGroupCount > 3)
-            {
-                for (int y = grid.Height - 1; y >= 0; y--)
-                {
-                    if (grid.Get(new Loc(0, y)) == Occupant.Barrier)
-                    {
-                        state.EnqueueBarrierDestruction(y);
-                        stopRewards = true;
-                        return;
-                    }
-                }
-            }
-        }
-    }
-
     sealed class CountdownHook : EmptyStateHook, ICountdownViewmodel
     {
         private const int maxCountdownMillis = 1000 * 60;

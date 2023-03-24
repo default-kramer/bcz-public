@@ -35,7 +35,7 @@ public class HealthViewerControl : Control
     public override void _Ready()
     {
         font = this.GetFont("");
-        numeralPool = new SpritePoolV2(this, numerals);
+        numeralPool = SpritePoolV2.Make(this, numerals);
         hearts = new Hearts(this);
     }
 
@@ -160,17 +160,17 @@ public class HealthViewerControl : Control
 
     private class Hearts
     {
-        public readonly PooledSprite[] FullHearts;
-        public readonly PooledSprite[] EmptyHearts;
+        public readonly Sprite[] FullHearts;
+        public readonly Sprite[] EmptyHearts;
         public readonly int SpriteWidth;
         public readonly int SpriteHeight;
 
         public Hearts(Control owner)
         {
-            var pool = new SpritePoolV2(owner, SpriteKind.Heart, SpriteKind.Heart0);
+            var pool = SpritePoolV2.Make(owner, SpriteKind.Heart, SpriteKind.Heart0);
 
-            FullHearts = new PooledSprite[MaxHearts];
-            EmptyHearts = new PooledSprite[MaxHearts];
+            FullHearts = new Sprite[MaxHearts];
+            EmptyHearts = new Sprite[MaxHearts];
             for (int i = 0; i < MaxHearts; i++)
             {
                 FullHearts[i] = pool.Rent(SpriteKind.Heart);

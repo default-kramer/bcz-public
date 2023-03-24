@@ -30,7 +30,7 @@ public class GridViewerControl : Control
     /// Loc -> Index -> Sprite, allowing us to detect a sprite that has not moved
     /// since the last Draw()
     /// </summary>
-    private PooledSprite?[] activeSprites = new PooledSprite?[400]; // should be way more than we need
+    private PooledSprite<SpriteKind>?[] activeSprites = new PooledSprite<SpriteKind>?[400]; // should be way more than we need
 
     private SpritePoolV2 spritePool = null!;
 
@@ -38,7 +38,7 @@ public class GridViewerControl : Control
 
     public override void _Ready()
     {
-        spritePool = new SpritePoolV2(this, SpriteKind.Single, SpriteKind.Joined,
+        spritePool = SpritePoolV2.Make(this, SpriteKind.Single, SpriteKind.Joined,
             SpriteKind.BlankJoined, SpriteKind.BlankSingle, SpriteKind.Enemy,
             SpriteKind.Barrier0, SpriteKind.Barrier1, SpriteKind.Barrier2, SpriteKind.Barrier3,
             SpriteKind.Barrier4, SpriteKind.Barrier5, SpriteKind.Barrier6, SpriteKind.Barrier7);
@@ -154,7 +154,7 @@ public class GridViewerControl : Control
 
                 var index = loc.ToIndex(gridSize);
                 var previousSprite = activeSprites[index];
-                PooledSprite? currentSprite = null;
+                PooledSprite<SpriteKind>? currentSprite = null;
 
                 if (previousSprite != null)
                 {
