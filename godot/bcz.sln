@@ -11,6 +11,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FF2.CoreTests", "..\core\FF
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ff2", "ff2.csproj", "{944758BB-2333-49B3-BEBD-61954482FF19}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Taqo", "..\..\server\Taqo\Taqo.csproj", "{093F9FEB-28DF-424A-89EF-78D18589EA66}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -51,6 +53,14 @@ Global
 		{944758BB-2333-49B3-BEBD-61954482FF19}.ExportRelease|Any CPU.Build.0 = ExportRelease|Any CPU
 		{944758BB-2333-49B3-BEBD-61954482FF19}.Release|Any CPU.ActiveCfg = ExportRelease|Any CPU
 		{944758BB-2333-49B3-BEBD-61954482FF19}.Release|Any CPU.Build.0 = ExportRelease|Any CPU
+		{093F9FEB-28DF-424A-89EF-78D18589EA66}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{093F9FEB-28DF-424A-89EF-78D18589EA66}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{093F9FEB-28DF-424A-89EF-78D18589EA66}.ExportDebug|Any CPU.ActiveCfg = Debug|Any CPU
+		{093F9FEB-28DF-424A-89EF-78D18589EA66}.ExportDebug|Any CPU.Build.0 = Debug|Any CPU
+		{093F9FEB-28DF-424A-89EF-78D18589EA66}.ExportRelease|Any CPU.ActiveCfg = Release|Any CPU
+		{093F9FEB-28DF-424A-89EF-78D18589EA66}.ExportRelease|Any CPU.Build.0 = Release|Any CPU
+		{093F9FEB-28DF-424A-89EF-78D18589EA66}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{093F9FEB-28DF-424A-89EF-78D18589EA66}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
