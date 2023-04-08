@@ -31,18 +31,18 @@ jobs:
       - name: Install the Godot Mono Headless binary
         run: |
           cd ./.github/downloads
-          unzip ./Godot_v3.4.4-stable_mono_linux_headless_64.zip
-          mv ./Godot_v3.4.4-stable_mono_linux_headless_64/* /usr/local/bin/
-          mv /usr/local/bin/Godot_v3.4.4-stable_mono_linux_headless.64 /usr/local/bin/godot
+          unzip ./Godot_v3.5.1-stable_mono_linux_headless_64.zip
+          mv ./Godot_v3.5.1-stable_mono_linux_headless_64/* /usr/local/bin/
+          mv /usr/local/bin/Godot_v3.5.1-stable_mono_linux_headless.64 /usr/local/bin/godot
 
       #- run: godot --help # Works but exits with code 255 anyway
 
       - name: Install the Godot export templates
         run: |
           cd ./.github/downloads
-          unzip ./Godot_v3.4.4-stable_mono_export_templates.zip
+          unzip ./Godot_v3.5.1-stable_mono_export_templates.zip
           mkdir --parents /home/runner/.local/share/godot/templates
-          mv ./Godot_v3.4.4-stable_mono_export_templates/templates /home/runner/.local/share/godot/templates/3.4.4.stable.mono
+          mv ./Godot_v3.5.1-stable_mono_export_templates/templates /home/runner/.local/share/godot/templates/3.5.1.stable.mono
 
       - name: Export project to HTML5
         run: |
