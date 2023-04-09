@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace FF2.Core
 {
-    public readonly struct Loc
+    public readonly struct Loc FAIL //testing build failure!
     {
         public readonly int X;
         public readonly int Y;
