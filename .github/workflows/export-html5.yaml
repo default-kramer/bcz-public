@@ -2,11 +2,11 @@ name: ExportHTML5
 
 # Controls when the workflow will run
 on:
-  # Triggers the workflow on push or pull request events but only for the "main" branch
+  # Triggers the workflow on push or pull request events but only for the "master" branch
   push:
-    branches: [ "main" ]
+    branches: [ "master" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "master" ]
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
@@ -56,6 +56,8 @@ jobs:
           cd .export/HTML5
           ls -lh
 
+      # Be careful! Using `-s` with `&&` and `||` is tricky; I wrote many incorrect versions.
+      # Use `if` instead which is much easier to get correct.
       - name: Verify stderr was empty
         run: |
           cd ./godot
