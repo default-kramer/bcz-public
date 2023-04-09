@@ -58,10 +58,10 @@ jobs:
           ls -lh
 
       - name: TEST
-        run: "cat ./godot/errlog.txt && ([ -s ./godot/errlog.txt ] || exit 123)"
-
-      - name: TEST2
-        run: "exit 123"
+        run: |
+          cd ./godot
+          cat ./errlog.txt
+          ([ -s ./errlog.txt ] && echo looks good) || exit 55
 
       - uses: actions/upload-artifact@v3
         with:
