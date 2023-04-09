@@ -60,7 +60,7 @@ jobs:
         run: |
           cd ./godot
           cat ./errlog.txt
-          ([ -s ./errlog.txt ] && exit 55) || echo looks good
+          if [ -s ./errlog.txt ]; then exit 55; else echo looks good; fi
 
       - uses: actions/upload-artifact@v3
         with:
