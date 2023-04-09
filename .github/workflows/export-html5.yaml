@@ -60,6 +60,9 @@ jobs:
       - name: TEST
         run: "cat ./godot/errlog.txt && ([ -s ./godot/errlog.txt ] || exit 123)"
 
+      - name: TEST2
+        run: "exit 123"
+
       - uses: actions/upload-artifact@v3
         with:
           name: ff2-html5
