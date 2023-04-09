@@ -51,9 +51,7 @@ namespace FF2.CoreTests
             }
         }
 
-#if DEBUG
         private string GridDump => grid.PrintGrid;
-#endif
 
         [TestMethod]
         public void asdf()
