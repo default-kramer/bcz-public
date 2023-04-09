@@ -6,7 +6,7 @@ using System;
 
 public class NewRoot : Control
 {
-    readonly struct Members
+    readonly struct Members FAIL // testing build failure
     {
         public readonly GameViewerControl GameViewer;
         public readonly PuzzleControl PuzzleControl;

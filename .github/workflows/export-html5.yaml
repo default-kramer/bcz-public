@@ -44,11 +44,14 @@ jobs:
           mkdir --parents /home/runner/.local/share/godot/templates
           mv ./Godot_v3.5.1-stable_mono_export_templates/templates /home/runner/.local/share/godot/templates/3.5.1.stable.mono
 
+      # The export command can fail but still exit with status code 0... so redirect stderr to a file
+      # and fail the build if that file is not empty
       - name: Export project to HTML5
         run: |
           cd ./godot
           mkdir --parents ./.export/HTML5
-          godot ./project.godot --export "HTML5"
+          godot ./project.godot --export "HTML5" 2> ./errlog.txt
+          [ -s ./errlog.txt ] || (echo "stderr was not empty, failing" && cat ./errlog.txt && exit 123)
           ls -lh
           cd .export/HTML5
           ls -lh
