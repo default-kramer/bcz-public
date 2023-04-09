@@ -56,7 +56,6 @@ namespace FF2.Core
 
         int HashGrid();
 
-#if DEBUG
         /// <summary>
         /// Just for tests. This is a property so you can easily grab it when debugging.
         /// </summary>
@@ -69,7 +68,6 @@ namespace FF2.Core
         /// we assume the caller is passing multiple rows separated by newlines.
         /// </summary>
         string DiffGridString(params string[] rows);
-#endif
     }
 
     /// <summary>
@@ -209,7 +207,6 @@ namespace FF2.Core
             cells.AsSpan().Fill(Occupant.None);
         }
 
-#if DEBUG
         const string Newline = "\n";
 
         private string BuildGridString()
@@ -330,7 +327,6 @@ namespace FF2.Core
 
             return "ok";
         }
-#endif
     }
 
     public sealed partial class Grid : GridBase

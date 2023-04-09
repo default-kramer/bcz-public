@@ -390,7 +390,6 @@ namespace FF2.Core
             return (grid, combo);
         }
 
-#if DEBUG
         /// <summary>
         /// For unit tests only. Creates a grid representing all the moves.
         /// Each horizontal drop will get one row to itself.
@@ -411,6 +410,5 @@ namespace FF2.Core
             }
             return grid;
         }
-#endif
     }
 }

@@ -2,11 +2,11 @@ name: ExportHTML5
 
 # Controls when the workflow will run
 on:
-  # Triggers the workflow on push or pull request events but only for the "main" branch
+  # Triggers the workflow on push or pull request events but only for the "master" branch
   push:
-    branches: [ "main" ]
+    branches: [ "master" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "master" ]
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
@@ -44,14 +44,25 @@ jobs:
           mkdir --parents /home/runner/.local/share/godot/templates
           mv ./Godot_v3.5.1-stable_mono_export_templates/templates /home/runner/.local/share/godot/templates/3.5.1.stable.mono
 
+      # The export command can fail but still exit with status code 0.
+      # Specifically, in the case of a C# compile error the exit code will be 0 but stderr will have a message.
+      # So here we redirect stderr and verify that it is empty.
       - name: Export project to HTML5
         run: |
           cd ./godot
           mkdir --parents ./.export/HTML5
-          godot ./project.godot --export "HTML5"
+          godot ./project.godot --export "HTML5" 2> ./errlog.txt
           ls -lh
           cd .export/HTML5
           ls -lh
+
+      # Be careful! Using `-s` with `&&` and `||` is tricky; I wrote many incorrect versions.
+      # Use `if` instead which is much easier to get correct.
+      - name: Verify stderr was empty
+        run: |
+          cd ./godot
+          cat ./errlog.txt
+          if [ -s ./errlog.txt ]; then exit 55; else echo looks good; fi
 
       - uses: actions/upload-artifact@v3
         with:
