@@ -56,6 +56,7 @@ jobs:
           ls -lh
           cd .export/HTML5
           ls -lh
+        run: "([ -s ./errlog.txt ] && echo looks good) || (cat ./errlog.txt && exit 123)"
 
       - name: TEST
         run: "([ -s ./errlog.txt ] && echo looks good) || (cat ./errlog.txt && exit 123)"
