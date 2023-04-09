@@ -58,7 +58,7 @@ jobs:
           ls -lh
 
       - name: TEST
-        run: [ -s ./errlog.txt ] || (cat ./errlog.txt && exit 123)
+        run: "([ -s ./errlog.txt ] && echo looks good) || (cat ./errlog.txt && exit 123)"
 
       - uses: actions/upload-artifact@v3
         with:
