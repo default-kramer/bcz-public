@@ -9,7 +9,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BCZ.Core", "..\core\BCZ.Cor
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BCZ.CoreTests", "..\core\BCZ.CoreTests\BCZ.CoreTests.csproj", "{5E22149F-4A13-4908-8F68-BA8F4DE729FE}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "bcz", "bcz.csproj", "{944758BB-2333-49B3-BEBD-61954482FF19}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "bcz-godot", "bcz-godot.csproj", "{944758BB-2333-49B3-BEBD-61954482FF19}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Taqo", "..\..\server\Taqo\Taqo.csproj", "{093F9FEB-28DF-424A-89EF-78D18589EA66}"
 EndProject
