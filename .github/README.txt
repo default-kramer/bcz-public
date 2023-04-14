@@ -1,7 +1,3 @@
-THIS IS BROKEN NOW - But was it the upgrade to 3.5.1 that did it?
-Or was it already broken before that?
-
-
 NOTE TO SELF: Review requirements of /godot/licensed before deploying publicly.
 
 Getting this autobuild working was not easy.
