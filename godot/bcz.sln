@@ -5,11 +5,11 @@ VisualStudioVersion = 17.5.33516.290
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BCZ.Server", "..\..\server\BCZ.Server\BCZ.Server.csproj", "{F02FC545-5681-4238-950D-24C73B82E44E}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FF2.Core", "..\core\FF2.Core\FF2.Core.csproj", "{C67A838F-FAD0-44FD-BACC-5B466FCA5F66}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BCZ.Core", "..\core\BCZ.Core\BCZ.Core.csproj", "{C67A838F-FAD0-44FD-BACC-5B466FCA5F66}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FF2.CoreTests", "..\core\FF2.CoreTests\FF2.CoreTests.csproj", "{5E22149F-4A13-4908-8F68-BA8F4DE729FE}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BCZ.CoreTests", "..\core\BCZ.CoreTests\BCZ.CoreTests.csproj", "{5E22149F-4A13-4908-8F68-BA8F4DE729FE}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ff2", "ff2.csproj", "{944758BB-2333-49B3-BEBD-61954482FF19}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "bcz", "bcz.csproj", "{944758BB-2333-49B3-BEBD-61954482FF19}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Taqo", "..\..\server\Taqo\Taqo.csproj", "{093F9FEB-28DF-424A-89EF-78D18589EA66}"
 EndProject

@@ -1,8 +1,8 @@
-using FF2.Core;
+using BCZ.Core;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 
-namespace FF2.CoreTests
+namespace BCZ.CoreTests
 {
     [TestClass]
     public class RandomTests

@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using FF2.Core;
+using BCZ.Core;
 
-namespace FF2.CoreTests
+namespace BCZ.CoreTests
 {
     static class Util
     {

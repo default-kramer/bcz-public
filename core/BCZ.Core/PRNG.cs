@@ -1,6 +1,6 @@
 using System;
 
-namespace FF2.Core
+namespace BCZ.Core
 {
     /// <summary>
     /// A deterministic pseudorandom number generator.

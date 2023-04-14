@@ -12,7 +12,7 @@
 
 using Bits = System.UInt32;
 
-namespace FF2.Core
+namespace BCZ.Core
 {
     // The enums in this file get packed into a single value so they must not share any bits.
 

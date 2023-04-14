@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using FF2.Core.Viewmodels;
+using BCZ.Core.Viewmodels;
 
 // Prototyping some PvP ideas here...
 //
@@ -55,7 +55,7 @@ using FF2.Core.Viewmodels;
 // * Orange - undefended and threatened
 // And of course, the Orange should flash when the attack is imminent.
 
-namespace FF2.Core
+namespace BCZ.Core
 {
     interface IDumpCallback
     {

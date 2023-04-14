@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace FF2.Core
+namespace BCZ.Core
 {
     /// <summary>
     /// Immutable. Tracks the 2 Occupants that the player has control of.

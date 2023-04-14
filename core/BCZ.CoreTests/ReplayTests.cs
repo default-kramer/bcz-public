@@ -4,11 +4,11 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using FF2.Core;
-using FF2.Core.ReplayModel;
+using BCZ.Core;
+using BCZ.Core.ReplayModel;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace FF2.CoreTests
+namespace BCZ.CoreTests
 {
     [TestClass]
     public class ReplayTests
@@ -334,7 +334,7 @@ BB                      "));
 
             while (currentDir.Parent != null)
             {
-                if (currentDir.Name == "FF2.CoreTests")
+                if (currentDir.Name == "BCZ.CoreTests")
                 {
                     var replayDir = new DirectoryInfo(Path.Combine(currentDir.FullName, "Replays"));
                     if (!replayDir.Exists)

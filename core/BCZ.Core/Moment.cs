@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace FF2.Core
+namespace BCZ.Core
 {
     /// <summary>
     /// A Moment is the number of milliseconds elapsed since the start of a game.

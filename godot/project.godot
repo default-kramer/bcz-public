@@ -10,7 +10,7 @@ config_version=4
 
 [application]
 
-config/name="ff2"
+config/name="bcz-godot"
 run/main_scene="res://NewRoot.tscn"
 config/icon="res://icon.png"
 
@@ -81,7 +81,7 @@ game_drop={
 
 [mono]
 
-project/assembly_name="ff2"
+project/assembly_name="bcz-godot"
 
 [physics]
 

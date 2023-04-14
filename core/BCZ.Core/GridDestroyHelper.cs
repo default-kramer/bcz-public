@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace FF2.Core
+namespace BCZ.Core
 {
     /// <summary>
     /// This struct should be very short-lived -- just create it, use it, and get rid of it

@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace FF2.Core
+namespace BCZ.Core
 {
     /// <summary>
     /// The core logic of this game uses the millisecond as the basic unit of time.

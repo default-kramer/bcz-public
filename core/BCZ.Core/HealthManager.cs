@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using FF2.Core.Viewmodels;
+using BCZ.Core.Viewmodels;
 
-namespace FF2.Core
+namespace BCZ.Core
 {
     sealed class CountdownHook : EmptyStateHook, ICountdownViewmodel
     {

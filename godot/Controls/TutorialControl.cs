@@ -1,4 +1,4 @@
-using FF2.Core;
+using BCZ.Core;
 using Godot;
 using System;
 using System.Collections.Generic;
@@ -7,10 +7,10 @@ using System.Collections.Generic;
 
 public class TutorialControl : Control
 {
-    const FF2.Core.Color yellow = FF2.Core.Color.Yellow;
-    const FF2.Core.Color blue = FF2.Core.Color.Blue;
-    const FF2.Core.Color red = FF2.Core.Color.Red;
-    const FF2.Core.Color blank = FF2.Core.Color.Blank;
+    const BCZ.Core.Color yellow = BCZ.Core.Color.Yellow;
+    const BCZ.Core.Color blue = BCZ.Core.Color.Blue;
+    const BCZ.Core.Color red = BCZ.Core.Color.Red;
+    const BCZ.Core.Color blank = BCZ.Core.Color.Blank;
     static readonly Occupant enemyYellow = Occupant.MakeEnemy(yellow);
     static readonly Occupant enemyBlue = Occupant.MakeEnemy(blue);
     static readonly Occupant enemyRed = Occupant.MakeEnemy(red);

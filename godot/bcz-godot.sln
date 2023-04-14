@@ -3,11 +3,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.1.32407.343
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ff2", "ff2.csproj", "{D00AD443-B029-43FF-A371-CDBBA727BCCC}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "bcz-godot", "bcz-godot.csproj", "{D00AD443-B029-43FF-A371-CDBBA727BCCC}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FF2.Core", "..\core\FF2.Core\FF2.Core.csproj", "{B5895AF2-95E5-45D0-AFA3-C4C87CB687DF}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BCZ.Core", "..\core\BCZ.Core\BCZ.Core.csproj", "{B5895AF2-95E5-45D0-AFA3-C4C87CB687DF}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FF2.CoreTests", "..\core\FF2.CoreTests\FF2.CoreTests.csproj", "{948D6672-68E1-4D4D-8677-A427F847503A}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BCZ.CoreTests", "..\core\BCZ.CoreTests\BCZ.CoreTests.csproj", "{948D6672-68E1-4D4D-8677-A427F847503A}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{5D28DF95-F64E-45B3-9C84-45B16904A56D}"
 	ProjectSection(SolutionItems) = preProject

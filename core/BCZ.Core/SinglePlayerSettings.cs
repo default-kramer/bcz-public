@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 #nullable enable
 
-namespace FF2.Core
+namespace BCZ.Core
 {
     public enum GameMode
     {

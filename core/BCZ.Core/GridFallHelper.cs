@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace FF2.Core
+namespace BCZ.Core
 {
     static class GridFallHelper
     {

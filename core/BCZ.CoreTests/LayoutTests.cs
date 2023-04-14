@@ -3,10 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using FF2.Core;
+using BCZ.Core;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace FF2.CoreTests
+namespace BCZ.CoreTests
 {
     [TestClass]
     public class LayoutTests

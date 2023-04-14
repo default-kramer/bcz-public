@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace FF2.Core.ReplayModel
+namespace BCZ.Core.ReplayModel
 {
     sealed class CompositeReplayCollector : IReplayCollector
     {

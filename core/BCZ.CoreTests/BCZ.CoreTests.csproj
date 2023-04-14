@@ -27,7 +27,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\FF2.Core\FF2.Core.csproj" />
+    <ProjectReference Include="..\BCZ.Core\BCZ.Core.csproj" />
   </ItemGroup>
 
 </Project>

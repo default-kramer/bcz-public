@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace FF2.Core
+namespace BCZ.Core
 {
     /// <summary>
     /// The ticker layers timing-related concerns on top of a <see cref="State"/>.

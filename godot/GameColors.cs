@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Godot;
-using Color = FF2.Core.Color;
+using Color = BCZ.Core.Color;
 
 static class GameColors
 {

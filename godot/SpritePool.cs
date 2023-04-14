@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using FF2.Core;
+using BCZ.Core;
 using Godot;
 
 #nullable enable
