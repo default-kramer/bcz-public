@@ -66,5 +66,5 @@ jobs:
 
       - uses: actions/upload-artifact@v3
         with:
-          name: ff2-html5
+          name: bcz-html5
           path: ./godot/.export/HTML5

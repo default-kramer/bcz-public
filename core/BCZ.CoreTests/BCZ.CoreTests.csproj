@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <Nullable>enable</Nullable>
+
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="RandomExpectations\rand-doubles-1928380848-1542618196-3045600165-1717332222-3142207023-1149002106.txt" />
+    <None Remove="RandomExpectations\rand-doubles-3044737622-155609380-3488820501-1922517136-40728809-3640400285.txt" />
+    <None Remove="RandomExpectations\rand-doubles-753845826-4014832777-2150615510-1513918462-256437212-4072870820.txt" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="RandomExpectations\rand-doubles-1928380848-1542618196-3045600165-1717332222-3142207023-1149002106.txt" />
+    <EmbeddedResource Include="RandomExpectations\rand-doubles-3044737622-155609380-3488820501-1922517136-40728809-3640400285.txt" />
+    <EmbeddedResource Include="RandomExpectations\rand-doubles-753845826-4014832777-2150615510-1513918462-256437212-4072870820.txt" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.11.0" />
+    <PackageReference Include="MSTest.TestAdapter" Version="2.2.7" />
+    <PackageReference Include="MSTest.TestFramework" Version="2.2.7" />
+    <PackageReference Include="coverlet.collector" Version="3.1.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\BCZ.Core\BCZ.Core.csproj" />
+  </ItemGroup>
+
+</Project>

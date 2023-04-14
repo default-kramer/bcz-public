@@ -1,4 +1,4 @@
-using FF2.Core;
+using BCZ.Core;
 using Godot;
 using System;
 using System.Collections.Generic;
@@ -45,12 +45,12 @@ public class PuzzleControl : Control, PuzzleMenu.ILogic
     public void TEST_SolvePuzzle()
     {
         //string path = @"C:\fission-flare-recordings\curated-puzzles\20220930_122640_2130838410-1956952547-1089322391-2206903227-2910161783-3276923346.ffr";
-        //var puzzles = FF2.Core.ReplayModel.ReplayReader.GetPuzzles(path);
+        //var puzzles = BCZ.Core.ReplayModel.ReplayReader.GetPuzzles(path);
         //puzzles = puzzles.Select(x => x.Distill().Value).ToList();
         //SolvePuzzles(puzzles);
 
         //var dir = new System.IO.DirectoryInfo(@"C:\fission-flare-recordings\raw");
-        var dir = new System.IO.DirectoryInfo(@"C:\Users\kramer\Documents\code\ff2\core\FF2.CoreTests\Replays");
+        var dir = new System.IO.DirectoryInfo(@"C:\Users\kramer\Documents\code\bcz\core\BCZ.CoreTests\Replays");
         var puzzles = CollectPuzzles(dir);
         SolvePuzzles(puzzles);
     }
@@ -84,7 +84,7 @@ public class PuzzleControl : Control, PuzzleMenu.ILogic
 
     private void CollectPuzzles(System.IO.FileInfo replayFile, List<PuzzleInfo> collector)
     {
-        var temp = FF2.Core.ReplayModel.ReplayReader.GetRawPuzzles(replayFile.FullName);
+        var temp = BCZ.Core.ReplayModel.ReplayReader.GetRawPuzzles(replayFile.FullName);
         for (int i = 0; i < temp.Count; i++)
         {
             var item = temp[i];

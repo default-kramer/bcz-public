@@ -1,9 +1,9 @@
-using FF2.Core;
-using FF2.Core.Viewmodels;
+using BCZ.Core;
+using BCZ.Core.Viewmodels;
 using Godot;
 using System;
 using System.Collections.Generic;
-using Color = FF2.Core.Color;
+using Color = BCZ.Core.Color;
 
 #nullable enable
 
@@ -347,7 +347,7 @@ public class GridViewerControl : Control
 
     public sealed class NullLogic : ILogic
     {
-        private static readonly IReadOnlyGridSlim defaultGrid = FF2.Core.Grid.Create();
+        private static readonly IReadOnlyGridSlim defaultGrid = BCZ.Core.Grid.Create();
 
         private NullLogic() { }
 

@@ -1,4 +1,4 @@
-using FF2.Core;
+using BCZ.Core;
 using Godot;
 using System;
 using System.Linq;
@@ -15,7 +15,7 @@ public class SinglePlayerMenu : Control
     const string ModeTraining = "Training";
     const string ModePvPSim = "PvP Simulator";
 
-    private static readonly FF2.Core.ISettingsCollection TODO = FF2.Core.SinglePlayerSettings.WIP;
+    private static readonly BCZ.Core.ISettingsCollection TODO = BCZ.Core.SinglePlayerSettings.WIP;
 
     private readonly ChoiceModel<int> LevelChoices = new ChoiceModel<int>()
         .AddChoices(Enumerable.Range(1, TODO.MaxLevel));
@@ -143,7 +143,7 @@ public class SinglePlayerMenu : Control
         }
         else if (mode == ModePvPSim)
         {
-            var collection = FF2.Core.SinglePlayerSettings.PvPSimSettings;
+            var collection = BCZ.Core.SinglePlayerSettings.PvPSimSettings;
             int level = LevelChoices.SelectedItem;
             var token = new LevelToken(level, collection);
             NewRoot.FindRoot(this).StartGame(token);
