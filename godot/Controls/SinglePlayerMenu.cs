@@ -1,6 +1,7 @@
 using BCZ.Core;
 using Godot;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 
 #nullable enable
@@ -15,7 +16,7 @@ public class SinglePlayerMenu : Control
     const string ModeTraining = "Training";
     const string ModePvPSim = "PvP Simulator";
 
-    private static readonly BCZ.Core.ISettingsCollection TODO = BCZ.Core.SinglePlayerSettings.WIP;
+    private static readonly BCZ.Core.ISettingsCollection TODO = BCZ.Core.SinglePlayerSettings.NormalSettings;// BCZ.Core.SinglePlayerSettings.WIP;
 
     private readonly ChoiceModel<int> LevelChoices = new ChoiceModel<int>()
         .AddChoices(Enumerable.Range(1, TODO.MaxLevel));
@@ -186,9 +187,11 @@ public class SinglePlayerMenu : Control
             return false;
         }
 
-        public SeededSettings CreateSeededSettings()
+        public GamePackage CreateGamePackage()
         {
-            return Collection.GetSettings(Level).AddRandomSeed();
+            var settings = Collection.GetSettings(Level).AddRandomSeed();
+            var goals = Collection.GetGoals(Level);
+            return new GamePackage(settings, goals);
         }
     }
 }

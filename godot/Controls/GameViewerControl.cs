@@ -28,9 +28,10 @@ public class GameViewerControl : Control
         SetLogic(newLogic);
     }
 
-    private void NewGame(SeededSettings ss)
+    private void NewGame(GamePackage gamePackage)
     {
-        var state = State.Create(ss);
+        var settings = gamePackage.Settings;
+        var state = State.Create(settings);
         ReplayWriter? replayWriter = null;
         var listReplayCollector = new ListReplayCollector();
         IReplayCollector replayCollector = listReplayCollector;
@@ -44,14 +45,14 @@ public class GameViewerControl : Control
             {
                 di.Create();
             }
-            var filename = System.IO.Path.Combine(replayDir, $"{DateTime.Now.ToString("yyyyMMdd_HHmmss")}_{ss.Seed.Serialize()}.ffr");
+            var filename = System.IO.Path.Combine(replayDir, $"{DateTime.Now.ToString("yyyyMMdd_HHmmss")}_{settings.Seed.Serialize()}.ffr");
             var writer = new System.IO.StreamWriter(filename);
-            replayWriter = ReplayWriter.Begin(writer, ss);
+            replayWriter = ReplayWriter.Begin(writer, settings);
             replayCollector = replayCollector.Combine(replayWriter);
         }
 
         var ticker = new DotnetTicker(state, replayCollector);
-        var newLogic = new LiveGameLogic(replayWriter, ticker, members);
+        var newLogic = new LiveGameLogic(replayWriter, ticker, members, gamePackage);
         SetLogic(newLogic);
     }
 
@@ -66,6 +67,7 @@ public class GameViewerControl : Control
         public readonly SwitchViewerControl SwitchViewerControl;
         public readonly GridViewerControl AttackGridViewer;
         public readonly BarrierTogglesControl BarrierTogglesControl;
+        public readonly GoalViewerControl GoalViewerControl;
 
         public Members(Control me)
         {
@@ -78,6 +80,7 @@ public class GameViewerControl : Control
             me.FindNode(out SwitchViewerControl, nameof(SwitchViewerControl));
             me.FindNode(out AttackGridViewer, nameof(AttackGridViewer));
             me.FindNode(out BarrierTogglesControl, nameof(BarrierTogglesControl));
+            me.FindNode(out GoalViewerControl, nameof(GoalViewerControl));
 
             QueueViewer.GridViewer = GridViewer;
         }
@@ -164,12 +167,28 @@ public class GameViewerControl : Control
         members.CountdownViewer.RectMinSize = new Vector2(ladderWidth, 0);
         minWidth += ladderWidth;
 
-        if (true)
+        if (false)
         {
             separationCount++;
             members.BarrierTogglesControl.Visible = true;
             members.BarrierTogglesControl.RectMinSize = new Vector2(100, 0);
             minWidth += 100;
+        }
+        else
+        {
+            members.BarrierTogglesControl.Visible = false;
+        }
+
+        if (true)
+        {
+            separationCount++;
+            members.GoalViewerControl.Visible = true;
+            members.GoalViewerControl.RectMinSize = new Vector2(ladderWidth, 0);
+            minWidth += ladderWidth;
+        }
+        else
+        {
+            members.GoalViewerControl.Visible = false;
         }
 
         if (members.SwitchViewerControl.Visible)
@@ -218,13 +237,14 @@ public class GameViewerControl : Control
         members.SwitchViewerControl.Update();
         members.AttackGridViewer.Update();
         members.BarrierTogglesControl.Update();
+        members.GoalViewerControl.Update();
 
         this.logic.CheckGameOver();
     }
 
-    public void StartGame(SeededSettings ss)
+    public void StartGame(GamePackage package)
     {
-        NewGame(ss);
+        NewGame(package);
         members.GameOverMenu.Visible = false;
     }
 
@@ -257,7 +277,7 @@ public class GameViewerControl : Control
         }
     }
 
-    private static void StandardInitialize(Members members, Ticker ticker)
+    private static void StandardInitialize(Members members, Ticker ticker, IReadOnlyList<IGoal> goals)
     {
         members.GridViewer.SetLogic(ticker);
         var state = ticker.state;
@@ -301,6 +321,17 @@ public class GameViewerControl : Control
         {
             members.AttackGridViewer.Visible = false;
             members.SwitchViewerControl.AttackViewer = null;
+        }
+
+        if (goals.Count > 0)
+        {
+            members.GoalViewerControl.TODO(state, goals);
+            members.GoalViewerControl.Visible = true;
+        }
+        else
+        {
+            members.GoalViewerControl.Disable();
+            members.GoalViewerControl.Visible = false;
         }
     }
 
@@ -365,9 +396,11 @@ public class GameViewerControl : Control
 
         public virtual void CheckGameOver() { }
 
+        protected virtual IReadOnlyList<IGoal> Goals => NoGoals;
+
         public void Initialize(Members members)
         {
-            StandardInitialize(members, ticker);
+            StandardInitialize(members, ticker, Goals);
         }
     }
 
@@ -375,13 +408,17 @@ public class GameViewerControl : Control
     {
         private ReplayWriter? replayWriter;
         private readonly Members members;
+        private readonly GamePackage gamePackage;
 
-        public LiveGameLogic(ReplayWriter? replayWriter, DotnetTicker ticker, Members members)
+        public LiveGameLogic(ReplayWriter? replayWriter, DotnetTicker ticker, Members members, GamePackage gamePackage)
             : base(ticker)
         {
             this.replayWriter = replayWriter;
             this.members = members;
+            this.gamePackage = gamePackage;
         }
+
+        protected override IReadOnlyList<IGoal> Goals => gamePackage.Goals;
 
         public override void Cleanup()
         {
@@ -400,7 +437,7 @@ public class GameViewerControl : Control
             if (state.IsGameOver && !members.GameOverMenu.Visible)
             {
                 Cleanup();
-                members.GameOverMenu.OnGameOver(state);
+                members.GameOverMenu.OnGameOver(state, gamePackage);
             }
         }
     }
@@ -437,7 +474,9 @@ public class GameViewerControl : Control
 
         public void Initialize(Members members)
         {
-            StandardInitialize(members, replayDriver.Ticker);
+            StandardInitialize(members, replayDriver.Ticker, NoGoals);
         }
     }
+
+    private static IReadOnlyList<IGoal> NoGoals = new List<IGoal>();
 }

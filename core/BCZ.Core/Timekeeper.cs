@@ -55,6 +55,8 @@ namespace BCZ.Core
         private readonly Func<Moment> cursorProvider;
         private readonly Func<Moment> waitingCursorProvider;
 
+        public Moment TODO_NOW => cursor;
+
         public Timekeeper()
         {
             this.cursorProvider = () => cursor;

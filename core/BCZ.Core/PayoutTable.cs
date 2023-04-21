@@ -49,6 +49,13 @@ namespace BCZ.Core
             = new PayoutTable(CorruptionManager.CorruptionAccelerationDenominator, 1m, 1.2m, 1.4m, 1.7m, 2m, 2.5m);
 
         public static readonly PayoutTable DefaultScorePayoutTable
-            = new PayoutTable(100, 0m, 0.5m, 1m, 2.5m, 4.5m, 7m, 10m, 15m);
+            = new PayoutTable(100, 0m, 0m, 1m, 2.5m, 4.5m, 7m, 10m, 15m);
+        // Single 0
+        // Double 100 (+100)
+        // Triple 250 (+150)
+        // Quad   450 (+200)
+        // 5      700 (+250)
+        // 6     1000 (+300)
+        // 7     1500 (+500)
     }
 }

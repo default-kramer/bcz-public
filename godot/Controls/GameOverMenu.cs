@@ -34,14 +34,16 @@ public class GameOverMenu : Control
         members.ButtonQuit.Connect("pressed", this, nameof(Quit));
     }
 
-    public void OnGameOver(State state)
+    public void OnGameOver(State state, GamePackage gamePackage)
     {
         this.Visible = true;
         var root = NewRoot.FindRoot(this);
 
         if (state.ClearedAllEnemies)
         {
-            members.LabelMessage.Text = "You Win!";
+            float scorePerCombo = state.Score * 1f / state.NumCombos;
+            // TODO check goals here
+            members.LabelMessage.Text = $"You Win! {scorePerCombo.ToString("#.00")} / {state.NumCatalystsSpawned} / {state.TODO_ClearTime.Millis} / {state.Score} / {state.Score * 1.0 / state.NumCatalystsSpawned}";
         }
         else
         {

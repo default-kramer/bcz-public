@@ -27,12 +27,6 @@ public class QueueViewerControl : Control
         me.DrawRect(new Rect2(box.Position + new Vector2(1, 1), box.Size - new Vector2(2, 2)), Godot.Colors.WhiteSmoke, filled: false, width: 1);
     }
 
-    private void DrawBorder(float bottomY)
-    {
-        DrawRect(new Rect2(0, 0, RectSize.x, bottomY), Godot.Colors.LightGray, filled: false, width: 1);
-        DrawRect(new Rect2(1, 1, RectSize.x - 2, bottomY - 2), Godot.Colors.WhiteSmoke, filled: false, width: 1);
-    }
-
     public override void _Draw()
     {
         if (Model == null)

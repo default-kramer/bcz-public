@@ -93,6 +93,7 @@ namespace BCZ.Core
         public static readonly ISettingsCollection NormalSettings = new NormalSettingsCollection();
         public static readonly ISettingsCollection PvPSimSettings = new PvPSimSettingsCollection();
         public static readonly ISettingsCollection WIP = new TODO();
+        private static readonly IReadOnlyList<IGoal> NoGoals = new List<IGoal>();
 
         abstract class SettingsCollection : ISettingsCollection
         {
@@ -178,6 +179,8 @@ namespace BCZ.Core
                     throw new Exception("Not enough levels are specified here");
                 }
             }
+
+            public abstract IReadOnlyList<IGoal> GetGoals(int level);
         }
 
         class BeginnerSettingsCollection : SettingsCollection
@@ -190,6 +193,11 @@ namespace BCZ.Core
             protected override bool SpawnBlanks(int level)
             {
                 return false;
+            }
+
+            public override IReadOnlyList<IGoal> GetGoals(int level)
+            {
+                return NoGoals;
             }
         }
 
@@ -204,6 +212,25 @@ namespace BCZ.Core
             {
                 return true;
             }
+
+            public override IReadOnlyList<IGoal> GetGoals(int level)
+            {
+                return goals;
+            }
+
+            private static List<IGoal> goals = new List<IGoal>()
+            {
+                // TODO should be per level.
+                // Gold seems like it should be about:
+                // * Level 14 : 500
+                // * Level 15 : 525
+                // * Level 16 : 550
+                // * ... +25 per level ...
+                // * Level 20 : 650
+                new FixedGoal(GoalKind.Bronze, 400),
+                new FixedGoal(GoalKind.Silver, 500),
+                new FixedGoal(GoalKind.Gold, 650),
+            };
         }
 
         class PvPSimSettingsCollection : SettingsCollection
@@ -219,6 +246,11 @@ namespace BCZ.Core
             }
 
             protected override GameMode GameMode => GameMode.PvPSim;
+
+            public override IReadOnlyList<IGoal> GetGoals(int level)
+            {
+                return NoGoals;
+            }
         }
 
         class TODO : SettingsCollection
@@ -257,6 +289,11 @@ namespace BCZ.Core
             {
                 const int enemiesPerStripe = 5;
                 return Add(enemiesPerStripe, level, level, enemyCount: level * 5, rowsPerStripe: 1);
+            }
+
+            public override IReadOnlyList<IGoal> GetGoals(int level)
+            {
+                return NoGoals;
             }
         }
     }

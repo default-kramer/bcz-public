@@ -152,6 +152,7 @@ namespace BCZ.Core
 
         public override void OnCatalystSpawned(SpawnItem catalyst)
         {
+            return;
             if (penaltyProgress[0] > 0)
             {
                 hitPoints--;

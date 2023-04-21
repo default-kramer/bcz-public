@@ -24,7 +24,7 @@ public class BarrierTogglesControl : Control
         offSpritePool = ToggleSpritePool.Create(this, false);
     }
 
-    private static Color b1 = Godot.Color.Color8(45, 55, 72);
+    private static readonly Color b1 = Godot.Color.Color8(45, 55, 72);
 
     public override void _Draw()
     {

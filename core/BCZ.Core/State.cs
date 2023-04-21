@@ -17,6 +17,7 @@ namespace BCZ.Core
         private ComboInfo currentCombo;
         public ComboInfo? ActiveOrPreviousCombo { get; private set; } = null;
         private int score = 0;
+        private int numCombos = 0;
         private readonly PayoutTable scorePayoutTable = PayoutTable.DefaultScorePayoutTable;
         private readonly IStateHook hook;
         private readonly StateEvent.Factory eventFactory;
@@ -31,6 +32,7 @@ namespace BCZ.Core
         public StateEvent CurrentEvent => __currentEvent;
 
         public int Score => score;
+        public int NumCombos => numCombos;
 
         public int NumCatalystsSpawned = 0; // Try not to use this...
 
@@ -39,6 +41,8 @@ namespace BCZ.Core
         public bool IsGameOver => CurrentEvent.Kind == StateEventKind.GameEnded;
 
         public bool ClearedAllEnemies { get; private set; }
+
+        public Moment TODO_ClearTime { get; private set; }
 
         public delegate void EventHandler<T>(State sender, T args);
 
@@ -120,6 +124,11 @@ namespace BCZ.Core
             }
         }
 
+        public GoalArgs MakeGoalArgs()
+        {
+            return new GoalArgs(timekeeper.TODO_NOW.Millis, NumCatalystsSpawned);
+        }
+
         public Viewmodels.QueueModel MakeQueueModel()
         {
             return new Viewmodels.QueueModel(this.spawnDeck);
@@ -197,6 +206,7 @@ namespace BCZ.Core
             {
                 var scorePayout = GetHypotheticalScore(currentCombo);
                 score += scorePayout;
+                numCombos++;
                 //Console.WriteLine($"Score: {score} (+{scorePayout})");
             }
             currentCombo = ComboInfo.Empty;
@@ -394,7 +404,9 @@ namespace BCZ.Core
         /// </summary>
         public int GetHypotheticalScore(ComboInfo combo)
         {
-            return scorePayoutTable.GetPayout(combo.ComboToReward.AdjustedGroupCount);
+            int enemyScore = combo.NumEnemiesDestroyed * 100;
+            int comboScore = scorePayoutTable.GetPayout(combo.ComboToReward.AdjustedGroupCount);
+            return enemyScore + comboScore;
         }
 
         private bool Transition()
@@ -405,6 +417,7 @@ namespace BCZ.Core
             {
                 // Don't change to GameOver immediately. Let the combo resolve.
                 ClearedAllEnemies = true;
+                TODO_ClearTime = timekeeper.TODO_NOW;
             }
             return retval;
         }
