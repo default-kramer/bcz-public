@@ -53,10 +53,13 @@ namespace BCZ.Core
 
         public static State CreateWithInfiniteHealth(Grid grid, ISpawnDeck deck)
         {
-            return new State(grid, deck, NullStateHook.Instance, new Timekeeper());
+            return new State(grid, deck, NullStateHook.Instance, new Timekeeper(), null, null, null);
         }
 
-        internal State(Grid grid, ISpawnDeck spawnDeck, IStateHook makeHook, Timekeeper timekeeper)
+        internal State(Grid grid, ISpawnDeck spawnDeck, IStateHook makeHook, Timekeeper timekeeper,
+            IAttackGridViewmodel? attackGridViewmodel,
+            ISwitchesViewmodel? switchesViewmodel,
+            ICountdownViewmodel? countdownViewmodel)
         {
             this.grid = grid;
             this.fallSampler = new FallAnimationSampler(grid);
@@ -71,20 +74,12 @@ namespace BCZ.Core
             mover = null;
             currentCombo = ComboInfo.Empty;
             this.hook = makeHook;
-            if (hook is NewHealth h3)
-            {
-                CountdownViewmodel = h3;
-                PenaltyViewmodel = h3;
-            }
-            else if (hook is SimulatedAttacker atk)
-            {
-                this.AttackGridViewmodel = atk.VM;
-                this.SwitchesViewmodel = atk.SwitchVM;
-            }
+            this.AttackGridViewmodel = attackGridViewmodel;
+            this.SwitchesViewmodel = switchesViewmodel;
+            this.CountdownViewmodel = countdownViewmodel;
         }
 
         public ICountdownViewmodel? CountdownViewmodel { get; private set; }
-        public readonly ISlidingPenaltyViewmodel? PenaltyViewmodel;
         public readonly IAttackGridViewmodel? AttackGridViewmodel;
         public readonly ISwitchesViewmodel? SwitchesViewmodel;
 
@@ -104,12 +99,16 @@ namespace BCZ.Core
             {
                 var switches = new Switches();
                 var hook = new SimulatedAttacker(switches);
-                return new State(grid, deck, hook, timekeeper);
+                return new State(grid, deck, hook, timekeeper, hook.VM, hook.SwitchVM, null);
+            }
+            else if (mode == GameMode.Levels)
+            {
+                var hook = new CountdownHook(timekeeper);
+                return new State(grid, deck, hook, timekeeper, null, null, hook);
             }
             else
             {
-                var hook = new NewHealth(timekeeper);
-                return new State(grid, deck, hook, timekeeper);
+                throw new Exception("Unsupported game mode: " + mode);
             }
         }
 

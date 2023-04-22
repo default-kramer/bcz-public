@@ -61,7 +61,6 @@ public class GameViewerControl : Control
         public readonly GridViewerControl GridViewer;
         public readonly QueueViewerControl QueueViewer;
         public readonly CountdownViewerControl CountdownViewer;
-        public readonly HealthViewerControl HealthViewer;
         public readonly GameOverMenu GameOverMenu;
         public readonly HBoxContainer HBoxContainer;
         public readonly SwitchViewerControl SwitchViewerControl;
@@ -73,7 +72,6 @@ public class GameViewerControl : Control
             me.FindNode(out GridViewer, nameof(GridViewer));
             me.FindNode(out QueueViewer, nameof(QueueViewer));
             me.FindNode(out CountdownViewer, nameof(CountdownViewer));
-            me.FindNode(out HealthViewer, nameof(HealthViewer));
             me.FindNode(out GameOverMenu, nameof(GameOverMenu));
             me.FindNode(out HBoxContainer, nameof(HBoxContainer));
             me.FindNode(out SwitchViewerControl, nameof(SwitchViewerControl));
@@ -149,13 +147,6 @@ public class GameViewerControl : Control
         minWidth = 0;
         int separationCount = 0;
 
-        if (members.HealthViewer.Visible)
-        {
-            members.HealthViewer.RectMinSize = new Vector2(ladderWidth, 0);
-            minWidth += ladderWidth;
-            separationCount++;
-        }
-
         float gridWidth = members.GridViewer.DesiredWidth(availHeight);
         members.GridViewer.RectMinSize = new Vector2(gridWidth, 0);
         minWidth += gridWidth;
@@ -219,7 +210,6 @@ public class GameViewerControl : Control
         members.GridViewer.Update();
         members.QueueViewer.Update();
         members.CountdownViewer.Update();
-        members.HealthViewer.Update();
         members.SwitchViewerControl.Update();
         members.AttackGridViewer.Update();
         members.GoalViewerControl.Update();
@@ -272,17 +262,6 @@ public class GameViewerControl : Control
         members.QueueViewer.Visible = true;
 
         members.CountdownViewer.SetModel(state.CountdownViewmodel);
-
-        if (state.PenaltyViewmodel != null)
-        {
-            members.HealthViewer.SetModel(state.PenaltyViewmodel);
-            members.HealthViewer.Visible = true;
-        }
-        else
-        {
-            members.HealthViewer.SetNullModel();
-            members.HealthViewer.Visible = false;
-        }
 
         if (state.SwitchesViewmodel != null)
         {
