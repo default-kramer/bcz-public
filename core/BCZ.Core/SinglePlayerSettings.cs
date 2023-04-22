@@ -203,7 +203,30 @@ namespace BCZ.Core
 
         class NormalSettingsCollection : SettingsCollection
         {
-            public NormalSettingsCollection() : base(20)
+            const int NumLevels = 20;
+
+            private static readonly IReadOnlyList<IReadOnlyList<IGoal>> goals;
+            static NormalSettingsCollection()
+            {
+                var goalsList = new List<IGoal>[NumLevels];
+
+                for (int level = 1; level <= NumLevels; level++)
+                {
+                    // The increase starts at level 15.
+                    // Gold goes from 500 at Level 14 up to 650 at Level 20.
+                    int offset = Math.Max(0, level - 14);
+                    goalsList[level - 1] = new List<IGoal>()
+                    {
+                        new FixedGoal(GoalKind.Bronze, 250 + offset * 25),
+                        new FixedGoal(GoalKind.Silver, 350 + offset * 25),
+                        new FixedGoal(GoalKind.Gold, 500 + offset * 25),
+                    };
+                }
+
+                goals = goalsList;
+            }
+
+            public NormalSettingsCollection() : base(NumLevels)
             {
                 AddAll();
             }
@@ -215,22 +238,8 @@ namespace BCZ.Core
 
             public override IReadOnlyList<IGoal> GetGoals(int level)
             {
-                return goals;
+                return goals[level - 1];
             }
-
-            private static List<IGoal> goals = new List<IGoal>()
-            {
-                // TODO should be per level.
-                // Gold seems like it should be about:
-                // * Level 14 : 500
-                // * Level 15 : 525
-                // * Level 16 : 550
-                // * ... +25 per level ...
-                // * Level 20 : 650
-                new FixedGoal(GoalKind.Bronze, 400),
-                new FixedGoal(GoalKind.Silver, 500),
-                new FixedGoal(GoalKind.Gold, 650),
-            };
         }
 
         class PvPSimSettingsCollection : SettingsCollection

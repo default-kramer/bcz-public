@@ -73,14 +73,12 @@ public class GoalViewerControl : Control
             this.models = new GoalModel[1 + goals.Count];
         }
 
-        private int lastPlayerScore = 0;
-
         public ReadOnlySpan<GoalModel> Recalculate()
         {
             var goalArgs = state.MakeGoalArgs();
 
             int foo = 0;
-            if(state.NumCombos > 0)
+            if (state.NumCombos > 0)
             {
                 foo = state.Score / state.NumCombos;
             }
@@ -108,12 +106,6 @@ public class GoalViewerControl : Control
                 float progress = targets[i] * 0.96f / headroom;
                 var color = i == 0 ? GameColors.Green : GameColors.Bronze;
                 models[i] = new GoalModel(progress, color);
-            }
-
-            if (targets[0] != lastPlayerScore)
-            {
-                lastPlayerScore = targets[0];
-                Console.WriteLine("Targets are now: " + string.Join(", ", targets));
             }
 
             return models;
