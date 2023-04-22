@@ -374,7 +374,6 @@ namespace BCZ.Core
         {
             var grid = Grid.Create(settings.GridWidth, settings.GridHeight);
             GridCreateHelper.SetupGrid(grid, prng, settings.EnemyCount, settings.EnemiesPerStripe, settings.RowsPerStripe);
-            GridCreateHelper.InsertBarriers(grid, settings.Barriers);
             return grid;
         }
 

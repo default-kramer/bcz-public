@@ -66,7 +66,6 @@ public class GameViewerControl : Control
         public readonly HBoxContainer HBoxContainer;
         public readonly SwitchViewerControl SwitchViewerControl;
         public readonly GridViewerControl AttackGridViewer;
-        public readonly BarrierTogglesControl BarrierTogglesControl;
         public readonly GoalViewerControl GoalViewerControl;
 
         public Members(Control me)
@@ -79,7 +78,6 @@ public class GameViewerControl : Control
             me.FindNode(out HBoxContainer, nameof(HBoxContainer));
             me.FindNode(out SwitchViewerControl, nameof(SwitchViewerControl));
             me.FindNode(out AttackGridViewer, nameof(AttackGridViewer));
-            me.FindNode(out BarrierTogglesControl, nameof(BarrierTogglesControl));
             me.FindNode(out GoalViewerControl, nameof(GoalViewerControl));
 
             QueueViewer.GridViewer = GridViewer;
@@ -167,18 +165,6 @@ public class GameViewerControl : Control
         members.CountdownViewer.RectMinSize = new Vector2(ladderWidth, 0);
         minWidth += ladderWidth;
 
-        if (false)
-        {
-            separationCount++;
-            members.BarrierTogglesControl.Visible = true;
-            members.BarrierTogglesControl.RectMinSize = new Vector2(100, 0);
-            minWidth += 100;
-        }
-        else
-        {
-            members.BarrierTogglesControl.Visible = false;
-        }
-
         if (true)
         {
             separationCount++;
@@ -236,7 +222,6 @@ public class GameViewerControl : Control
         members.HealthViewer.Update();
         members.SwitchViewerControl.Update();
         members.AttackGridViewer.Update();
-        members.BarrierTogglesControl.Update();
         members.GoalViewerControl.Update();
 
         this.logic.CheckGameOver();
@@ -282,8 +267,6 @@ public class GameViewerControl : Control
         members.GridViewer.SetLogic(ticker);
         var state = ticker.state;
         members.QueueViewer.Model = state.MakeQueueModel();
-
-        members.BarrierTogglesControl.SetModel(state.BarrierTogglesViewmodel);
 
         members.GridViewer.Visible = true;
         members.QueueViewer.Visible = true;

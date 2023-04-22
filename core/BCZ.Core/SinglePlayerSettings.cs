@@ -10,10 +10,12 @@ namespace BCZ.Core
 {
     public enum GameMode
     {
-        // WARNING - changing these names could break replays
+        // WARNING - changing these names could break replays.
+        // The values shouldn't matter, but why risk it? Just keep everything in the same order.
         Levels,
         ScoreAttack,
         PvPSim,
+        [Obsolete("Didn't like it (barriers idea)")]
         Levels2,
     }
 
@@ -48,8 +50,6 @@ namespace BCZ.Core
 
         GameMode GameMode { get; }
 
-        IReadOnlyList<BarrierDefinition> Barriers { get; }
-
         SeededSettings AddRandomSeed();
     }
 
@@ -62,15 +62,6 @@ namespace BCZ.Core
         public int EnemiesPerStripe { get; set; } = 5;
         public int RowsPerStripe { get; set; } = 2;
         public GameMode GameMode { get; set; } = GameMode.Levels;
-        public IReadOnlyList<BarrierDefinition> Barriers => barriers;
-
-        private readonly List<BarrierDefinition> barriers = new();
-
-        public SinglePlayerSettings AddBarrier(int y, params int[] ranks)
-        {
-            barriers.Add(new BarrierDefinition(y, ranks));
-            return this;
-        }
 
         public static readonly SinglePlayerSettings Default = new SinglePlayerSettings();
 
@@ -92,7 +83,6 @@ namespace BCZ.Core
         public static readonly ISettingsCollection BeginnerSettings = new BeginnerSettingsCollection();
         public static readonly ISettingsCollection NormalSettings = new NormalSettingsCollection();
         public static readonly ISettingsCollection PvPSimSettings = new PvPSimSettingsCollection();
-        public static readonly ISettingsCollection WIP = new TODO();
         private static readonly IReadOnlyList<IGoal> NoGoals = new List<IGoal>();
 
         abstract class SettingsCollection : ISettingsCollection
@@ -255,50 +245,6 @@ namespace BCZ.Core
             }
 
             protected override GameMode GameMode => GameMode.PvPSim;
-
-            public override IReadOnlyList<IGoal> GetGoals(int level)
-            {
-                return NoGoals;
-            }
-        }
-
-        class TODO : SettingsCollection
-        {
-            protected override GameMode GameMode => GameMode.Levels2;
-
-            public TODO() : base(12)
-            {
-                MyAdd(1);
-                MyAdd(2);
-                MyAdd(3);
-                MyAdd(4).AddBarrier(2, 2);
-                MyAdd(5).AddBarrier(2, 3);
-                MyAdd(6).AddBarrier(2, 2, 3);
-                MyAdd(7)
-                    .AddBarrier(2, 4)
-                    .AddBarrier(6, 2);
-                MyAdd(8)
-                    .AddBarrier(2, 3, 4)
-                    .AddBarrier(6, 2, 3);
-                MyAdd(9)
-                    .AddBarrier(2, 3, 3, 5)
-                    .AddBarrier(6, 2, 2, 3);
-                MyAdd(10)
-                    .AddBarrier(2, 4, 5, 6)
-                    .AddBarrier(7, 2, 3, 4);
-                MyAdd(11)
-                    .AddBarrier(2, 3, 3, 5, 6)
-                    .AddBarrier(10, 3, 3, 4);
-                MyAdd(12)
-                    .AddBarrier(2, 4, 5, 6, 7)
-                    .AddBarrier(10, 2, 3, 3, 4);
-            }
-
-            private SinglePlayerSettings MyAdd(int level)
-            {
-                const int enemiesPerStripe = 5;
-                return Add(enemiesPerStripe, level, level, enemyCount: level * 5, rowsPerStripe: 1);
-            }
 
             public override IReadOnlyList<IGoal> GetGoals(int level)
             {

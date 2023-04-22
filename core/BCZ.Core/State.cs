@@ -87,7 +87,6 @@ namespace BCZ.Core
         public readonly ISlidingPenaltyViewmodel? PenaltyViewmodel;
         public readonly IAttackGridViewmodel? AttackGridViewmodel;
         public readonly ISwitchesViewmodel? SwitchesViewmodel;
-        public IBarrierTogglesViewmodel? BarrierTogglesViewmodel { get; private set; }
 
         public IReadOnlyGrid Grid { get { return grid; } }
 
@@ -106,16 +105,6 @@ namespace BCZ.Core
                 var switches = new Switches();
                 var hook = new SimulatedAttacker(switches);
                 return new State(grid, deck, hook, timekeeper);
-            }
-            if (mode == GameMode.Levels2)
-            {
-                var countdown = new CountdownHook(timekeeper);
-                var barrier = new BarrierHook(ss.Settings.Barriers);
-                var hook = new CompositeHook(countdown, barrier);
-                var state = new State(grid, deck, hook, timekeeper);
-                state.CountdownViewmodel = countdown;
-                state.BarrierTogglesViewmodel = barrier;
-                return state;
             }
             else
             {
@@ -456,16 +445,6 @@ namespace BCZ.Core
             }
         }
 
-        /// <summary>
-        /// Hold y-coordinate of barriers to destroy, or subzero meaning nothing
-        /// </summary>
-        private int BarrierRowToDestroy = -1;
-
-        internal void EnqueueBarrierDestruction(int y)
-        {
-            this.BarrierRowToDestroy = y;
-        }
-
         private StateEvent FallOrDestroyOrSpawn()
         {
             if (Fall(true))
@@ -476,15 +455,6 @@ namespace BCZ.Core
             else if (Destroy())
             {
                 return eventFactory.Destroyed(TickCalculations, scheduler.CreateAppointment(Constants.DestructionMillis));
-            }
-            else if (BarrierRowToDestroy >= 0)
-            {
-
-                // The call to Destroy() that returns false might request barrier destruction, so this code
-                // must come after the call to Destroy()
-                var y = BarrierRowToDestroy;
-                BarrierRowToDestroy = -1;
-                return DestroyBarriers(y);
             }
             else
             {
