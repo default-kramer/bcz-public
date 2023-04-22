@@ -79,7 +79,7 @@ namespace BCZ.Core
             this.CountdownViewmodel = countdownViewmodel;
         }
 
-        public ICountdownViewmodel? CountdownViewmodel { get; private set; }
+        public readonly ICountdownViewmodel? CountdownViewmodel;
         public readonly IAttackGridViewmodel? AttackGridViewmodel;
         public readonly ISwitchesViewmodel? SwitchesViewmodel;
 
