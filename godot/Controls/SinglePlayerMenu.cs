@@ -1,7 +1,6 @@
 using BCZ.Core;
 using Godot;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 
 #nullable enable
@@ -16,10 +15,10 @@ public class SinglePlayerMenu : Control
     const string ModeTraining = "Training";
     const string ModePvPSim = "PvP Simulator";
 
-    private static readonly BCZ.Core.ISettingsCollection TODO = BCZ.Core.SinglePlayerSettings.NormalSettings;// BCZ.Core.SinglePlayerSettings.WIP;
+    private static readonly BCZ.Core.ISettingsCollection LevelsModeSettings = BCZ.Core.SinglePlayerSettings.NormalSettings;
 
     private readonly ChoiceModel<int> LevelChoices = new ChoiceModel<int>()
-        .AddChoices(Enumerable.Range(1, TODO.MaxLevel));
+        .AddChoices(Enumerable.Range(1, LevelsModeSettings.MaxLevel));
 
     private readonly ChoiceModel<string> TutorialChoices = new ChoiceModel<string>()
         .AddChoices(TutorialsOn, TutorialsOff);
@@ -151,7 +150,7 @@ public class SinglePlayerMenu : Control
         }
         else
         {
-            var collection = TODO;
+            var collection = LevelsModeSettings;
             int level = LevelChoices.SelectedItem;
             var token = new LevelToken(level, collection);
             NewRoot.FindRoot(this).StartGame(token);

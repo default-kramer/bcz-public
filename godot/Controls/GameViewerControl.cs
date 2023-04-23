@@ -156,16 +156,12 @@ public class GameViewerControl : Control
         members.CountdownViewer.RectMinSize = new Vector2(ladderWidth, 0);
         minWidth += ladderWidth;
 
-        if (true)
+        if (members.GoalViewerControl.Visible)
         {
             separationCount++;
             members.GoalViewerControl.Visible = true;
             members.GoalViewerControl.RectMinSize = new Vector2(ladderWidth, 0);
             minWidth += ladderWidth;
-        }
-        else
-        {
-            members.GoalViewerControl.Visible = false;
         }
 
         if (members.SwitchViewerControl.Visible)
