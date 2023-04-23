@@ -1,9 +1,15 @@
+# Copy of export-html5.yaml with the "publish artifact" step removed to avoid using up my monthly quota.
+# (Surely there is a way to do this with a single file, but I don't have time for that right now.)
+
 name: ExportHTML5
 
 # Controls when the workflow will run
 on:
-  # Allows you to run this workflow manually from the Actions tab
-  workflow_dispatch:
+  # Triggers the workflow on push or pull request events but only for the "master" branch
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
@@ -57,8 +63,3 @@ jobs:
           cd ./godot
           cat ./errlog.txt
           if [ -s ./errlog.txt ]; then exit 55; else echo looks good; fi
-
-      - uses: actions/upload-artifact@v3
-        with:
-          name: bcz-html5
-          path: ./godot/.export/HTML5
