@@ -17,6 +17,7 @@ namespace BCZ.Core
         private ComboInfo currentCombo;
         public ComboInfo? ActiveOrPreviousCombo { get; private set; } = null;
         private int score = 0;
+        private int numCombos = 0;
         private readonly PayoutTable scorePayoutTable = PayoutTable.DefaultScorePayoutTable;
         private readonly IStateHook hook;
         private readonly StateEvent.Factory eventFactory;
@@ -31,6 +32,7 @@ namespace BCZ.Core
         public StateEvent CurrentEvent => __currentEvent;
 
         public int Score => score;
+        public int NumCombos => numCombos;
 
         public int NumCatalystsSpawned = 0; // Try not to use this...
 
@@ -49,10 +51,13 @@ namespace BCZ.Core
 
         public static State CreateWithInfiniteHealth(Grid grid, ISpawnDeck deck)
         {
-            return new State(grid, deck, NullStateHook.Instance, new Timekeeper());
+            return new State(grid, deck, NullStateHook.Instance, new Timekeeper(), null, null, null);
         }
 
-        internal State(Grid grid, ISpawnDeck spawnDeck, IStateHook makeHook, Timekeeper timekeeper)
+        internal State(Grid grid, ISpawnDeck spawnDeck, IStateHook makeHook, Timekeeper timekeeper,
+            IAttackGridViewmodel? attackGridViewmodel,
+            ISwitchesViewmodel? switchesViewmodel,
+            ICountdownViewmodel? countdownViewmodel)
         {
             this.grid = grid;
             this.fallSampler = new FallAnimationSampler(grid);
@@ -67,23 +72,14 @@ namespace BCZ.Core
             mover = null;
             currentCombo = ComboInfo.Empty;
             this.hook = makeHook;
-            if (hook is NewHealth h3)
-            {
-                CountdownViewmodel = h3;
-                PenaltyViewmodel = h3;
-            }
-            else if (hook is SimulatedAttacker atk)
-            {
-                this.AttackGridViewmodel = atk.VM;
-                this.SwitchesViewmodel = atk.SwitchVM;
-            }
+            this.AttackGridViewmodel = attackGridViewmodel;
+            this.SwitchesViewmodel = switchesViewmodel;
+            this.CountdownViewmodel = countdownViewmodel;
         }
 
-        public ICountdownViewmodel? CountdownViewmodel { get; private set; }
-        public readonly ISlidingPenaltyViewmodel? PenaltyViewmodel;
+        public readonly ICountdownViewmodel? CountdownViewmodel;
         public readonly IAttackGridViewmodel? AttackGridViewmodel;
         public readonly ISwitchesViewmodel? SwitchesViewmodel;
-        public IBarrierTogglesViewmodel? BarrierTogglesViewmodel { get; private set; }
 
         public IReadOnlyGrid Grid { get { return grid; } }
 
@@ -101,22 +97,16 @@ namespace BCZ.Core
             {
                 var switches = new Switches();
                 var hook = new SimulatedAttacker(switches);
-                return new State(grid, deck, hook, timekeeper);
+                return new State(grid, deck, hook, timekeeper, hook.VM, hook.SwitchVM, null);
             }
-            if (mode == GameMode.Levels2)
+            else if (mode == GameMode.Levels)
             {
-                var countdown = new CountdownHook(timekeeper);
-                var barrier = new BarrierHook(ss.Settings.Barriers);
-                var hook = new CompositeHook(countdown, barrier);
-                var state = new State(grid, deck, hook, timekeeper);
-                state.CountdownViewmodel = countdown;
-                state.BarrierTogglesViewmodel = barrier;
-                return state;
+                var hook = new CountdownHook(timekeeper);
+                return new State(grid, deck, hook, timekeeper, null, null, hook);
             }
             else
             {
-                var hook = new NewHealth(timekeeper);
-                return new State(grid, deck, hook, timekeeper);
+                throw new Exception("Unsupported game mode: " + mode);
             }
         }
 
@@ -197,6 +187,7 @@ namespace BCZ.Core
             {
                 var scorePayout = GetHypotheticalScore(currentCombo);
                 score += scorePayout;
+                numCombos++;
                 //Console.WriteLine($"Score: {score} (+{scorePayout})");
             }
             currentCombo = ComboInfo.Empty;
@@ -394,7 +385,9 @@ namespace BCZ.Core
         /// </summary>
         public int GetHypotheticalScore(ComboInfo combo)
         {
-            return scorePayoutTable.GetPayout(combo.ComboToReward.AdjustedGroupCount);
+            int enemyScore = combo.NumEnemiesDestroyed * 100;
+            int comboScore = scorePayoutTable.GetPayout(combo.ComboToReward.AdjustedGroupCount);
+            return enemyScore + comboScore;
         }
 
         private bool Transition()
@@ -443,16 +436,6 @@ namespace BCZ.Core
             }
         }
 
-        /// <summary>
-        /// Hold y-coordinate of barriers to destroy, or subzero meaning nothing
-        /// </summary>
-        private int BarrierRowToDestroy = -1;
-
-        internal void EnqueueBarrierDestruction(int y)
-        {
-            this.BarrierRowToDestroy = y;
-        }
-
         private StateEvent FallOrDestroyOrSpawn()
         {
             if (Fall(true))
@@ -463,15 +446,6 @@ namespace BCZ.Core
             else if (Destroy())
             {
                 return eventFactory.Destroyed(TickCalculations, scheduler.CreateAppointment(Constants.DestructionMillis));
-            }
-            else if (BarrierRowToDestroy >= 0)
-            {
-
-                // The call to Destroy() that returns false might request barrier destruction, so this code
-                // must come after the call to Destroy()
-                var y = BarrierRowToDestroy;
-                BarrierRowToDestroy = -1;
-                return DestroyBarriers(y);
             }
             else
             {

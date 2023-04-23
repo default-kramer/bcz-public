@@ -34,14 +34,14 @@ public class GameOverMenu : Control
         members.ButtonQuit.Connect("pressed", this, nameof(Quit));
     }
 
-    public void OnGameOver(State state)
+    public void OnGameOver(State state, GamePackage gamePackage)
     {
         this.Visible = true;
         var root = NewRoot.FindRoot(this);
 
         if (state.ClearedAllEnemies)
         {
-            members.LabelMessage.Text = "You Win!";
+            members.LabelMessage.Text = $"You Win!";
         }
         else
         {

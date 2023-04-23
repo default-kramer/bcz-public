@@ -50,7 +50,7 @@ public class PuzzleControl : Control, PuzzleMenu.ILogic
         //SolvePuzzles(puzzles);
 
         //var dir = new System.IO.DirectoryInfo(@"C:\fission-flare-recordings\raw");
-        var dir = new System.IO.DirectoryInfo(@"C:\Users\kramer\Documents\code\bcz\core\BCZ.CoreTests\Replays");
+        var dir = new System.IO.DirectoryInfo(@"C:\Users\kramer\Documents\code\bcz-private\bcz-public\core\BCZ.CoreTests\Replays");
         var puzzles = CollectPuzzles(dir);
         SolvePuzzles(puzzles);
     }

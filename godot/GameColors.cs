@@ -12,6 +12,10 @@ static class GameColors
     public static readonly Godot.Color Blue = Godot.Color.Color8(0, 148, 255);
     public static readonly Godot.Color Yellow = Godot.Color.Color8(255, 255, 107);
     public static readonly Godot.Color Corrupt = Godot.Color.Color8(86, 41, 25);
+    public static readonly Godot.Color Green = Godot.Color.Color8(60, 175, 36);
+    public static readonly Godot.Color Bronze = Godot.Color.Color8(205, 127, 50);
+    public static readonly Godot.Color Silver = Godot.Color.Color8(192, 192, 192);
+    public static readonly Godot.Color Gold = Godot.Color.Color8(255, 215, 0);
 
     public static readonly Vector3 RedV = ToVector(Red);
     public static readonly Vector3 BlueV = ToVector(Blue);

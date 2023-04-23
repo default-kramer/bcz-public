@@ -83,7 +83,7 @@ public class NewRoot : Control
     public void StartGame(SinglePlayerMenu.LevelToken levelToken)
     {
         this.levelToken = levelToken;
-        StartGame(levelToken.CreateSeededSettings());
+        StartGame(levelToken.CreateGamePackage());
     }
 
     public bool CanAdvanceToNextLevel()
@@ -142,10 +142,10 @@ public class NewRoot : Control
         SetEnabled(control, true);
     }
 
-    private void StartGame(SeededSettings ss)
+    private void StartGame(GamePackage package)
     {
         SwitchTo(members.GameViewer);
-        members.GameViewer.StartGame(ss);
+        members.GameViewer.StartGame(package);
     }
 
     public void BackToMainMenu()

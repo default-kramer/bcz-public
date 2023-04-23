@@ -13,11 +13,6 @@ namespace BCZ.Core.Viewmodels
         bool IsGreen(int rank);
     }
 
-    public interface IBarrierTogglesViewmodel
-    {
-        IReadOnlyList<ToggleViewmodel> GetToggles();
-    }
-
     public readonly struct ToggleViewmodel
     {
         public readonly int Rank;

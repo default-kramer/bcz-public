@@ -6,6 +6,33 @@ using System.Threading.Tasks;
 
 namespace BCZ.Core
 {
+    public interface IGoal
+    {
+        int Target { get; }
+        GoalKind Kind { get; }
+    }
+
+    class FixedGoal : IGoal
+    {
+        public GoalKind Kind { get; }
+        public int Target { get; }
+
+        public FixedGoal(GoalKind kind, int target)
+        {
+            Kind = kind;
+            Target = target;
+        }
+    }
+
+    public enum GoalKind
+    {
+        None,
+        Bronze,
+        Silver,
+        Gold,
+        Arbitrary,
+    }
+
     public interface IReplayCollector
     {
         void Collect(Stamped<Command> command);
@@ -18,6 +45,10 @@ namespace BCZ.Core
         int MaxLevel { get; }
 
         ISinglePlayerSettings GetSettings(int level);
+
+        // Putting goals into the settings and/or the state felt wrong.
+        // Putting goals here feels a little better... but not quite right.
+        IReadOnlyList<IGoal> GetGoals(int level);
     }
 
     public interface ISpawnDeck
