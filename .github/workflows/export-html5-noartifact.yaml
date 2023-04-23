@@ -1,7 +1,7 @@
 # Copy of export-html5.yaml with the "publish artifact" step removed to avoid using up my monthly quota.
 # (Surely there is a way to do this with a single file, but I don't have time for that right now.)
 
-name: ExportHTML5
+name: ExportHTML5-NoArtifact
 
 # Controls when the workflow will run
 on:
