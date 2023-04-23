@@ -112,11 +112,6 @@ namespace BCZ.Core
             }
         }
 
-        public GoalArgs MakeGoalArgs()
-        {
-            return new GoalArgs(timekeeper.TODO_NOW.Millis, NumCatalystsSpawned);
-        }
-
         public Viewmodels.QueueModel MakeQueueModel()
         {
             return new Viewmodels.QueueModel(this.spawnDeck);

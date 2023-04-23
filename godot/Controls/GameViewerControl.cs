@@ -287,7 +287,7 @@ public class GameViewerControl : Control
 
         if (goals.Count > 0)
         {
-            members.GoalViewerControl.TODO(state, goals);
+            members.GoalViewerControl.SetLogic(state, goals);
             members.GoalViewerControl.Visible = true;
         }
         else

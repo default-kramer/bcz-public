@@ -14,7 +14,7 @@ public class GoalViewerControl : Control
         viewmodel = NullViewmodel.Instance;
     }
 
-    public void TODO(State state, IReadOnlyList<IGoal> goals)
+    public void SetLogic(State state, IReadOnlyList<IGoal> goals)
     {
         this.viewmodel = new Viewmodel(goals, state);
     }
@@ -61,34 +61,39 @@ public class GoalViewerControl : Control
     {
         private readonly IReadOnlyList<IGoal> goals;
         private readonly State state;
-        private readonly int[] targets;
+        private readonly int[] bars;
         private readonly GoalModel[] models;
         private int headroom = int.MinValue;
+
+        // Player's value goes into bars[0] and does not affect headroom.
+        // (That is, the player can go past 100% and we will just draw it as 100%.)
+        // The N goal values go into bars[1]...bars[N], inclusive.
+        const int playerIndex = 0;
+        const int goalsOffset = 1;
 
         public Viewmodel(IReadOnlyList<IGoal> goals, State state)
         {
             this.goals = goals;
             this.state = state;
-            this.targets = new int[1 + goals.Count];
+            this.bars = new int[1 + goals.Count];
             this.models = new GoalModel[1 + goals.Count];
         }
 
         public ReadOnlySpan<GoalModel> Recalculate()
         {
-            var goalArgs = state.MakeGoalArgs();
-
-            int foo = 0;
+            int playerValue = 0;
             if (state.NumCombos > 0)
             {
-                foo = state.Score / state.NumCombos;
+                playerValue = state.Score / state.NumCombos;
             }
-            targets[0] = foo;
+            bars[playerIndex] = playerValue;
 
-            int maxTarget = targets[0];
+            int maxTarget = 0;
+
             for (int i = 0; i < goals.Count; i++)
             {
-                int target = goals[i].GetTargetScore(goalArgs);
-                targets[i + 1] = target;
+                int target = goals[i].Target;
+                bars[i + goalsOffset] = target;
                 if (target > maxTarget)
                 {
                     maxTarget = target;
@@ -97,14 +102,30 @@ public class GoalViewerControl : Control
 
             if (maxTarget >= headroom)
             {
-                headroom = maxTarget * 2;
+                headroom = Convert.ToInt32(maxTarget * 1.2);
             }
 
-            for (int i = 0; i < targets.Length; i++)
+            for (int i = 0; i < bars.Length; i++)
             {
-                // Scale progress to max out at 96% because I think it looks better
-                float progress = targets[i] * 0.96f / headroom;
-                var color = i == 0 ? GameColors.Green : GameColors.Bronze;
+                int clampedValue = Math.Min(bars[i], headroom);
+                float progress = clampedValue * 1f / headroom;
+                var color = GameColors.Green;
+                if (i != playerIndex)
+                {
+                    var goal = goals[i - goalsOffset];
+                    switch (goal.Kind)
+                    {
+                        case GoalKind.Bronze:
+                            color = GameColors.Bronze;
+                            break;
+                        case GoalKind.Silver:
+                            color = GameColors.Silver;
+                            break;
+                        case GoalKind.Gold:
+                            color = GameColors.Gold;
+                            break;
+                    }
+                }
                 models[i] = new GoalModel(progress, color);
             }
 

@@ -6,82 +6,21 @@ using System.Threading.Tasks;
 
 namespace BCZ.Core
 {
-    public readonly ref struct GoalArgs
-    {
-        public readonly int ElapsedMillis;
-        public readonly int SpawnCount;
-
-        public GoalArgs(int elapsedMillis, int spawnCount)
-        {
-            this.ElapsedMillis = elapsedMillis;
-            this.SpawnCount = spawnCount;
-        }
-    }
-
     public interface IGoal
     {
-        int GetTargetScore(GoalArgs args);
+        int Target { get; }
         GoalKind Kind { get; }
     }
 
     class FixedGoal : IGoal
     {
         public GoalKind Kind { get; }
-        private readonly int target;
+        public int Target { get; }
 
         public FixedGoal(GoalKind kind, int target)
         {
             Kind = kind;
-            this.target = target;
-        }
-
-        public int GetTargetScore(GoalArgs args) => target;
-    }
-
-    class VariableGoal : IGoal
-    {
-        private readonly int baseScore;
-        private readonly Formula millisFormula;
-        private readonly Formula spawnCountFormula;
-        public GoalKind Kind { get; }
-
-        public VariableGoal(int baseScore, Formula millisFormula, Formula spawnCountFormula, GoalKind kind)
-        {
-            this.baseScore = baseScore;
-            this.millisFormula = millisFormula;
-            this.spawnCountFormula = spawnCountFormula;
-            Kind = kind;
-        }
-
-        public int GetTargetScore(GoalArgs args)
-        {
-            return baseScore
-                + millisFormula.Calculate(args.ElapsedMillis)
-                + spawnCountFormula.Calculate(args.SpawnCount);
-        }
-
-        public readonly struct Formula
-        {
-            public readonly int target;
-            public readonly int factor;
-            public readonly double penalizer;
-
-            public Formula(int target, int factor, double penalizer)
-            {
-                this.target = target;
-                this.factor = factor;
-                this.penalizer = penalizer;
-            }
-
-            public int Calculate(int actual)
-            {
-                double ratio = Convert.ToDouble(actual) / target;
-                if (actual > target)
-                {
-                    ratio = Math.Pow(ratio, penalizer);
-                }
-                return Convert.ToInt32(factor * ratio);
-            }
+            Target = target;
         }
     }
 
