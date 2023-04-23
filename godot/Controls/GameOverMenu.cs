@@ -41,9 +41,7 @@ public class GameOverMenu : Control
 
         if (state.ClearedAllEnemies)
         {
-            float scorePerCombo = state.Score * 1f / state.NumCombos;
-            // TODO check goals here
-            members.LabelMessage.Text = $"You Win! {scorePerCombo.ToString("#.00")} / {state.NumCatalystsSpawned} / {state.TODO_ClearTime.Millis} / {state.Score} / {state.Score * 1.0 / state.NumCatalystsSpawned}";
+            members.LabelMessage.Text = $"You Win!";
         }
         else
         {

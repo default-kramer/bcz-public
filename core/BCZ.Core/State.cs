@@ -42,8 +42,6 @@ namespace BCZ.Core
 
         public bool ClearedAllEnemies { get; private set; }
 
-        public Moment TODO_ClearTime { get; private set; }
-
         public delegate void EventHandler<T>(State sender, T args);
 
         // Not sure how I feel about using events here...
@@ -400,7 +398,6 @@ namespace BCZ.Core
             {
                 // Don't change to GameOver immediately. Let the combo resolve.
                 ClearedAllEnemies = true;
-                TODO_ClearTime = timekeeper.TODO_NOW;
             }
             return retval;
         }
