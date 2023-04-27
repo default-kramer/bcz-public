@@ -4,6 +4,14 @@ using System;
 
 #nullable enable
 
+/*
+ * Sizing Notes: The VBox container is used to limit the main content to the top 2/3 of the screen.
+ * Its children set
+ * - Size Flags
+ *   - Vertical: Fill, Expand
+ *   - Stretch Ratio: 1/3 or 2/3
+ */
+
 public class GameOverMenu : Control
 {
     readonly struct Members
@@ -15,11 +23,10 @@ public class GameOverMenu : Control
 
         public Members(GameOverMenu parent)
         {
-            var node = parent.FindNode("VBoxContainer");
-            this.LabelMessage = node.GetNode<Label>("LabelMessage");
-            this.ButtonNext = node.GetNode<Button>("ButtonNext");
-            this.ButtonReplay = node.GetNode<Button>("ButtonReplay");
-            this.ButtonQuit = node.GetNode<Button>("ButtonQuit");
+            parent.FindNode(out LabelMessage, nameof(LabelMessage));
+            parent.FindNode(out ButtonNext, nameof(ButtonNext));
+            parent.FindNode(out ButtonReplay, nameof(ButtonReplay));
+            parent.FindNode(out ButtonQuit, nameof(ButtonQuit));
         }
     }
 
