@@ -36,6 +36,12 @@ namespace BCZ.Core
 
         public int NumCatalystsSpawned = 0; // Try not to use this...
 
+        public int EfficiencyInt()
+        {
+            if (NumCombos == 0) return 0;
+            return Score / NumCombos;
+        }
+
         public bool IsWaitingOnUser => CurrentEvent.Kind == StateEventKind.Spawned;
 
         public bool IsGameOver => CurrentEvent.Kind == StateEventKind.GameEnded;

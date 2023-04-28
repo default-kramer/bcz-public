@@ -24,6 +24,7 @@ namespace BCZ.Core
         }
     }
 
+    // TODO rename to MedalKind and remove "Arbitrary"
     public enum GoalKind
     {
         None,

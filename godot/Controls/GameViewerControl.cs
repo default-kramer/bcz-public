@@ -15,8 +15,7 @@ public class GameViewerControl : Control
         logic.Cleanup();
         logic = newLogic;
         logic.Initialize(members);
-        // NOMERGE temp testing
-        //members.GameOverMenu.Visible = false;
+        members.GameOverMenu.Visible = false;
 
         OnSizeChanged(); // In case the grid size changed
     }
@@ -227,8 +226,7 @@ public class GameViewerControl : Control
     public void StartGame(GamePackage package)
     {
         NewGame(package);
-        // NOMERGE temp testing
-        //members.GameOverMenu.Visible = false;
+        members.GameOverMenu.Visible = false;
     }
 
     internal interface ILogic

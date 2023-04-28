@@ -81,11 +81,7 @@ public class GoalViewerControl : Control
 
         public ReadOnlySpan<GoalModel> Recalculate()
         {
-            int playerValue = 0;
-            if (state.NumCombos > 0)
-            {
-                playerValue = state.Score / state.NumCombos;
-            }
+            int playerValue = state.EfficiencyInt();
             bars[playerIndex] = playerValue;
 
             int maxTarget = 0;
