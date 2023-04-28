@@ -122,8 +122,19 @@ public class GameOverMenu : Control
         }
 
         members.ScoreValue.Text = state.Score.ToString();
-        members.BestComboValue.Text = "TODO"; // NOMERGE
-        members.TimeValue.Text = "TODO"; // NOMERGE
+
+        members.BestComboValue.Text = state.BestCombo.ComboToReward.Describe("none");
+
+        var time = state.FinishTime;
+        if (time.HasValue)
+        {
+            var ts = time.Value.ToTimeSpan();
+            members.TimeValue.Text = ts.ToString("m\\:ss\\.fff");
+        }
+        else
+        {
+            members.TimeValue.Text = "?bug?";
+        }
     }
 
     private static GoalKind MostImpressiveGoal(IReadOnlyList<IGoal> goals, int playerValue)

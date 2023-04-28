@@ -106,7 +106,7 @@ namespace BCZ.Core
             appointments.Remove(this.cursor.Millis);
             waitingAppointments.Remove(this.waitingCursor.Millis);
             //Console.WriteLine($"Elapsing to {cursor} (waiting: {waitingCursor})");
-            state.TEMP_TimekeeperHook(this);
+            state.TEMP_TimekeeperHook(cursor);
             return true;
         }
 

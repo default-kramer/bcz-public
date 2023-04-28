@@ -75,5 +75,18 @@ namespace BCZ.Core
         {
             return new Combo(this.NumVerticalGroups + numVerticalGroups, this.NumHorizontalGroups + numHorizontalGroups);
         }
+
+        public string Describe(string ifZero)
+        {
+            if (AdjustedGroupCount <= 0)
+            {
+                return ifZero;
+            }
+            int index = Math.Min(AdjustedGroupCount, Numerals.Length - 1);
+            string numeral = Numerals[index];
+            return $"{numeral} ({NumVerticalGroups}v{NumHorizontalGroups}h)";
+        }
+
+        private static readonly string[] Numerals = new[] { "ZERO", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII", "XII", "XIV", "XV", "XVI" };
     }
 }

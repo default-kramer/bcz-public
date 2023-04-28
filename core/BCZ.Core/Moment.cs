@@ -47,5 +47,10 @@ namespace BCZ.Core
         {
             return $"{Millis}ms";
         }
+
+        public TimeSpan ToTimeSpan()
+        {
+            return TimeSpan.FromMilliseconds(Millis);
+        }
     }
 }

@@ -14,6 +14,7 @@ namespace BCZ.Core
         private readonly FallAnimationSampler fallSampler;
         private readonly ISpawnDeck spawnDeck;
         private Mover? mover;
+        public ComboInfo BestCombo { get; private set; } = ComboInfo.Empty;
         private ComboInfo currentCombo;
         public ComboInfo? ActiveOrPreviousCombo { get; private set; } = null;
         private int score = 0;
@@ -46,6 +47,16 @@ namespace BCZ.Core
 
         public bool IsGameOver => CurrentEvent.Kind == StateEventKind.GameEnded;
 
+        /// <summary>
+        /// If the player <see cref="ClearedAllEnemies"/>, this will hold the moment when that
+        /// happened. Otherwise it will be the moment that we transitioned to <see cref="StateEventKind.GameEnded"/>.
+        /// </summary>
+        public Moment? FinishTime { get; private set; }
+
+        /// <summary>
+        /// When the player clears the final enemy, we set this to true immediately
+        /// but we don't transition to <see cref="StateEventKind.GameEnded"/> until the combo resolves.
+        /// </summary>
         public bool ClearedAllEnemies { get; private set; }
 
         public delegate void EventHandler<T>(State sender, T args);
@@ -128,12 +139,13 @@ namespace BCZ.Core
         }
 
         // ... and this should become non-TEMP code.
-        internal void TEMP_TimekeeperHook(IScheduler scheduler)
+        internal void TEMP_TimekeeperHook(Moment now)
         {
-            Transition();
+            Transition(now);
 
             if (hook.GameOver)
             {
+                FinishTime = FinishTime ?? now;
                 Update(StateEvent.GameEnded);
             }
         }
@@ -185,6 +197,7 @@ namespace BCZ.Core
             return true;
         }
 
+        // NOMERGE let's hook this back up, or get rid of it.
         public float LastGaspProgress() => 0; // TODO
 
         private StateEvent Spawn()
@@ -378,12 +391,32 @@ namespace BCZ.Core
             {
                 if (currentCombo.TotalNumGroups > 0)
                 {
+                    UpdateBestCombo(currentCombo);
                     hook.OnComboLikelyCompleted(this, currentCombo, scheduler);
                     OnComboLikelyCompleted?.Invoke(this, currentCombo);
                 }
             }
             Slowmo = Slowmo || result;
             return result;
+        }
+
+        private bool UpdateBestCombo(ComboInfo candidate)
+        {
+            var exist = BestCombo.ComboToReward;
+            var cand = candidate.ComboToReward;
+            if (cand.AdjustedGroupCount < exist.AdjustedGroupCount)
+            {
+                return false;
+            }
+            if (cand.AdjustedGroupCount == exist.AdjustedGroupCount)
+            {
+                if (cand.NumHorizontalGroups <= exist.NumHorizontalGroups)
+                {
+                    return false;
+                }
+            }
+            BestCombo = candidate;
+            return true;
         }
 
         /// <summary>
@@ -396,7 +429,7 @@ namespace BCZ.Core
             return enemyScore + comboScore;
         }
 
-        private bool Transition()
+        private bool Transition(Moment now)
         {
             bool retval = __SingleTransition();
             while (__SingleTransition()) { }
@@ -404,6 +437,7 @@ namespace BCZ.Core
             {
                 // Don't change to GameOver immediately. Let the combo resolve.
                 ClearedAllEnemies = true;
+                FinishTime = now;
             }
             return retval;
         }
