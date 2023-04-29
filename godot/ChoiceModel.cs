@@ -12,6 +12,7 @@ public interface IChoiceModel
     void Previous();
     string DisplayValue { get; }
     IReadOnlyList<string> AllDisplayValues { get; }
+    int SelectedIndex { get; }
 }
 
 public sealed class ChoiceModel<T> : IChoiceModel
