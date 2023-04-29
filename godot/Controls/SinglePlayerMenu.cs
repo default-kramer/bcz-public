@@ -8,7 +8,7 @@ using System.Linq;
 public class SinglePlayerMenu : Control
 {
     private readonly ChoiceModel<string> GameModeChoices = new ChoiceModel<string>()
-        .AddChoices(ModeNormal, ModeScoreAttack, ModeTraining, ModePvPSim);
+        .AddChoices(ModeNormal, ModeScoreAttack, ModeTraining);
     const string ModeNormal = "Normal";
     const string ModeScoreAttack = "Score Attack";
     const string ModeTraining = "Training";
@@ -85,6 +85,11 @@ public class SinglePlayerMenu : Control
     // Called when the node enters the scene tree for the first time.
     public override void _Ready()
     {
+        if (Util.IsSuperuser)
+        {
+            GameModeChoices.AddChoice(ModePvPSim);
+        }
+
         this.members = new Members(this);
 
         members.ButtonStartGame.Connect("pressed", this, nameof(StartGame));
