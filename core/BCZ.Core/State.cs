@@ -197,8 +197,7 @@ namespace BCZ.Core
             return true;
         }
 
-        // NOMERGE let's hook this back up, or get rid of it.
-        public float LastGaspProgress() => 0; // TODO
+        public float LastGaspProgress() => 0; // Could be resurrected to enable the grid flicker effect
 
         private StateEvent Spawn()
         {
