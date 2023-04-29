@@ -11,10 +11,6 @@ using System.Collections.Generic;
 // - Size Flags
 //   - Vertical: Fill, Expand
 //   - Stretch Ratio: 1/3 or 2/3
-//
-// Within the Grid Container, we want small spacing between "Efficiency" and "Medal"
-// and larger spacing between all the rest.
-// We use RectMinSize on the Labels so that when they are not visible everything will collapse properly.
 
 public class GameOverMenu : Control
 {
