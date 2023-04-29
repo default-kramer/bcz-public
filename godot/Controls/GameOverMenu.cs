@@ -133,9 +133,9 @@ public class GameOverMenu : Control
         }
     }
 
-    private static GoalKind MostImpressiveGoal(IReadOnlyList<IGoal> goals, int playerValue)
+    private static MedalKind MostImpressiveGoal(IReadOnlyList<IGoal> goals, int playerValue)
     {
-        GoalKind best = GoalKind.None;
+        MedalKind best = MedalKind.None;
         for (int i = 0; i < goals.Count; i++)
         {
             var goal = goals[i];
