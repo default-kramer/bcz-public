@@ -11,7 +11,7 @@ public class MainMenu : Control
     readonly struct Members
     {
         public readonly Button ButtonSinglePlayer;
-        public readonly Button ButtonMultiplayer;
+        public readonly Button ButtonTutorial;
         public readonly Button ButtonControllerSetup;
         public readonly Button ButtonWatchReplay;
         public readonly Button ButtonSolvePuzzles;
@@ -23,7 +23,7 @@ public class MainMenu : Control
         public Members(Control me)
         {
             me.FindNode(out ButtonSinglePlayer, nameof(ButtonSinglePlayer));
-            me.FindNode(out ButtonMultiplayer, nameof(ButtonMultiplayer));
+            me.FindNode(out ButtonTutorial, nameof(ButtonTutorial));
             me.FindNode(out ButtonControllerSetup, nameof(ButtonControllerSetup));
             me.FindNode(out ButtonWatchReplay, nameof(ButtonWatchReplay));
             me.FindNode(out ButtonSolvePuzzles, nameof(ButtonSolvePuzzles));
@@ -66,7 +66,7 @@ public class MainMenu : Control
         }
 
         members.ButtonSinglePlayer.Connect("pressed", this, nameof(PressedSinglePlayer));
-        members.ButtonMultiplayer.Connect("pressed", this, nameof(PressedMultiplayer));
+        members.ButtonTutorial.Connect("pressed", this, nameof(PressedTutorial));
         members.ButtonControllerSetup.Connect("pressed", this, nameof(PressedControllerSetup));
         members.ButtonWatchReplay.Connect("pressed", this, nameof(PressedWatchReplay));
         members.ButtonSolvePuzzles.Connect("pressed", this, nameof(PressedSolvePuzzles));
@@ -87,9 +87,9 @@ public class MainMenu : Control
         SwitchTo(members.MenuSinglePlayer);
     }
 
-    private void PressedMultiplayer()
+    private void PressedTutorial()
     {
-        Console.WriteLine("TODO show multiplayer menu");
+        NewRoot.FindRoot(this).StartTutorial();
     }
 
     public void PressedControllerSetup()

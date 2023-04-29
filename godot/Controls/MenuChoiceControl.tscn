@@ -7,30 +7,38 @@ rect_min_size = Vector2( 0, 28 )
 focus_mode = 2
 script = ExtResource( 1 )
 
+[node name="ColorRectDEBUG" type="ColorRect" parent="."]
+visible = false
+anchor_right = 1.0
+anchor_bottom = 1.0
+rect_min_size = Vector2( 0, 10 )
+color = Color( 0.333333, 0.564706, 0.615686, 1 )
+
 [node name="HBoxContainer" type="HBoxContainer" parent="."]
-anchor_top = 0.5
-anchor_bottom = 0.5
-margin_top = -10.0
-margin_right = 110.0
-margin_bottom = 10.0
+anchor_right = 1.0
+anchor_bottom = 1.0
 
 [node name="ButtonLeft" type="Button" parent="HBoxContainer"]
-margin_right = 20.0
-margin_bottom = 20.0
+margin_right = 23.0
+margin_bottom = 30.0
 focus_mode = 1
 text = "<"
 
-[node name="LabelValue" type="Label" parent="HBoxContainer"]
-margin_left = 24.0
-margin_top = 3.0
-margin_right = 86.0
-margin_bottom = 17.0
+[node name="LabelHolder" type="CenterContainer" parent="HBoxContainer"]
+margin_left = 27.0
+margin_right = 100.0
+margin_bottom = 30.0
+
+[node name="LabelValue" type="Label" parent="HBoxContainer/LabelHolder"]
+margin_top = 4.0
+margin_right = 73.0
+margin_bottom = 25.0
 text = "[no value]"
 align = 1
 
 [node name="ButtonRight" type="Button" parent="HBoxContainer"]
-margin_left = 90.0
-margin_right = 110.0
-margin_bottom = 20.0
+margin_left = 104.0
+margin_right = 127.0
+margin_bottom = 30.0
 focus_mode = 1
 text = ">"

@@ -207,9 +207,9 @@ namespace BCZ.Core
                     int offset = Math.Max(0, level - 14);
                     goalsList[level - 1] = new List<IGoal>()
                     {
-                        new FixedGoal(GoalKind.Bronze, 250 + offset * 25),
-                        new FixedGoal(GoalKind.Silver, 350 + offset * 25),
-                        new FixedGoal(GoalKind.Gold, 500 + offset * 25),
+                        new MedalGoal(MedalKind.Bronze, 250 + offset * 25),
+                        new MedalGoal(MedalKind.Silver, 350 + offset * 25),
+                        new MedalGoal(MedalKind.Gold, 500 + offset * 25),
                     };
                 }
 

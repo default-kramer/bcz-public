@@ -5,6 +5,12 @@ using System.Linq;
 
 #nullable enable
 
+// Sizing Notes:
+// In WPF, there is Visible/Hidden/Collapsed.
+// It doesn't seem like Godot supports Hidden; setting Visible=false implies Collapsed.
+// We don't want the size of the control to change when the user selects a longer
+// or shorter string, so we add clone Labels for all possible strings and manually
+// update the RectMinSize of all of them to match the biggest one.
 public class MenuChoiceControl : Control
 {
     readonly struct Members
@@ -12,14 +18,15 @@ public class MenuChoiceControl : Control
         public readonly Button ButtonLeft;
         public readonly Button ButtonRight;
         public readonly Label LabelValue;
+        public readonly HBoxContainer HBoxContainer;
         public readonly Color FocusColor;
 
         public Members(MenuChoiceControl me)
         {
-            var node = me.FindNode("HBoxContainer");
-            ButtonLeft = node.GetNode<Button>("ButtonLeft");
-            ButtonRight = node.GetNode<Button>("ButtonRight");
-            LabelValue = node.GetNode<Label>("LabelValue");
+            me.FindNode(out ButtonLeft, nameof(ButtonLeft));
+            me.FindNode(out ButtonRight, nameof(ButtonRight));
+            me.FindNode(out LabelValue, nameof(LabelValue));
+            me.FindNode(out HBoxContainer, nameof(HBoxContainer));
 
             FocusColor = ButtonLeft.GetColor("font_color_focus");
 
@@ -34,13 +41,58 @@ public class MenuChoiceControl : Control
     private Members members;
 
     private IChoiceModel? model;
+
+    /// <summary>
+    /// Holds dynamically cloned Labels (and the original Label at position 0).
+    /// I'm now realizing we could probably just iterate over the parent's child collection...
+    /// but whatever - this code is already written.
+    /// </summary>
+    private List<Label> labels = new List<Label>();
+
     public IChoiceModel? Model
     {
         get { return model; }
         set
         {
             model = value;
-            members.LabelValue.Text = value?.DisplayValue;
+            UpdateLabelSizes(value?.AllDisplayValues ?? NoChoices);
+            UpdateLabelVisibility(model?.SelectedIndex ?? -1);
+        }
+    }
+
+    private static readonly IReadOnlyList<string> NoChoices = new List<string>();
+
+    private void UpdateLabelSizes(IReadOnlyList<string> choices)
+    {
+        Vector2 max = default;
+        for (int i = 0; i < choices.Count; i++)
+        {
+            if (labels.Count == i)
+            {
+                object obj = members.LabelValue.Duplicate();
+                var clone = (Label)obj;
+                labels.Add(clone);
+                members.LabelValue.GetParent().AddChild(clone);
+            }
+
+            var label = labels[i];
+            label.Text = choices[i];
+            var temp = label.GetMinimumSize();
+            max = new Vector2(Math.Max(temp.x, max.x), Math.Max(temp.y, max.y));
+        }
+
+        for (int i = 0; i < labels.Count; i++)
+        {
+            labels[i].RectMinSize = max;
+        }
+    }
+
+    private void UpdateLabelVisibility(int selectedIndex)
+    {
+        int count = members.LabelValue.GetParent().GetChildCount();
+        for (int i = 0; i < labels.Count; i++)
+        {
+            labels[i].Visible = i == selectedIndex;
         }
     }
 
@@ -48,6 +100,7 @@ public class MenuChoiceControl : Control
     public override void _Ready()
     {
         members = new Members(this);
+        labels.Add(members.LabelValue);
     }
 
     private void StyleFocus(Control control)
@@ -65,15 +118,21 @@ public class MenuChoiceControl : Control
     private void GotFocus()
     {
         StyleFocus(members.ButtonLeft);
-        StyleFocus(members.LabelValue);
         StyleFocus(members.ButtonRight);
+        for (int i = 0; i < labels.Count; i++)
+        {
+            StyleFocus(labels[i]);
+        }
     }
 
     private void LostFocus()
     {
         StyleUnfocus(members.ButtonLeft);
-        StyleUnfocus(members.LabelValue);
         StyleUnfocus(members.ButtonRight);
+        for (int i = 0; i < labels.Count; i++)
+        {
+            StyleUnfocus(labels[i]);
+        }
     }
 
     private void LeftPressed()
@@ -91,7 +150,7 @@ public class MenuChoiceControl : Control
         if (model != null)
         {
             cycler(model);
-            members.LabelValue.Text = model.DisplayValue;
+            UpdateLabelVisibility(model.SelectedIndex);
             // We need to grab focus after the left/right button gets a mouse click
             this.GrabFocus();
         }
@@ -114,28 +173,13 @@ public class MenuChoiceControl : Control
         }
     }
 
+    /// <summary>
+    /// It seems this is not actually necessary for normal operation, but it is necessary if
+    /// you want to do some ColorRect debugging.
+    /// </summary>
     public override Vector2 _GetMinimumSize()
     {
-        var displayValues = Model?.AllDisplayValues;
-        if (displayValues != null)
-        {
-            // See which value makes the label the largest and use that as its min size
-            var origText = members.LabelValue.Text;
-            Vector2 max = members.LabelValue.GetMinimumSize();
-
-            foreach (var text in displayValues)
-            {
-                members.LabelValue.Text = text;
-                var temp = members.LabelValue.GetMinimumSize();
-                max = new Vector2(Math.Max(max.x, temp.x), Math.Max(max.y, temp.y));
-            }
-
-            //Console.WriteLine($"New max: {max} for label: {origText}");
-            members.LabelValue.RectMinSize = max;
-            members.LabelValue.Text = origText;
-        }
-
-        return base._GetMinimumSize();
+        var result = members.HBoxContainer?.GetCombinedMinimumSize();
+        return result.GetValueOrDefault();
     }
 }
-

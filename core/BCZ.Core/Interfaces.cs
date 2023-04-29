@@ -9,28 +9,30 @@ namespace BCZ.Core
     public interface IGoal
     {
         int Target { get; }
-        GoalKind Kind { get; }
+        MedalKind Kind { get; }
     }
 
-    class FixedGoal : IGoal
+    class MedalGoal : IGoal
     {
-        public GoalKind Kind { get; }
+        public MedalKind Kind { get; }
         public int Target { get; }
 
-        public FixedGoal(GoalKind kind, int target)
+        public MedalGoal(MedalKind kind, int target)
         {
             Kind = kind;
             Target = target;
         }
     }
 
-    public enum GoalKind
+    /// <summary>
+    /// Warning - other code relies on the order here: Gold > Silver > Bronze.
+    /// </summary>
+    public enum MedalKind
     {
         None,
         Bronze,
         Silver,
         Gold,
-        Arbitrary,
     }
 
     public interface IReplayCollector

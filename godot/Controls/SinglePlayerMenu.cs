@@ -8,8 +8,7 @@ using System.Linq;
 public class SinglePlayerMenu : Control
 {
     private readonly ChoiceModel<string> GameModeChoices = new ChoiceModel<string>()
-        .AddChoices(ModeTutorial, ModeNormal, ModeScoreAttack, ModeTraining, ModePvPSim);
-    const string ModeTutorial = "Tutorial";
+        .AddChoices(ModeNormal, ModeScoreAttack, ModeTraining, ModePvPSim);
     const string ModeNormal = "Normal";
     const string ModeScoreAttack = "Score Attack";
     const string ModeTraining = "Training";
@@ -32,17 +31,12 @@ public class SinglePlayerMenu : Control
     const string TimeLimit10m = "10 minutes";
 
     private readonly ChoiceModel<string> LayoutChoices = new ChoiceModel<string>()
-        .AddChoices(LayoutStandard, LayoutWave);
-    const string LayoutStandard = "Standard";
-    const string LayoutWave = "Wave"; // TODO would "Wide" be better?
+        .AddChoices(LayoutTall, LayoutWide);
+    const string LayoutTall = "Tall";
+    const string LayoutWide = "Wide";
 
     private readonly ChoiceModel<int> EnemyCountChoices = new ChoiceModel<int>()
         .AddChoices(Enumerable.Range(1, 20).Select(i => i * 4));
-
-    private readonly ChoiceModel<string> BlanksChoices = new ChoiceModel<string>()
-        .AddChoices(BlanksOn, BlanksOff);
-    const string BlanksOn = "On";
-    const string BlanksOff = "Off";
 
     readonly struct Members
     {
@@ -52,7 +46,6 @@ public class SinglePlayerMenu : Control
         public readonly MenuChoiceControl ChoiceTimeLimit;
         public readonly MenuChoiceControl ChoiceLayout;
         public readonly MenuChoiceControl ChoiceEnemyCount;
-        public readonly MenuChoiceControl ChoiceBlanks;
         public readonly Button ButtonStartGame;
         public readonly Button ButtonBack;
 
@@ -81,9 +74,6 @@ public class SinglePlayerMenu : Control
 
             me.FindNode(out ChoiceEnemyCount, nameof(ChoiceEnemyCount));
             ChoiceEnemyCount.Model = me.EnemyCountChoices;
-
-            me.FindNode(out ChoiceBlanks, nameof(ChoiceBlanks));
-            ChoiceBlanks.Model = me.BlanksChoices;
 
             me.FindNode(out ButtonStartGame, nameof(ButtonStartGame));
             me.FindNode(out ButtonBack, nameof(ButtonBack));
@@ -137,11 +127,7 @@ public class SinglePlayerMenu : Control
     private void StartGame()
     {
         var mode = GameModeChoices.SelectedItem;
-        if (mode == ModeTutorial)
-        {
-            NewRoot.FindRoot(this).StartTutorial();
-        }
-        else if (mode == ModePvPSim)
+        if (mode == ModePvPSim)
         {
             var collection = BCZ.Core.SinglePlayerSettings.PvPSimSettings;
             int level = LevelChoices.SelectedItem;

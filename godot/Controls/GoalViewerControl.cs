@@ -81,11 +81,7 @@ public class GoalViewerControl : Control
 
         public ReadOnlySpan<GoalModel> Recalculate()
         {
-            int playerValue = 0;
-            if (state.NumCombos > 0)
-            {
-                playerValue = state.Score / state.NumCombos;
-            }
+            int playerValue = state.EfficiencyInt();
             bars[playerIndex] = playerValue;
 
             int maxTarget = 0;
@@ -115,13 +111,13 @@ public class GoalViewerControl : Control
                     var goal = goals[i - goalsOffset];
                     switch (goal.Kind)
                     {
-                        case GoalKind.Bronze:
+                        case MedalKind.Bronze:
                             color = GameColors.Bronze;
                             break;
-                        case GoalKind.Silver:
+                        case MedalKind.Silver:
                             color = GameColors.Silver;
                             break;
-                        case GoalKind.Gold:
+                        case MedalKind.Gold:
                             color = GameColors.Gold;
                             break;
                     }

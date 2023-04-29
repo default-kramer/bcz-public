@@ -1,8 +1,16 @@
 using BCZ.Core;
 using Godot;
 using System;
+using System.Collections.Generic;
 
 #nullable enable
+
+// == Sizing Notes ==
+// The VBox container is used to limit the main content to the top 2/3 of the screen.
+// Its children set
+// - Size Flags
+//   - Vertical: Fill, Expand
+//   - Stretch Ratio: 1/3 or 2/3
 
 public class GameOverMenu : Control
 {
@@ -13,13 +21,43 @@ public class GameOverMenu : Control
         public readonly Button ButtonReplay;
         public readonly Button ButtonQuit;
 
+        // Grid and its members
+        public readonly GridContainer GridContainer;
+        public readonly Label EfficiencyCaption;
+        public readonly Label EfficiencyValue;
+        public readonly Label MedalCaption;
+        public readonly Label MedalValue;
+        public readonly Label ScoreCaption;
+        public readonly Label ScoreValue;
+        public readonly Label BestComboCaption;
+        public readonly Label BestComboValue;
+        public readonly Label TimeCaption;
+        public readonly Label TimeValue;
+
         public Members(GameOverMenu parent)
         {
-            var node = parent.FindNode("VBoxContainer");
-            this.LabelMessage = node.GetNode<Label>("LabelMessage");
-            this.ButtonNext = node.GetNode<Button>("ButtonNext");
-            this.ButtonReplay = node.GetNode<Button>("ButtonReplay");
-            this.ButtonQuit = node.GetNode<Button>("ButtonQuit");
+            parent.FindNode(out LabelMessage, nameof(LabelMessage));
+            parent.FindNode(out ButtonNext, nameof(ButtonNext));
+            parent.FindNode(out ButtonReplay, nameof(ButtonReplay));
+            parent.FindNode(out ButtonQuit, nameof(ButtonQuit));
+
+            parent.FindNode(out GridContainer, nameof(GridContainer));
+            parent.FindNode(out EfficiencyCaption, nameof(EfficiencyCaption));
+            parent.FindNode(out EfficiencyValue, nameof(EfficiencyValue));
+            parent.FindNode(out MedalCaption, nameof(MedalCaption));
+            parent.FindNode(out MedalValue, nameof(MedalValue));
+            parent.FindNode(out ScoreCaption, nameof(ScoreCaption));
+            parent.FindNode(out ScoreValue, nameof(ScoreValue));
+            parent.FindNode(out BestComboCaption, nameof(BestComboCaption));
+            parent.FindNode(out BestComboValue, nameof(BestComboValue));
+            parent.FindNode(out TimeCaption, nameof(TimeCaption));
+            parent.FindNode(out TimeValue, nameof(TimeValue));
+        }
+
+        public void SetMedalVisibility(bool visible)
+        {
+            MedalCaption.Visible = visible;
+            MedalValue.Visible = visible;
         }
     }
 
@@ -41,12 +79,14 @@ public class GameOverMenu : Control
 
         if (state.ClearedAllEnemies)
         {
-            members.LabelMessage.Text = $"You Win!";
+            members.LabelMessage.Text = $"Stage Clear!";
         }
         else
         {
             members.LabelMessage.Text = "Game Over";
         }
+
+        DisplayPostgameStats(state, gamePackage);
 
         if (state.ClearedAllEnemies && root.CanAdvanceToNextLevel())
         {
@@ -59,6 +99,53 @@ public class GameOverMenu : Control
             members.ButtonNext.Visible = false;
             members.ButtonReplay.GrabFocus();
         }
+    }
+
+    private void DisplayPostgameStats(State state, GamePackage gamePackage)
+    {
+        var efficiency = state.EfficiencyInt();
+
+        members.EfficiencyValue.Text = efficiency.ToString();
+        if (state.ClearedAllEnemies && gamePackage.Goals.Count > 0)
+        {
+            var medal = MostImpressiveGoal(gamePackage.Goals, efficiency);
+            members.MedalValue.Text = medal.ToString();
+            members.SetMedalVisibility(true);
+        }
+        else
+        {
+            members.SetMedalVisibility(false);
+        }
+
+        members.ScoreValue.Text = state.Score.ToString();
+
+        members.BestComboValue.Text = state.BestCombo.ComboToReward.Describe("none");
+
+        var time = state.FinishTime;
+        if (time.HasValue)
+        {
+            var ts = time.Value.ToTimeSpan();
+            members.TimeValue.Text = ts.ToString("m\\:ss\\.fff");
+        }
+        else
+        {
+            members.TimeValue.Text = "?bug?";
+        }
+    }
+
+    private static MedalKind MostImpressiveGoal(IReadOnlyList<IGoal> goals, int playerValue)
+    {
+        MedalKind best = MedalKind.None;
+        for (int i = 0; i < goals.Count; i++)
+        {
+            var goal = goals[i];
+            if (playerValue >= goal.Target && goal.Kind > best)
+            {
+                best = goal.Kind;
+            }
+        }
+
+        return best;
     }
 
     private void NextLevel()

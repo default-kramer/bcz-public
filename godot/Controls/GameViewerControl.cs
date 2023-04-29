@@ -66,6 +66,7 @@ public class GameViewerControl : Control
         public readonly SwitchViewerControl SwitchViewerControl;
         public readonly GridViewerControl AttackGridViewer;
         public readonly GoalViewerControl GoalViewerControl;
+        private readonly Control GridViewerContainer;
 
         public Members(Control me)
         {
@@ -77,8 +78,17 @@ public class GameViewerControl : Control
             me.FindNode(out SwitchViewerControl, nameof(SwitchViewerControl));
             me.FindNode(out AttackGridViewer, nameof(AttackGridViewer));
             me.FindNode(out GoalViewerControl, nameof(GoalViewerControl));
+            me.FindNode(out GridViewerContainer, nameof(GridViewerContainer));
 
             QueueViewer.GridViewer = GridViewer;
+        }
+
+        public void SetGridViewerSize(Vector2 rectMinSize)
+        {
+            GridViewerContainer.RectMinSize = rectMinSize;
+            // Ensure that both children take up the full space
+            GridViewer.RectMinSize = rectMinSize;
+            GameOverMenu.RectMinSize = rectMinSize;
         }
     }
 
@@ -148,7 +158,7 @@ public class GameViewerControl : Control
         int separationCount = 0;
 
         float gridWidth = members.GridViewer.DesiredWidth(availHeight);
-        members.GridViewer.RectMinSize = new Vector2(gridWidth, 0);
+        members.SetGridViewerSize(new Vector2(gridWidth, 0));
         minWidth += gridWidth;
         separationCount++;
 
