@@ -16,11 +16,11 @@ margin_bottom = 40.0
 
 [node name="CenterContainer" type="CenterContainer" parent="HBoxContainer"]
 margin_right = 200.0
-margin_bottom = 288.0
+margin_bottom = 298.0
 
 [node name="VBoxContainer" type="VBoxContainer" parent="HBoxContainer/CenterContainer"]
 margin_right = 200.0
-margin_bottom = 288.0
+margin_bottom = 298.0
 
 [node name="GridContainer" type="GridContainer" parent="HBoxContainer/CenterContainer/VBoxContainer"]
 margin_right = 200.0
@@ -28,14 +28,14 @@ margin_bottom = 28.0
 columns = 2
 
 [node name="Label" type="Label" parent="HBoxContainer/CenterContainer/VBoxContainer/GridContainer"]
-margin_top = 7.0
-margin_right = 40.0
-margin_bottom = 21.0
+margin_top = 3.0
+margin_right = 46.0
+margin_bottom = 24.0
 text = "Mode:"
 
 [node name="ChoiceGameMode" parent="HBoxContainer/CenterContainer/VBoxContainer/GridContainer" instance=ExtResource( 1 )]
-margin_left = 44.0
-margin_right = 44.0
+margin_left = 50.0
+margin_right = 50.0
 margin_bottom = 28.0
 
 [node name="NormalModeOptions" type="GridContainer" parent="HBoxContainer/CenterContainer/VBoxContainer"]
@@ -45,26 +45,26 @@ margin_bottom = 92.0
 columns = 2
 
 [node name="Label3" type="Label" parent="HBoxContainer/CenterContainer/VBoxContainer/NormalModeOptions"]
-margin_top = 7.0
-margin_right = 59.0
-margin_bottom = 21.0
+margin_top = 3.0
+margin_right = 70.0
+margin_bottom = 24.0
 text = "Level:"
 
 [node name="ChoiceLevel" parent="HBoxContainer/CenterContainer/VBoxContainer/NormalModeOptions" instance=ExtResource( 1 )]
-margin_left = 63.0
-margin_right = 63.0
+margin_left = 74.0
+margin_right = 74.0
 margin_bottom = 28.0
 
 [node name="Label5" type="Label" parent="HBoxContainer/CenterContainer/VBoxContainer/NormalModeOptions"]
-margin_top = 39.0
-margin_right = 59.0
-margin_bottom = 53.0
+margin_top = 35.0
+margin_right = 70.0
+margin_bottom = 56.0
 text = "Tutorials:"
 
 [node name="ChoiceTutorials" parent="HBoxContainer/CenterContainer/VBoxContainer/NormalModeOptions" instance=ExtResource( 1 )]
-margin_left = 63.0
+margin_left = 74.0
 margin_top = 32.0
-margin_right = 63.0
+margin_right = 74.0
 margin_bottom = 60.0
 
 [node name="ScoreAttackOptions" type="GridContainer" parent="HBoxContainer/CenterContainer/VBoxContainer"]
@@ -74,50 +74,50 @@ margin_bottom = 220.0
 columns = 2
 
 [node name="Label4" type="Label" parent="HBoxContainer/CenterContainer/VBoxContainer/ScoreAttackOptions"]
-margin_top = 7.0
-margin_right = 73.0
-margin_bottom = 21.0
+margin_top = 3.0
+margin_right = 82.0
+margin_bottom = 24.0
 text = "Time Limit:"
 
 [node name="ChoiceTimeLimit" parent="HBoxContainer/CenterContainer/VBoxContainer/ScoreAttackOptions" instance=ExtResource( 1 )]
-margin_left = 77.0
-margin_right = 77.0
+margin_left = 86.0
+margin_right = 86.0
 margin_bottom = 28.0
 
 [node name="Label" type="Label" parent="HBoxContainer/CenterContainer/VBoxContainer/ScoreAttackOptions"]
-margin_top = 39.0
-margin_right = 73.0
-margin_bottom = 53.0
+margin_top = 35.0
+margin_right = 82.0
+margin_bottom = 56.0
 text = "Layout:"
 
 [node name="ChoiceLayout" parent="HBoxContainer/CenterContainer/VBoxContainer/ScoreAttackOptions" instance=ExtResource( 1 )]
-margin_left = 77.0
+margin_left = 86.0
 margin_top = 32.0
-margin_right = 77.0
+margin_right = 86.0
 margin_bottom = 60.0
 
 [node name="Label3" type="Label" parent="HBoxContainer/CenterContainer/VBoxContainer/ScoreAttackOptions"]
-margin_top = 71.0
-margin_right = 73.0
-margin_bottom = 85.0
+margin_top = 67.0
+margin_right = 82.0
+margin_bottom = 88.0
 text = "Enemies:"
 
 [node name="ChoiceEnemyCount" parent="HBoxContainer/CenterContainer/VBoxContainer/ScoreAttackOptions" instance=ExtResource( 1 )]
-margin_left = 77.0
+margin_left = 86.0
 margin_top = 64.0
-margin_right = 77.0
+margin_right = 86.0
 margin_bottom = 92.0
 
 [node name="Label2" type="Label" parent="HBoxContainer/CenterContainer/VBoxContainer/ScoreAttackOptions"]
-margin_top = 103.0
-margin_right = 73.0
-margin_bottom = 117.0
+margin_top = 99.0
+margin_right = 82.0
+margin_bottom = 120.0
 text = "Blanks:"
 
 [node name="ChoiceBlanks" parent="HBoxContainer/CenterContainer/VBoxContainer/ScoreAttackOptions" instance=ExtResource( 1 )]
-margin_left = 77.0
+margin_left = 86.0
 margin_top = 96.0
-margin_right = 77.0
+margin_right = 86.0
 margin_bottom = 124.0
 
 [node name="CenterContainer" type="CenterContainer" parent="HBoxContainer/CenterContainer/VBoxContainer"]
@@ -127,20 +127,20 @@ margin_bottom = 264.0
 rect_min_size = Vector2( 200, 40 )
 
 [node name="ButtonStartGame" type="Button" parent="HBoxContainer/CenterContainer/VBoxContainer/CenterContainer"]
-margin_left = 58.0
-margin_top = 10.0
-margin_right = 141.0
-margin_bottom = 30.0
+margin_left = 45.0
+margin_top = 5.0
+margin_right = 155.0
+margin_bottom = 35.0
 text = "Start Game"
 
 [node name="CenterContainer2" type="CenterContainer" parent="HBoxContainer/CenterContainer/VBoxContainer"]
 margin_top = 268.0
 margin_right = 200.0
-margin_bottom = 288.0
+margin_bottom = 298.0
 rect_min_size = Vector2( 200, 0 )
 
 [node name="ButtonBack" type="Button" parent="HBoxContainer/CenterContainer/VBoxContainer/CenterContainer2"]
-margin_left = 79.0
-margin_right = 121.0
-margin_bottom = 20.0
+margin_left = 73.0
+margin_right = 127.0
+margin_bottom = 30.0
 text = "Back"

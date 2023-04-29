@@ -8,8 +8,7 @@ using System.Linq;
 public class SinglePlayerMenu : Control
 {
     private readonly ChoiceModel<string> GameModeChoices = new ChoiceModel<string>()
-        .AddChoices(ModeTutorial, ModeNormal, ModeScoreAttack, ModeTraining, ModePvPSim);
-    const string ModeTutorial = "Tutorial";
+        .AddChoices(ModeNormal, ModeScoreAttack, ModeTraining, ModePvPSim);
     const string ModeNormal = "Normal";
     const string ModeScoreAttack = "Score Attack";
     const string ModeTraining = "Training";
@@ -137,11 +136,7 @@ public class SinglePlayerMenu : Control
     private void StartGame()
     {
         var mode = GameModeChoices.SelectedItem;
-        if (mode == ModeTutorial)
-        {
-            NewRoot.FindRoot(this).StartTutorial();
-        }
-        else if (mode == ModePvPSim)
+        if (mode == ModePvPSim)
         {
             var collection = BCZ.Core.SinglePlayerSettings.PvPSimSettings;
             int level = LevelChoices.SelectedItem;
