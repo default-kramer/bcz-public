@@ -33,4 +33,9 @@ static class Util
         var extraH = box.Size.y - spriteH;
         sprite.Position = box.Position + new Vector2(spriteW / 2 + extraW / 2, spriteH / 2 + extraH / 2);
     }
+
+    /// <summary>
+    /// For experimental stuff that I don't want the public to see (at least not by default)
+    /// </summary>
+    public static bool IsSuperuser = !string.IsNullOrWhiteSpace(System.Environment.GetEnvironmentVariable("BCZ_SUPERUSER"));
 }

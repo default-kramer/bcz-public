@@ -53,6 +53,7 @@ public class MainMenu : Control
     public override void _Ready()
     {
         members = new Members(this);
+        members.ButtonWatchReplay.Visible = Util.IsSuperuser;
 
         try
         {
