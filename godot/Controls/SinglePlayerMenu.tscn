@@ -60,27 +60,27 @@ columns = 2
 
 [node name="Label3" type="Label" parent="HBoxContainer/CenterContainer/VBoxContainer/NormalModeOptions"]
 margin_top = 3.0
-margin_right = 70.0
+margin_right = 59.0
 margin_bottom = 24.0
 text = "Level:"
 align = 2
 
 [node name="ChoiceLevel" parent="HBoxContainer/CenterContainer/VBoxContainer/NormalModeOptions" instance=ExtResource( 1 )]
-margin_left = 85.0
-margin_right = 85.0
+margin_left = 74.0
+margin_right = 74.0
 margin_bottom = 28.0
 
 [node name="Label5" type="Label" parent="HBoxContainer/CenterContainer/VBoxContainer/NormalModeOptions"]
 margin_top = 41.0
-margin_right = 70.0
+margin_right = 59.0
 margin_bottom = 62.0
-text = "Tutorials:"
+text = "Medals:"
 align = 2
 
-[node name="ChoiceTutorials" parent="HBoxContainer/CenterContainer/VBoxContainer/NormalModeOptions" instance=ExtResource( 1 )]
-margin_left = 85.0
+[node name="ChoiceMedals" parent="HBoxContainer/CenterContainer/VBoxContainer/NormalModeOptions" instance=ExtResource( 1 )]
+margin_left = 74.0
 margin_top = 38.0
-margin_right = 85.0
+margin_right = 74.0
 margin_bottom = 66.0
 
 [node name="ScoreAttackOptions" type="GridContainer" parent="HBoxContainer/CenterContainer/VBoxContainer"]

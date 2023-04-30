@@ -104,11 +104,18 @@ public class GameOverMenu : Control
     private void DisplayPostgameStats(State state, GamePackage gamePackage)
     {
         var efficiency = state.EfficiencyInt();
+        var medal = MostImpressiveGoal(gamePackage.Goals, efficiency);
+        bool showMedal = state.ClearedAllEnemies;
+        if (gamePackage.HideMedalProgress)
+        {
+            // Even if the user chose to hide the medal progress indicator, they might have
+            // earned a medal anyway. If they did, show it.
+            showMedal = showMedal && medal > MedalKind.None;
+        }
 
         members.EfficiencyValue.Text = efficiency.ToString();
-        if (state.ClearedAllEnemies && gamePackage.Goals.Count > 0)
+        if (showMedal)
         {
-            var medal = MostImpressiveGoal(gamePackage.Goals, efficiency);
             members.MedalValue.Text = medal.ToString();
             members.SetMedalVisibility(true);
         }

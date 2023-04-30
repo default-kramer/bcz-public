@@ -386,7 +386,17 @@ public class GameViewerControl : Control
             this.gamePackage = gamePackage;
         }
 
-        protected override IReadOnlyList<IGoal> Goals => gamePackage.Goals;
+        protected override IReadOnlyList<IGoal> Goals
+        {
+            get
+            {
+                if (gamePackage.HideMedalProgress)
+                {
+                    return NoGoals;
+                }
+                return gamePackage.Goals;
+            }
+        }
 
         public override void Cleanup()
         {

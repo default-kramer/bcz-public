@@ -18,4 +18,9 @@ public sealed class GamePackage
         Settings = settings;
         Goals = goals;
     }
+
+    /// <summary>
+    /// Did the user choose to hide the medal progress indicator?
+    /// </summary>
+    public bool HideMedalProgress { get; set; }
 }

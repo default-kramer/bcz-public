@@ -19,10 +19,10 @@ public class SinglePlayerMenu : Control
     private readonly ChoiceModel<int> LevelChoices = new ChoiceModel<int>()
         .AddChoices(Enumerable.Range(1, LevelsModeSettings.MaxLevel));
 
-    private readonly ChoiceModel<string> TutorialChoices = new ChoiceModel<string>()
-        .AddChoices(TutorialsOn, TutorialsOff);
-    const string TutorialsOn = "On";
-    const string TutorialsOff = "Off";
+    private readonly ChoiceModel<string> ChoiceMedals = new ChoiceModel<string>()
+        .AddChoices(MedalsHide, MedalsShow);
+    const string MedalsHide = "Hide";
+    const string MedalsShow = "Show";
 
     private readonly ChoiceModel<string> TimeLimitChoices = new ChoiceModel<string>()
         .AddChoices(TimeLimit2m, TimeLimit5m, TimeLimit10m);
@@ -42,7 +42,7 @@ public class SinglePlayerMenu : Control
     {
         public readonly MenuChoiceControl ChoiceGameMode;
         public readonly MenuChoiceControl ChoiceLevel;
-        public readonly MenuChoiceControl ChoiceTutorials;
+        public readonly MenuChoiceControl ChoiceMedals;
         public readonly MenuChoiceControl ChoiceTimeLimit;
         public readonly MenuChoiceControl ChoiceLayout;
         public readonly MenuChoiceControl ChoiceEnemyCount;
@@ -63,8 +63,8 @@ public class SinglePlayerMenu : Control
             me.FindNode(out ChoiceLevel, nameof(ChoiceLevel));
             ChoiceLevel.Model = me.LevelChoices;
 
-            me.FindNode(out ChoiceTutorials, nameof(ChoiceTutorials));
-            ChoiceTutorials.Model = me.TutorialChoices;
+            me.FindNode(out ChoiceMedals, nameof(ChoiceMedals));
+            ChoiceMedals.Model = me.ChoiceMedals;
 
             me.FindNode(out ChoiceTimeLimit, nameof(ChoiceTimeLimit));
             ChoiceTimeLimit.Model = me.TimeLimitChoices;
@@ -129,6 +129,8 @@ public class SinglePlayerMenu : Control
         // For now just placeholder code
     }
 
+    private bool HideMedals => ChoiceMedals.SelectedItem == MedalsHide;
+
     private void StartGame()
     {
         var mode = GameModeChoices.SelectedItem;
@@ -136,14 +138,14 @@ public class SinglePlayerMenu : Control
         {
             var collection = BCZ.Core.SinglePlayerSettings.PvPSimSettings;
             int level = LevelChoices.SelectedItem;
-            var token = new LevelToken(level, collection);
+            var token = new LevelToken(level, collection, HideMedals);
             NewRoot.FindRoot(this).StartGame(token);
         }
         else
         {
             var collection = LevelsModeSettings;
             int level = LevelChoices.SelectedItem;
-            var token = new LevelToken(level, collection);
+            var token = new LevelToken(level, collection, HideMedals);
             NewRoot.FindRoot(this).StartGame(token);
         }
     }
@@ -157,11 +159,13 @@ public class SinglePlayerMenu : Control
     {
         private readonly int Level;
         private readonly ISettingsCollection Collection;
+        private readonly bool HideMedals;
 
-        public LevelToken(int level, ISettingsCollection collection)
+        public LevelToken(int level, ISettingsCollection collection, bool hideMedals)
         {
             this.Level = level;
             this.Collection = collection;
+            this.HideMedals = hideMedals;
         }
 
         public bool CanAdvance { get { return Level < Collection.MaxLevel; } }
@@ -170,7 +174,7 @@ public class SinglePlayerMenu : Control
         {
             if (CanAdvance)
             {
-                result = new LevelToken(Level + 1, Collection);
+                result = new LevelToken(Level + 1, Collection, HideMedals);
                 return true;
             }
             result = this;
@@ -181,7 +185,9 @@ public class SinglePlayerMenu : Control
         {
             var settings = Collection.GetSettings(Level).AddRandomSeed();
             var goals = Collection.GetGoals(Level);
-            return new GamePackage(settings, goals);
+            var package = new GamePackage(settings, goals);
+            package.HideMedalProgress = HideMedals;
+            return package;
         }
     }
 }
