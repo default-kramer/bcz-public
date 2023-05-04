@@ -46,7 +46,16 @@ namespace BCZ.Core
         Appointment CreateAnimation(int millisFromNow);
     }
 
-    sealed class Timekeeper : IScheduler
+    /// <summary>
+    /// Provides access to the current <see cref="Moment"/>.
+    /// Prefer to use <see cref="IScheduler"/> if possible, see comments there.
+    /// </summary>
+    interface ITimer
+    {
+        Moment Now { get; }
+    }
+
+    sealed class Timekeeper : IScheduler, ITimer
     {
         private readonly SortedSet<int> appointments = new() { 0 };
         private readonly SortedSet<int> waitingAppointments = new() { 0 };
@@ -54,6 +63,8 @@ namespace BCZ.Core
         private Moment waitingCursor;
         private readonly Func<Moment> cursorProvider;
         private readonly Func<Moment> waitingCursorProvider;
+
+        Moment ITimer.Now => cursor;
 
         public Timekeeper()
         {

@@ -11,5 +11,13 @@ namespace BCZ.Core.Viewmodels
         int MaxMillis { get; }
 
         int CurrentMillis { get; }
+
+        public TimeSpan Time { get; }
+
+        public int EnemiesRemaining(Color color);
+
+        public (Combo, int score) LastCombo { get; }
+
+        public int Score { get; }
     }
 }

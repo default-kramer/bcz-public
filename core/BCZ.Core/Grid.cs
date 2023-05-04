@@ -80,11 +80,17 @@ namespace BCZ.Core
     {
         public readonly int EnemyCount;
         public readonly int OccupantCount;
+        public readonly int BlueEnemyCount;
+        public readonly int RedEnemyCount;
+        public readonly int YellowEnemyCount;
 
         public GridStats(Grid grid)
         {
             EnemyCount = 0;
             OccupantCount = 0;
+            BlueEnemyCount = 0;
+            RedEnemyCount = 0;
+            YellowEnemyCount = 0;
 
             for (int x = 0; x < grid.Width; x++)
             {
@@ -96,6 +102,19 @@ namespace BCZ.Core
                         case OccupantKind.Enemy:
                             EnemyCount++;
                             OccupantCount++;
+                            switch (occ.Color)
+                            {
+                                case Color.Blue:
+                                    BlueEnemyCount++;
+                                    break;
+                                case Color.Red:
+                                    RedEnemyCount++;
+                                    break;
+                                case Color.Yellow:
+                                    YellowEnemyCount++;
+                                    break;
+                                default: break;
+                            }
                             break;
                         case OccupantKind.None:
                             break;
@@ -104,6 +123,17 @@ namespace BCZ.Core
                             break;
                     }
                 }
+            }
+        }
+
+        public int EnemiesRemaining(Color color)
+        {
+            switch (color)
+            {
+                case Color.Blue: return BlueEnemyCount;
+                case Color.Red: return RedEnemyCount;
+                case Color.Yellow: return YellowEnemyCount;
+                default: return 0;
             }
         }
     }

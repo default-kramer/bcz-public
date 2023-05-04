@@ -82,9 +82,21 @@ namespace BCZ.Core
             {
                 return ifZero;
             }
-            int index = Math.Min(AdjustedGroupCount, Numerals.Length - 1);
-            string numeral = Numerals[index];
-            return $"{numeral} ({NumVerticalGroups}v{NumHorizontalGroups}h)";
+            return $"{Numeral} ({Description()})";
+        }
+
+        public string Numeral
+        {
+            get
+            {
+                int index = Math.Min(AdjustedGroupCount, Numerals.Length - 1);
+                return Numerals[index];
+            }
+        }
+
+        public string Description()
+        {
+            return $"{NumVerticalGroups}v{NumHorizontalGroups}h";
         }
 
         private static readonly string[] Numerals = new[] { "ZERO", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII", "XII", "XIV", "XV", "XVI" };

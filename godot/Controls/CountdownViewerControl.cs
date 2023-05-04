@@ -1,3 +1,4 @@
+using BCZ.Core;
 using BCZ.Core.Viewmodels;
 using Godot;
 using System;
@@ -12,8 +13,25 @@ public class CountdownViewerControl : Control
 
     readonly struct Members
     {
+        public readonly Label TimeValue;
+        public readonly Label RemainBlueValue;
+        public readonly Label RemainRedValue;
+        public readonly Label RemainYellowValue;
+        public readonly Label ScoreValue;
+        public readonly Label ComboRankValue;
+        public readonly Label ComboDescriptionValue;
+        public readonly Label ComboScoreValue;
+
         public Members(Control me)
         {
+            me.FindNode(out TimeValue, nameof(TimeValue));
+            me.FindNode(out RemainBlueValue, nameof(RemainBlueValue));
+            me.FindNode(out RemainRedValue, nameof(RemainRedValue));
+            me.FindNode(out RemainYellowValue, nameof(RemainYellowValue));
+            me.FindNode(out ScoreValue, nameof(ScoreValue));
+            me.FindNode(out ComboRankValue, nameof(ComboRankValue));
+            me.FindNode(out ComboDescriptionValue, nameof(ComboDescriptionValue));
+            me.FindNode(out ComboScoreValue, nameof(ComboScoreValue));
         }
     }
 
@@ -96,24 +114,38 @@ public class CountdownViewerControl : Control
 
         QueueViewerControl.DrawBorder(this, new Rect2(0, 0, RectSize));
 
+        members.TimeValue.Text = vm.Time.ToString("mm\\:ss", System.Globalization.CultureInfo.InvariantCulture);
+        members.RemainBlueValue.Text = vm.EnemiesRemaining(BCZ.Core.Color.Blue).ToString();
+        members.RemainRedValue.Text = vm.EnemiesRemaining(BCZ.Core.Color.Red).ToString();
+        members.RemainYellowValue.Text = vm.EnemiesRemaining(BCZ.Core.Color.Yellow).ToString();
+        members.ScoreValue.Text = vm.Score.ToString();
 
-        if (ts.TotalSeconds > 5)
+        var item = vm.LastCombo;
+        if (item.score > 0)
         {
-            //members.LabelTimer.Text = ts.ToString("mm\\:ss", System.Globalization.CultureInfo.InvariantCulture);
+            var combo = item.Item1;
+            members.ComboRankValue.Text = $"Rank {combo.Numeral}";
+            members.ComboDescriptionValue.Text = combo.Description();
+            members.ComboScoreValue.Text = item.score.ToString();
         }
         else
         {
-            //members.LabelTimer.Text = ts.ToString("mm\\:ss\\.fff", System.Globalization.CultureInfo.InvariantCulture);
+            members.ComboRankValue.Text = "";
+            members.ComboDescriptionValue.Text = "";
+            members.ComboScoreValue.Text = "";
         }
     }
 
     class NullModel : ICountdownViewmodel
     {
+        private NullModel() { }
+        public static readonly NullModel Instance = new NullModel();
+
         public int MaxMillis => 1;
         public int CurrentMillis => 1;
-
-        private NullModel() { }
-
-        public static readonly NullModel Instance = new NullModel();
+        public TimeSpan Time => default;
+        public (Combo, int score) LastCombo => (Combo.Empty, 0);
+        public int Score => 0;
+        public int EnemiesRemaining(BCZ.Core.Color color) => 0;
     }
 }
