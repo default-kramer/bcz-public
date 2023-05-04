@@ -1,0 +1,8 @@
+[gd_resource type="DynamicFont" load_steps=2 format=2]
+
+[ext_resource path="res://licensed/Qaz_Font_0_7/Web Open Font Format (.woff)/Qaz-Italic.woff2" type="DynamicFontData" id=1]
+
+[resource]
+size = 180
+extra_spacing_bottom = -25
+font_data = ExtResource( 1 )

@@ -1,18 +1,9 @@
-[gd_scene load_steps=7 format=2]
+[gd_scene load_steps=5 format=2]
 
 [ext_resource path="res://Controls/SinglePlayerMenu.tscn" type="PackedScene" id=1]
-[ext_resource path="res://licensed/Yulong_Font_1_0/OpenType (.otf)/Yulong-Italic.otf" type="DynamicFontData" id=2]
+[ext_resource path="res://theme/fonts/TitleFont.tres" type="DynamicFont" id=2]
 [ext_resource path="res://Controls/GameViewerControl.tscn" type="PackedScene" id=3]
-[ext_resource path="res://licensed/Qaz_Font_0_7/OpenType (.otf)/Qaz-Italic.otf" type="DynamicFontData" id=4]
-
-[sub_resource type="DynamicFont" id=1]
-size = 120
-font_data = ExtResource( 2 )
-
-[sub_resource type="DynamicFont" id=3]
-size = 180
-extra_spacing_bottom = -25
-font_data = ExtResource( 4 )
+[ext_resource path="res://theme/fonts/TitleFontZ.tres" type="DynamicFont" id=4]
 
 [node name="Control" type="Control"]
 anchor_right = 1.0
@@ -37,7 +28,7 @@ margin_bottom = 291.0
 margin_top = 24.0
 margin_right = 220.0
 margin_bottom = 267.0
-custom_fonts/font = SubResource( 1 )
+custom_fonts/font = ExtResource( 2 )
 text = "Block
 Cipher"
 align = 2
@@ -55,7 +46,7 @@ margin_top = 110.0
 margin_right = 95.0
 margin_bottom = 291.0
 custom_colors/font_color = Color( 0.235294, 0.686275, 0.141176, 1 )
-custom_fonts/font = SubResource( 3 )
+custom_fonts/font = ExtResource( 4 )
 text = "Z"
 align = 2
 

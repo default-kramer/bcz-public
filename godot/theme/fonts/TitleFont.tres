@@ -1,0 +1,7 @@
+[gd_resource type="DynamicFont" load_steps=2 format=2]
+
+[ext_resource path="res://licensed/Yulong_Font_1_0/Web Open Font Format (.woff)/Yulong-Italic.woff2" type="DynamicFontData" id=1]
+
+[resource]
+size = 120
+font_data = ExtResource( 1 )
