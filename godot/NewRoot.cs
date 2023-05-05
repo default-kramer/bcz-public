@@ -163,12 +163,16 @@ public class NewRoot : Control
         members.GameViewer.WatchReplay(replayFile);
     }
 
-    public void SolvePuzzles()
+    public void ShowCredits()
     {
         SwitchTo(members.CreditsControl);
         members.CreditsControl.OnShown();
-        //SwitchTo(members.PuzzleControl);
-        //members.PuzzleControl.TEST_SolvePuzzle();
+    }
+
+    public void SolvePuzzles()
+    {
+        SwitchTo(members.PuzzleControl);
+        members.PuzzleControl.TEST_SolvePuzzle();
     }
 
     public void ControllerSetup()

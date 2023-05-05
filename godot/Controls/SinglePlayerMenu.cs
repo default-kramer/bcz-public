@@ -8,10 +8,10 @@ using System.Linq;
 public class SinglePlayerMenu : Control
 {
     private readonly ChoiceModel<string> GameModeChoices = new ChoiceModel<string>()
-        .AddChoices(ModeNormal, ModeScoreAttack, ModeTraining);
-    const string ModeNormal = "Normal";
+        .AddChoices(ModeLevels, ModePuzzles, ModeScoreAttack);
+    const string ModeLevels = "Levels";
+    const string ModePuzzles = "Puzzles";
     const string ModeScoreAttack = "Score Attack";
-    const string ModeTraining = "Training";
     const string ModePvPSim = "PvP Simulator";
 
     private static readonly BCZ.Core.ISettingsCollection LevelsModeSettings = BCZ.Core.SinglePlayerSettings.NormalSettings;
@@ -112,7 +112,7 @@ public class SinglePlayerMenu : Control
     {
         switch (GameModeChoices.SelectedItem)
         {
-            case ModeNormal:
+            case ModeLevels:
             case ModePvPSim:
                 Show(members.NormalModeOptions);
                 break;
@@ -134,7 +134,11 @@ public class SinglePlayerMenu : Control
     private void StartGame()
     {
         var mode = GameModeChoices.SelectedItem;
-        if (mode == ModePvPSim)
+        if (mode == ModePuzzles)
+        {
+            NewRoot.FindRoot(this).SolvePuzzles();
+        }
+        else if (mode == ModePvPSim)
         {
             var collection = BCZ.Core.SinglePlayerSettings.PvPSimSettings;
             int level = LevelChoices.SelectedItem;
