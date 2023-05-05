@@ -14,7 +14,7 @@ public class MainMenu : Control
         public readonly Button ButtonTutorial;
         public readonly Button ButtonControllerSetup;
         public readonly Button ButtonWatchReplay;
-        public readonly Button ButtonSolvePuzzles;
+        public readonly Button ButtonCredits;
         public readonly Control MainContainer;
         public readonly Control MenuSinglePlayer;
         public readonly Control FileDialog;
@@ -26,7 +26,7 @@ public class MainMenu : Control
             me.FindNode(out ButtonTutorial, nameof(ButtonTutorial));
             me.FindNode(out ButtonControllerSetup, nameof(ButtonControllerSetup));
             me.FindNode(out ButtonWatchReplay, nameof(ButtonWatchReplay));
-            me.FindNode(out ButtonSolvePuzzles, nameof(ButtonSolvePuzzles));
+            me.FindNode(out ButtonCredits, nameof(ButtonCredits));
             me.FindNode(out MainContainer, nameof(MainContainer));
             me.FindNode(out MenuSinglePlayer, nameof(MenuSinglePlayer));
             me.FindNode(out FileDialog, nameof(FileDialog));
@@ -70,7 +70,7 @@ public class MainMenu : Control
         members.ButtonTutorial.Connect("pressed", this, nameof(PressedTutorial));
         members.ButtonControllerSetup.Connect("pressed", this, nameof(PressedControllerSetup));
         members.ButtonWatchReplay.Connect("pressed", this, nameof(PressedWatchReplay));
-        members.ButtonSolvePuzzles.Connect("pressed", this, nameof(PressedSolvePuzzles));
+        members.ButtonCredits.Connect("pressed", this, nameof(PressedCredits));
         members.FileDialog.Connect("file_selected", this, nameof(OnFileSelected));
 
         SwitchTo(members.MainContainer);
@@ -112,8 +112,8 @@ public class MainMenu : Control
         fd.Call("popup_centered");
     }
 
-    private void PressedSolvePuzzles()
+    private void PressedCredits()
     {
-        NewRoot.FindRoot(this).SolvePuzzles();
+        NewRoot.FindRoot(this).ShowCredits();
     }
 }
