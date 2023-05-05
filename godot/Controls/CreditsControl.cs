@@ -100,7 +100,7 @@ public class CreditsControl : Control
 
     readonly string BlockCipherZInfo = @$"Block Cipher Z copyright © {CopyrightYear} Ryan Kramer.
 
-This game contains software written by third parties. View the other tabs for more information.";
+This game contains software written by third parties. For more information and licenses, use left/right to view the other tabs.";
 
     /// <summary>
     /// Per https://docs.godotengine.org/en/4.0/about/complying_with_licenses.html#requirements
