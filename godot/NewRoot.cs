@@ -13,6 +13,7 @@ public class NewRoot : Control
         public readonly MainMenu MainMenu;
         public readonly ControllerSetupControl ControllerSetupControl;
         public readonly TutorialControl TutorialControl;
+        public readonly CreditsControl CreditsControl;
 
         public Members(Control me)
         {
@@ -21,6 +22,7 @@ public class NewRoot : Control
             me.FindNode(out MainMenu, nameof(MainMenu));
             me.FindNode(out ControllerSetupControl, nameof(ControllerSetupControl));
             me.FindNode(out TutorialControl, nameof(TutorialControl));
+            me.FindNode(out CreditsControl, nameof(CreditsControl));
         }
     }
 
@@ -138,6 +140,7 @@ public class NewRoot : Control
         SetEnabled(members.MainMenu, false);
         SetEnabled(members.ControllerSetupControl, false);
         SetEnabled(members.TutorialControl, false);
+        SetEnabled(members.CreditsControl, false);
 
         SetEnabled(control, true);
     }
@@ -162,8 +165,10 @@ public class NewRoot : Control
 
     public void SolvePuzzles()
     {
-        SwitchTo(members.PuzzleControl);
-        members.PuzzleControl.TEST_SolvePuzzle();
+        SwitchTo(members.CreditsControl);
+        members.CreditsControl.OnShown();
+        //SwitchTo(members.PuzzleControl);
+        //members.PuzzleControl.TEST_SolvePuzzle();
     }
 
     public void ControllerSetup()
