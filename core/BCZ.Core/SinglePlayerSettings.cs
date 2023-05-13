@@ -50,6 +50,8 @@ namespace BCZ.Core
 
         GameMode GameMode { get; }
 
+        int ScorePerEnemy { get; }
+
         SeededSettings AddRandomSeed();
     }
 
@@ -62,6 +64,7 @@ namespace BCZ.Core
         public int EnemiesPerStripe { get; set; } = 5;
         public int RowsPerStripe { get; set; } = 2;
         public GameMode GameMode { get; set; } = GameMode.Levels;
+        public int ScorePerEnemy { get; set; } = 100;
 
         public static readonly SinglePlayerSettings Default = new SinglePlayerSettings();
 
@@ -80,9 +83,10 @@ namespace BCZ.Core
             return stripeCount * RowsPerStripe;
         }
 
-        public static readonly ISettingsCollection BeginnerSettings = new BeginnerSettingsCollection();
-        public static readonly ISettingsCollection NormalSettings = new NormalSettingsCollection();
-        public static readonly ISettingsCollection PvPSimSettings = new PvPSimSettingsCollection();
+        public static readonly ISettingsCollection BeginnerSettings = BeginnerSettingsCollection.Instance;
+        public static readonly ISettingsCollection NormalSettings = NormalSettingsCollection.Instance;
+        public static readonly ISettingsCollection PvPSimSettings = PvPSimSettingsCollection.Instance;
+        public static readonly ISinglePlayerSettings TODO = NormalSettingsCollection.TODO;
         private static readonly IReadOnlyList<IGoal> NoGoals = new List<IGoal>();
 
         abstract class SettingsCollection : ISettingsCollection
@@ -175,7 +179,9 @@ namespace BCZ.Core
 
         class BeginnerSettingsCollection : SettingsCollection
         {
-            public BeginnerSettingsCollection() : base(20)
+            public static readonly BeginnerSettingsCollection Instance = new();
+
+            private BeginnerSettingsCollection() : base(20)
             {
                 AddAll();
             }
@@ -214,9 +220,29 @@ namespace BCZ.Core
                 }
 
                 goals = goalsList;
+
+                Instance = new NormalSettingsCollection();
+                var level14 = Instance.GetSettings(14);
+                var clone = new SinglePlayerSettings()
+                {
+                    // copy data:
+                    EnemyCount = level14.EnemyCount,
+                    EnemiesPerStripe = level14.EnemiesPerStripe,
+                    RowsPerStripe = level14.RowsPerStripe,
+                    GridHeight = level14.GridHeight,
+                    GridWidth = level14.GridWidth,
+                    SpawnBlanks = level14.SpawnBlanks,
+                    // different data:
+                    GameMode = GameMode.ScoreAttack,
+                    ScorePerEnemy = 200,
+                };
+                TODO = clone;
             }
 
-            public NormalSettingsCollection() : base(NumLevels)
+            public static readonly NormalSettingsCollection Instance;
+            public static readonly ISinglePlayerSettings TODO;
+
+            private NormalSettingsCollection() : base(NumLevels)
             {
                 AddAll();
             }
@@ -234,7 +260,9 @@ namespace BCZ.Core
 
         class PvPSimSettingsCollection : SettingsCollection
         {
-            public PvPSimSettingsCollection() : base(20)
+            public static readonly PvPSimSettingsCollection Instance = new();
+
+            private PvPSimSettingsCollection() : base(20)
             {
                 AddAll();
             }

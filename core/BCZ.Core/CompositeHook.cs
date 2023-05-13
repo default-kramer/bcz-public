@@ -41,5 +41,10 @@ namespace BCZ.Core
             a.PreSpawn(state, spawnCount);
             b.PreSpawn(state, spawnCount);
         }
+
+        public bool WillAddEnemies()
+        {
+            return a.WillAddEnemies() || b.WillAddEnemies();
+        }
     }
 }

@@ -29,7 +29,7 @@ namespace BCZ.Core.ReplayModel
             writer.WriteLine("s gridHeight {0}", settings.GridHeight);
             writer.WriteLine("s enemiesPerStripe {0}", settings.EnemiesPerStripe);
             writer.WriteLine("s rowsPerStripe {0}", settings.RowsPerStripe);
-            // TODO need to write barriers
+            writer.WriteLine("s scorePerEnemy {0}", settings.ScorePerEnemy);
 
             return new ReplayWriter(writer);
         }

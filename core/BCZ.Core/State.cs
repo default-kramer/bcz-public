@@ -14,6 +14,7 @@ namespace BCZ.Core
     interface IStateData
     {
         int Score { get; }
+        StateEvent CurrentEvent { get; }
     }
 
     public sealed class State : IDumpCallback
@@ -27,6 +28,7 @@ namespace BCZ.Core
         public ComboInfo? ActiveOrPreviousCombo { get; private set; } = null;
         private int numCombos = 0;
         private readonly PayoutTable scorePayoutTable = PayoutTable.DefaultScorePayoutTable;
+        private readonly int scorePerEnemy;
         private readonly IStateHook hook;
         private readonly StateEvent.Factory eventFactory;
         private readonly Timekeeper timekeeper;
@@ -36,9 +38,7 @@ namespace BCZ.Core
         private readonly IDestructionAnimator destructionAnimator;
         private readonly BarrierDestructionAnimator barrierDestructionAnimator;
         private readonly StateData stateData;
-
-        private StateEvent __currentEvent = StateEvent.StateConstructed;
-        public StateEvent CurrentEvent => __currentEvent;
+        public StateEvent CurrentEvent => stateData.currentEvent;
 
         public int Score => stateData.score;
         public int NumCombos => numCombos;
@@ -51,7 +51,9 @@ namespace BCZ.Core
             return Score / NumCombos;
         }
 
-        public bool IsWaitingOnUser => CurrentEvent.Kind == StateEventKind.Spawned;
+        public static bool IsWaitingState(StateEventKind kind) => kind == StateEventKind.Spawned;
+
+        public bool IsWaitingOnUser => IsWaitingState(CurrentEvent.Kind);
 
         public bool IsGameOver => CurrentEvent.Kind == StateEventKind.GameEnded;
 
@@ -76,13 +78,15 @@ namespace BCZ.Core
 
         public static State CreateWithInfiniteHealth(Grid grid, ISpawnDeck deck)
         {
-            return new State(grid, deck, NullStateHook.Instance, new Timekeeper(), new StateData(), null, null, null);
+            const int scorePerEnemy = 100;
+            return new State(grid, deck, NullStateHook.Instance, new Timekeeper(), new StateData(), null, null, null, scorePerEnemy);
         }
 
-        private State(Grid grid, ISpawnDeck spawnDeck, IStateHook makeHook, Timekeeper timekeeper, StateData stateData,
+        private State(Grid grid, ISpawnDeck spawnDeck, IStateHook hook, Timekeeper timekeeper, StateData stateData,
             IAttackGridViewmodel? attackGridViewmodel,
             ISwitchesViewmodel? switchesViewmodel,
-            ICountdownViewmodel? countdownViewmodel)
+            ICountdownViewmodel? countdownViewmodel,
+            int scorePerEnemy)
         {
             this.grid = grid;
             this.fallSampler = new FallAnimationSampler(grid);
@@ -97,10 +101,11 @@ namespace BCZ.Core
             barrierDestructionAnimator = new BarrierDestructionAnimator();
             mover = null;
             currentCombo = ComboInfo.Empty;
-            this.hook = makeHook;
+            this.hook = hook;
             this.AttackGridViewmodel = attackGridViewmodel;
             this.SwitchesViewmodel = switchesViewmodel;
             this.CountdownViewmodel = countdownViewmodel;
+            this.scorePerEnemy = scorePerEnemy;
         }
 
         public readonly ICountdownViewmodel? CountdownViewmodel;
@@ -113,6 +118,7 @@ namespace BCZ.Core
 
         public static State Create(SeededSettings ss)
         {
+            var settings = ss.Settings;
             var spawns = ss.Settings.SpawnBlanks ? Lists.MainDeck : Lists.BlanklessDeck;
             var deck = new InfiniteSpawnDeck(spawns, new PRNG(ss.Seed));
             var grid = Core.Grid.Create(ss.Settings, new PRNG(ss.Seed));
@@ -124,12 +130,21 @@ namespace BCZ.Core
             {
                 var switches = new Switches();
                 var hook = new SimulatedAttacker(switches);
-                return new State(grid, deck, hook, timekeeper, stateData, hook.VM, hook.SwitchVM, null);
+                return new State(grid, deck, hook, timekeeper, stateData, hook.VM, hook.SwitchVM, null, settings.ScorePerEnemy);
             }
             else if (mode == GameMode.Levels)
             {
-                var hook = new CountdownHook(timekeeper, stateData, grid, timekeeper);
-                return new State(grid, deck, hook, timekeeper, stateData, null, null, hook);
+                var levelsHook = new HookLevelsMode(timekeeper);
+                IStateHook hook = levelsHook;
+                var countdownVM = levelsHook.BuildCountdownVM(timekeeper, grid, stateData, ref hook);
+                return new State(grid, deck, hook, timekeeper, stateData, null, null, countdownVM, settings.ScorePerEnemy);
+            }
+            else if (mode == GameMode.ScoreAttack)
+            {
+                var scoreAttackHook = new HookScoreAttack(stateData, timekeeper);
+                IStateHook hook = scoreAttackHook;
+                var countdownVM = scoreAttackHook.BuildCountdownVM(timekeeper, grid, ref hook);
+                return new State(grid, deck, hook, timekeeper, stateData, null, null, countdownVM, settings.ScorePerEnemy);
             }
             else
             {
@@ -145,7 +160,7 @@ namespace BCZ.Core
         // TODO this should probably go away ...
         public void Elapse(Moment now)
         {
-            if (__currentEvent.Kind == StateEventKind.GameEnded)
+            if (CurrentEvent.Kind == StateEventKind.GameEnded)
             {
                 return;
             }
@@ -166,7 +181,17 @@ namespace BCZ.Core
 
         public bool HandleCommand(Command command, Moment now)
         {
+            if (CurrentEvent.Kind == StateEventKind.GameEnded)
+            {
+                return false;
+            }
+
             Elapse(now);
+
+            if (CurrentEvent.Kind == StateEventKind.GameEnded)
+            {
+                return false;
+            }
 
             switch (command)
             {
@@ -195,7 +220,7 @@ namespace BCZ.Core
             {
                 return false;
             }
-            __currentEvent = result.Value;
+            stateData.currentEvent = result.Value;
             return true;
         }
 
@@ -207,7 +232,7 @@ namespace BCZ.Core
 
         private bool Update(StateEvent result)
         {
-            __currentEvent = result;
+            stateData.currentEvent = result;
             return true;
         }
 
@@ -437,7 +462,7 @@ namespace BCZ.Core
         /// </summary>
         public int GetHypotheticalScore(ComboInfo combo)
         {
-            int enemyScore = combo.NumEnemiesDestroyed * 100;
+            int enemyScore = combo.NumEnemiesDestroyed * scorePerEnemy;
             int comboScore = scorePayoutTable.GetPayout(combo.ComboToReward.AdjustedGroupCount);
             return enemyScore + comboScore;
         }
@@ -446,7 +471,7 @@ namespace BCZ.Core
         {
             bool retval = __SingleTransition();
             while (__SingleTransition()) { }
-            if (retval && grid.Stats.EnemyCount == 0)
+            if (retval && grid.Stats.EnemyCount == 0 && !hook.WillAddEnemies())
             {
                 // Don't change to GameOver immediately. Let the combo resolve.
                 ClearedAllEnemies = true;
@@ -699,8 +724,10 @@ namespace BCZ.Core
         class StateData : IStateData
         {
             public int score;
+            public StateEvent currentEvent = StateEvent.StateConstructed;
 
             int IStateData.Score => score;
+            StateEvent IStateData.CurrentEvent => currentEvent;
         }
     }
 }

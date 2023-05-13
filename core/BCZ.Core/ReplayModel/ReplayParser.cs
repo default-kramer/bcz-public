@@ -67,6 +67,7 @@ namespace BCZ.Core.ReplayModel
         private int? gridHeight;
         private int? enemiesPerStripe;
         private int? rowsPerStripe;
+        private int? scorePerEnemy;
 
         private State BuildState()
         {
@@ -77,6 +78,7 @@ namespace BCZ.Core.ReplayModel
             settings.GridHeight = this.gridHeight ?? settings.GridHeight;
             settings.EnemiesPerStripe = this.enemiesPerStripe ?? settings.EnemiesPerStripe;
             settings.RowsPerStripe = this.rowsPerStripe ?? settings.RowsPerStripe;
+            settings.ScorePerEnemy = this.scorePerEnemy ?? 100;
             // TODO before going public, should make game mode required with no default...
             settings.GameMode = this.mode ?? GameMode.Levels;
             if (seed == null)
@@ -139,7 +141,10 @@ namespace BCZ.Core.ReplayModel
             {
                 rowsPerStripe = int.Parse(setting.Value);
             }
-            // TODO need to read barriers
+            if (setting.Name == "scorePerEnemy")
+            {
+                scorePerEnemy = int.Parse(setting.Value);
+            }
         }
 
         public void Parse(CommandElement command)

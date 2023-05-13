@@ -94,6 +94,8 @@ namespace BCZ.Core
         void PreSpawn(State state, int spawnCount);
 
         bool GameOver { get; }
+
+        bool WillAddEnemies();
     }
 
     abstract class EmptyStateHook : IStateHook
@@ -107,6 +109,8 @@ namespace BCZ.Core
         public virtual void OnComboUpdated(ComboInfo previous, ComboInfo current, IScheduler scheduler, int score) { }
 
         public virtual void PreSpawn(State state, int spawnCount) { }
+
+        public virtual bool WillAddEnemies() { return false; }
     }
 
     sealed class NullStateHook : EmptyStateHook

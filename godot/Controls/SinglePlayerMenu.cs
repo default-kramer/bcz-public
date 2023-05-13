@@ -1,6 +1,7 @@
 using BCZ.Core;
 using Godot;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 
 #nullable enable
@@ -15,6 +16,7 @@ public class SinglePlayerMenu : Control
     const string ModePvPSim = "PvP Simulator";
 
     private static readonly BCZ.Core.ISettingsCollection LevelsModeSettings = BCZ.Core.SinglePlayerSettings.NormalSettings;
+    private static readonly ISinglePlayerSettings ScoreAttackSettings = SinglePlayerSettings.TODO;
 
     private readonly ChoiceModel<int> LevelChoices = new ChoiceModel<int>()
         .AddChoices(Enumerable.Range(1, LevelsModeSettings.MaxLevel));
@@ -145,12 +147,40 @@ public class SinglePlayerMenu : Control
             var token = new LevelToken(level, collection, HideMedals);
             NewRoot.FindRoot(this).StartGame(token);
         }
+        else if (mode == ModeScoreAttack)
+        {
+            var settings = ScoreAttackSettings;
+            var token = new LevelToken(1, new SingleItemSettingsCollection(settings), hideMedals: true);
+            NewRoot.FindRoot(this).StartGame(token);
+        }
         else
         {
             var collection = LevelsModeSettings;
             int level = LevelChoices.SelectedItem;
             var token = new LevelToken(level, collection, HideMedals);
             NewRoot.FindRoot(this).StartGame(token);
+        }
+    }
+
+    class SingleItemSettingsCollection : ISettingsCollection
+    {
+        private readonly ISinglePlayerSettings settings;
+        public SingleItemSettingsCollection(ISinglePlayerSettings settings)
+        {
+            this.settings = settings;
+        }
+
+        public int MaxLevel => 1;
+
+        private static readonly List<IGoal> goals = new();
+        public IReadOnlyList<IGoal> GetGoals(int level)
+        {
+            return goals;
+        }
+
+        public ISinglePlayerSettings GetSettings(int level)
+        {
+            return settings;
         }
     }
 
