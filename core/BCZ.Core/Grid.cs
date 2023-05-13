@@ -403,7 +403,7 @@ namespace BCZ.Core
         public static Grid Create(ISinglePlayerSettings settings, PRNG prng)
         {
             var grid = Grid.Create(settings.GridWidth, settings.GridHeight);
-            GridCreateHelper.SetupGrid(grid, prng, settings.EnemyCount, settings.EnemiesPerStripe, settings.RowsPerStripe);
+            GridCreateHelper.SetupGrid(grid, prng, settings);
             return grid;
         }
 

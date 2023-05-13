@@ -9,18 +9,25 @@ namespace BCZ.Core
 {
     sealed class HookScoreAttack : EmptyStateHook
     {
-        private const int gameDurationMillis = 1000 * 60 * 1; // 1 minute for now
+        private const int gameDurationMillis = 1000 * 60 * 5; // 1 minute for now
         private readonly IStateData data;
+        private readonly ISinglePlayerSettings settings;
         private readonly Appointment countdown;
+        private readonly PRNG prng; // This PRNG must not be shared. It is only for creating and re-creating the grid.
+        private readonly Grid grid;
         private bool isGameOver = false;
 
-        public HookScoreAttack(IStateData data, IScheduler scheduler)
+        public HookScoreAttack(IStateData data, IScheduler scheduler, SeededSettings settings, out Grid grid)
         {
             this.data = data;
+            this.settings = settings.Settings;
             this.countdown = scheduler.CreateAppointment(gameDurationMillis);
+            this.prng = new PRNG(settings.Seed);
+            this.grid = Grid.Create(this.settings, prng);
+            grid = this.grid;
         }
 
-        public ICountdownViewmodel BuildCountdownVM(ITimer timer, Grid grid, ref IStateHook hook)
+        public ICountdownViewmodel BuildCountdownVM(ITimer timer, ref IStateHook hook)
         {
             var vm = new CountdownVM(timer, grid, data);
             hook = new CompositeHook(hook, vm);
@@ -39,6 +46,15 @@ namespace BCZ.Core
         }
 
         public override bool WillAddEnemies() => true;
+
+        public override void PreSpawn(State state, int spawnCount)
+        {
+            if (grid.Stats.EnemyCount == 0)
+            {
+                grid.Clear();
+                GridCreateHelper.SetupGrid(grid, prng, settings);
+            }
+        }
 
         private class CountdownVM : CountdownViewmodel
         {

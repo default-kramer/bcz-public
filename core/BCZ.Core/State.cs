@@ -121,19 +121,20 @@ namespace BCZ.Core
             var settings = ss.Settings;
             var spawns = ss.Settings.SpawnBlanks ? Lists.MainDeck : Lists.BlanklessDeck;
             var deck = new InfiniteSpawnDeck(spawns, new PRNG(ss.Seed));
-            var grid = Core.Grid.Create(ss.Settings, new PRNG(ss.Seed));
             var timekeeper = new Timekeeper();
             var stateData = new StateData();
 
             var mode = ss.Settings.GameMode;
             if (mode == GameMode.PvPSim)
             {
+                var grid = Core.Grid.Create(ss.Settings, new PRNG(ss.Seed));
                 var switches = new Switches();
                 var hook = new SimulatedAttacker(switches);
                 return new State(grid, deck, hook, timekeeper, stateData, hook.VM, hook.SwitchVM, null, settings.ScorePerEnemy);
             }
             else if (mode == GameMode.Levels)
             {
+                var grid = Core.Grid.Create(ss.Settings, new PRNG(ss.Seed));
                 var levelsHook = new HookLevelsMode(timekeeper);
                 IStateHook hook = levelsHook;
                 var countdownVM = levelsHook.BuildCountdownVM(timekeeper, grid, stateData, ref hook);
@@ -141,9 +142,9 @@ namespace BCZ.Core
             }
             else if (mode == GameMode.ScoreAttack)
             {
-                var scoreAttackHook = new HookScoreAttack(stateData, timekeeper);
+                var scoreAttackHook = new HookScoreAttack(stateData, timekeeper, ss, out var grid);
                 IStateHook hook = scoreAttackHook;
-                var countdownVM = scoreAttackHook.BuildCountdownVM(timekeeper, grid, ref hook);
+                var countdownVM = scoreAttackHook.BuildCountdownVM(timekeeper, ref hook);
                 return new State(grid, deck, hook, timekeeper, stateData, null, null, countdownVM, settings.ScorePerEnemy);
             }
             else

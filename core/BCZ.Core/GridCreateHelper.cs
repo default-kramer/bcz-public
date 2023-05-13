@@ -31,6 +31,11 @@ namespace BCZ.Core
             SetupGrid(grid, rand, 15, 5, 2);
         }
 
+        public static void SetupGrid(Grid grid, PRNG prng, ISinglePlayerSettings settings)
+        {
+            SetupGrid(grid, prng, settings.EnemyCount, settings.EnemiesPerStripe, settings.RowsPerStripe);
+        }
+
         public static void SetupGrid(Grid grid, PRNG prng, int totalEnemies, int enemiesPerStripe, int rowsPerStripe)
         {
             if (totalEnemies < 1 || enemiesPerStripe < 1 || rowsPerStripe < 1)
