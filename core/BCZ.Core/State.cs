@@ -8,12 +8,30 @@ using BCZ.Core.Viewmodels;
 
 namespace BCZ.Core
 {
+    public readonly struct Score
+    {
+        public readonly int ComboScore;
+        public readonly int EnemyScore;
+        public int TotalScore => ComboScore + EnemyScore;
+
+        public Score(int combo, int enemy)
+        {
+            this.ComboScore = combo;
+            this.EnemyScore = enemy;
+        }
+
+        public static Score operator +(Score a, Score b)
+        {
+            return new Score(a.ComboScore + b.ComboScore, a.EnemyScore + b.EnemyScore);
+        }
+    }
+
     /// <summary>
     /// A read-only view of some mutable state data
     /// </summary>
     interface IStateData
     {
-        int Score { get; }
+        Score Score { get; }
         StateEvent CurrentEvent { get; }
     }
 
@@ -40,7 +58,7 @@ namespace BCZ.Core
         private readonly StateData stateData;
         public StateEvent CurrentEvent => stateData.currentEvent;
 
-        public int Score => stateData.score;
+        public Score Score => stateData.score;
         public int NumCombos => numCombos;
 
         public int NumCatalystsSpawned = 0; // Try not to use this...
@@ -48,7 +66,7 @@ namespace BCZ.Core
         public int EfficiencyInt()
         {
             if (NumCombos == 0) return 0;
-            return Score / NumCombos;
+            return Score.TotalScore / NumCombos;
         }
 
         public static bool IsWaitingState(StateEventKind kind) => kind == StateEventKind.Spawned;
@@ -461,11 +479,11 @@ namespace BCZ.Core
         /// <summary>
         /// If the given <paramref name="combo"/> were played, how much would it score?
         /// </summary>
-        public int GetHypotheticalScore(ComboInfo combo)
+        public Score GetHypotheticalScore(ComboInfo combo)
         {
             int enemyScore = combo.NumEnemiesDestroyed * scorePerEnemy;
             int comboScore = scorePayoutTable.GetPayout(combo.ComboToReward.AdjustedGroupCount);
-            return enemyScore + comboScore;
+            return new Score(comboScore, enemyScore);
         }
 
         private bool Transition(Moment now)
@@ -724,10 +742,10 @@ namespace BCZ.Core
 
         class StateData : IStateData
         {
-            public int score;
+            public Score score;
             public StateEvent currentEvent = StateEvent.StateConstructed;
 
-            int IStateData.Score => score;
+            Score IStateData.Score => score;
             StateEvent IStateData.CurrentEvent => currentEvent;
         }
     }

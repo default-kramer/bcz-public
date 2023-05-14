@@ -29,6 +29,8 @@ public class GameOverMenu : Control
         public readonly Label MedalValue;
         public readonly Label ScoreCaption;
         public readonly Label ScoreValue;
+        public readonly Label EnemyScoreValue;
+        public readonly Label ComboScoreValue;
         public readonly Label BestComboCaption;
         public readonly Label BestComboValue;
         public readonly Label TimeCaption;
@@ -48,6 +50,8 @@ public class GameOverMenu : Control
             parent.FindNode(out MedalValue, nameof(MedalValue));
             parent.FindNode(out ScoreCaption, nameof(ScoreCaption));
             parent.FindNode(out ScoreValue, nameof(ScoreValue));
+            parent.FindNode(out EnemyScoreValue, nameof(EnemyScoreValue));
+            parent.FindNode(out ComboScoreValue, nameof(ComboScoreValue));
             parent.FindNode(out BestComboCaption, nameof(BestComboCaption));
             parent.FindNode(out BestComboValue, nameof(BestComboValue));
             parent.FindNode(out TimeCaption, nameof(TimeCaption));
@@ -124,7 +128,10 @@ public class GameOverMenu : Control
             members.SetMedalVisibility(false);
         }
 
-        members.ScoreValue.Text = state.Score.ToString();
+        var score = state.Score;
+        members.ScoreValue.Text = score.TotalScore.ToString();
+        members.EnemyScoreValue.Text = score.EnemyScore.ToString();
+        members.ComboScoreValue.Text = score.ComboScore.ToString();
 
         members.BestComboValue.Text = state.BestCombo.ComboToReward.Describe("none");
 

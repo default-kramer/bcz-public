@@ -78,7 +78,7 @@ namespace BCZ.Core
 
     interface IStateHook
     {
-        void OnComboUpdated(ComboInfo previous, ComboInfo current, IScheduler scheduler, int score);
+        void OnComboUpdated(ComboInfo previous, ComboInfo current, IScheduler scheduler, Score score);
 
         /// <summary>
         /// Called when the combo is probably done, but barrier removal might allow it to continue.
@@ -106,7 +106,7 @@ namespace BCZ.Core
 
         public virtual void OnComboLikelyCompleted(State state, ComboInfo combo, IScheduler scheduler) { }
 
-        public virtual void OnComboUpdated(ComboInfo previous, ComboInfo current, IScheduler scheduler, int score) { }
+        public virtual void OnComboUpdated(ComboInfo previous, ComboInfo current, IScheduler scheduler, Score score) { }
 
         public virtual void PreSpawn(State state, int spawnCount) { }
 

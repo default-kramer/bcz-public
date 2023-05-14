@@ -31,25 +31,24 @@ anchor_bottom = 1.0
 
 [node name="CenterContainer" type="CenterContainer" parent="VBoxContainer"]
 margin_right = 1024.0
-margin_bottom = 397.0
+margin_bottom = 442.0
 size_flags_vertical = 3
 size_flags_stretch_ratio = 2.0
 
 [node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/CenterContainer"]
 margin_left = 393.0
-margin_top = 8.0
 margin_right = 630.0
-margin_bottom = 388.0
+margin_bottom = 442.0
 
 [node name="ColorRect" type="ColorRect" parent="VBoxContainer/CenterContainer/MarginContainer"]
 visible = false
 margin_right = 237.0
-margin_bottom = 380.0
+margin_bottom = 442.0
 color = Color( 1, 1, 1, 0.721569 )
 
 [node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/CenterContainer/MarginContainer"]
 margin_right = 237.0
-margin_bottom = 380.0
+margin_bottom = 442.0
 custom_constants/margin_right = 20
 custom_constants/margin_top = 20
 custom_constants/margin_left = 20
@@ -59,7 +58,7 @@ custom_constants/margin_bottom = 20
 margin_left = 20.0
 margin_top = 20.0
 margin_right = 217.0
-margin_bottom = 360.0
+margin_bottom = 422.0
 
 [node name="LabelMessage" type="Label" parent="VBoxContainer/CenterContainer/MarginContainer/MarginContainer/VBoxContainer2"]
 margin_right = 197.0
@@ -76,7 +75,7 @@ rect_min_size = Vector2( 0, 30 )
 [node name="GridContainer" type="GridContainer" parent="VBoxContainer/CenterContainer/MarginContainer/MarginContainer/VBoxContainer2"]
 margin_top = 59.0
 margin_right = 197.0
-margin_bottom = 204.0
+margin_bottom = 266.0
 custom_constants/vseparation = 10
 columns = 2
 
@@ -120,44 +119,70 @@ margin_right = 197.0
 margin_bottom = 83.0
 text = "<12345>"
 
-[node name="BestComboCaption" type="Label" parent="VBoxContainer/CenterContainer/MarginContainer/MarginContainer/VBoxContainer2/GridContainer"]
+[node name="EnemyScoreCaption" type="Label" parent="VBoxContainer/CenterContainer/MarginContainer/MarginContainer/VBoxContainer2/GridContainer"]
 margin_top = 93.0
 margin_right = 95.0
 margin_bottom = 114.0
+text = "Targets:"
+align = 2
+
+[node name="EnemyScoreValue" type="Label" parent="VBoxContainer/CenterContainer/MarginContainer/MarginContainer/VBoxContainer2/GridContainer"]
+margin_left = 99.0
+margin_top = 93.0
+margin_right = 197.0
+margin_bottom = 114.0
+
+[node name="ComboScoreCaption" type="Label" parent="VBoxContainer/CenterContainer/MarginContainer/MarginContainer/VBoxContainer2/GridContainer"]
+margin_top = 124.0
+margin_right = 95.0
+margin_bottom = 145.0
+text = "Combos:"
+align = 2
+
+[node name="ComboScoreValue" type="Label" parent="VBoxContainer/CenterContainer/MarginContainer/MarginContainer/VBoxContainer2/GridContainer"]
+margin_left = 99.0
+margin_top = 124.0
+margin_right = 197.0
+margin_bottom = 145.0
+
+[node name="BestComboCaption" type="Label" parent="VBoxContainer/CenterContainer/MarginContainer/MarginContainer/VBoxContainer2/GridContainer"]
+margin_top = 155.0
+margin_right = 95.0
+margin_bottom = 176.0
 text = "Best Combo:"
 align = 2
 
 [node name="BestComboValue" type="Label" parent="VBoxContainer/CenterContainer/MarginContainer/MarginContainer/VBoxContainer2/GridContainer"]
 margin_left = 99.0
-margin_top = 93.0
+margin_top = 155.0
 margin_right = 197.0
-margin_bottom = 114.0
+margin_bottom = 176.0
 text = "<rank VI>"
 
 [node name="TimeCaption" type="Label" parent="VBoxContainer/CenterContainer/MarginContainer/MarginContainer/VBoxContainer2/GridContainer"]
-margin_top = 124.0
+margin_top = 186.0
 margin_right = 95.0
-margin_bottom = 145.0
+margin_bottom = 207.0
 text = "Time:"
 align = 2
 
 [node name="TimeValue" type="Label" parent="VBoxContainer/CenterContainer/MarginContainer/MarginContainer/VBoxContainer2/GridContainer"]
 margin_left = 99.0
-margin_top = 124.0
+margin_top = 186.0
 margin_right = 197.0
-margin_bottom = 145.0
+margin_bottom = 207.0
 text = "<55:22.498>"
 
 [node name="Spacer2" type="Control" parent="VBoxContainer/CenterContainer/MarginContainer/MarginContainer/VBoxContainer2"]
-margin_top = 208.0
+margin_top = 270.0
 margin_right = 197.0
-margin_bottom = 238.0
+margin_bottom = 300.0
 rect_min_size = Vector2( 0, 30 )
 
 [node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/CenterContainer/MarginContainer/MarginContainer/VBoxContainer2"]
-margin_top = 242.0
+margin_top = 304.0
 margin_right = 197.0
-margin_bottom = 340.0
+margin_bottom = 402.0
 
 [node name="ButtonNext" type="Button" parent="VBoxContainer/CenterContainer/MarginContainer/MarginContainer/VBoxContainer2/VBoxContainer"]
 margin_right = 197.0
@@ -177,7 +202,7 @@ margin_bottom = 98.0
 text = "Back to Title"
 
 [node name="BottomSpacer" type="Control" parent="VBoxContainer"]
-margin_top = 401.0
+margin_top = 446.0
 margin_right = 1024.0
 margin_bottom = 600.0
 size_flags_vertical = 3

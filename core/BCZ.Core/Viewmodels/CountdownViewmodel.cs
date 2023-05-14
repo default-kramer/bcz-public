@@ -23,9 +23,9 @@ namespace BCZ.Core.Viewmodels
 
         public abstract int CurrentMillis { get; }
 
-        public TimeSpan Time => timer.Now.ToTimeSpan();
+        public virtual TimeSpan Time => timer.Now.ToTimeSpan();
 
-        public int Score => data.Score;
+        public int Score => data.Score.TotalScore;
 
         public (Combo, int score) LastCombo { get; private set; } = (Combo.Empty, 0);
 
@@ -34,9 +34,9 @@ namespace BCZ.Core.Viewmodels
             return grid.Stats.EnemiesRemaining(color);
         }
 
-        public override void OnComboUpdated(ComboInfo previous, ComboInfo current, IScheduler scheduler, int score)
+        public override void OnComboUpdated(ComboInfo previous, ComboInfo current, IScheduler scheduler, Score score)
         {
-            LastCombo = (current.ComboToReward, score);
+            LastCombo = (current.ComboToReward, score.TotalScore);
         }
     }
 }
