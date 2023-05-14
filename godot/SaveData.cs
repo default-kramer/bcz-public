@@ -11,4 +11,9 @@ using BCZ.Core;
 static class SaveData
 {
     public static int ScoreAttackPB { get; set; } = 0;
+
+    public static void RecordMedal(int level, MedalKind medal)
+    {
+        // nothing for now...
+    }
 }

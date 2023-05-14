@@ -26,8 +26,6 @@ public class GameOverMenu : Control
         public readonly GridContainer GridContainer;
         private readonly Label EfficiencyCaption;
         private readonly Label EfficiencyValue;
-        public readonly Label MedalCaption;
-        public readonly Label MedalValue; // Should we move the medal message to "Great News" ?
         public readonly Label ScoreCaption;
         public readonly Label ScoreValue;
         public readonly Label EnemyScoreValue;
@@ -48,8 +46,6 @@ public class GameOverMenu : Control
             parent.FindNode(out GridContainer, nameof(GridContainer));
             parent.FindNode(out EfficiencyCaption, nameof(EfficiencyCaption));
             parent.FindNode(out EfficiencyValue, nameof(EfficiencyValue));
-            parent.FindNode(out MedalCaption, nameof(MedalCaption));
-            parent.FindNode(out MedalValue, nameof(MedalValue));
             parent.FindNode(out ScoreCaption, nameof(ScoreCaption));
             parent.FindNode(out ScoreValue, nameof(ScoreValue));
             parent.FindNode(out EnemyScoreValue, nameof(EnemyScoreValue));
@@ -58,12 +54,6 @@ public class GameOverMenu : Control
             parent.FindNode(out BestComboValue, nameof(BestComboValue));
             parent.FindNode(out TimeCaption, nameof(TimeCaption));
             parent.FindNode(out TimeValue, nameof(TimeValue));
-        }
-
-        public void SetMedalVisibility(bool visible)
-        {
-            MedalCaption.Visible = visible;
-            MedalValue.Visible = visible;
         }
 
         public void ShowEfficiency(int efficiency)

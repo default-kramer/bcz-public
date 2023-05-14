@@ -23,7 +23,6 @@ public abstract class GamePackage
     {
         members.HideGreatNews();
         members.HideEfficiency();
-        members.SetMedalVisibility(false);
 
         var score = state.Score;
         members.ScoreValue.Text = score.TotalScore.ToString();
@@ -48,10 +47,12 @@ public abstract class GamePackage
 class LevelsModeGamePackage : GamePackage
 {
     public readonly IReadOnlyList<IGoal> Goals;
+    private readonly int Level;
 
-    public LevelsModeGamePackage(SeededSettings settings, IReadOnlyList<IGoal> goals) : base(settings)
+    public LevelsModeGamePackage(SeededSettings settings, int level, IReadOnlyList<IGoal> goals) : base(settings)
     {
         this.Goals = goals;
+        this.Level = level;
     }
 
     /// <summary>
@@ -61,7 +62,7 @@ class LevelsModeGamePackage : GamePackage
 
     internal override void Initialize(GameViewerControl.Members members, Ticker ticker)
     {
-        if (Goals.Count > 0)
+        if (!HideMedalProgress && Goals.Count > 0)
         {
             members.GoalViewerControl.SetLogic(ticker.state, Goals);
             members.GoalViewerControl.Visible = true;
@@ -80,23 +81,15 @@ class LevelsModeGamePackage : GamePackage
         var efficiency = state.Data.EfficiencyInt();
         members.ShowEfficiency(efficiency);
 
-        var medal = MostImpressiveGoal(Goals, efficiency);
-        bool showMedal = state.ClearedAllEnemies;
-        if (HideMedalProgress)
+        var medal = MedalKind.None;
+        if (state.ClearedAllEnemies)
         {
-            // Even if the user chose to hide the medal progress indicator, they might have
-            // earned a medal anyway. If they did, show it.
-            showMedal = showMedal && medal > MedalKind.None;
+            medal = MostImpressiveGoal(Goals, efficiency);
         }
-
-        if (showMedal)
+        if (medal != MedalKind.None)
         {
-            members.MedalValue.Text = medal.ToString();
-            members.SetMedalVisibility(true);
-        }
-        else
-        {
-            members.SetMedalVisibility(false);
+            SaveData.RecordMedal(Level, medal);
+            members.ShowGreatNews($"{medal} Medal Earned!");
         }
     }
 
@@ -146,10 +139,6 @@ class ScoreAttackGamePackage : GamePackage
         {
             SaveData.ScoreAttackPB = totalScore;
             members.ShowGreatNews("!!! New Personal Best !!!");
-        }
-        else
-        {
-            members.HideGreatNews();
         }
     }
 }

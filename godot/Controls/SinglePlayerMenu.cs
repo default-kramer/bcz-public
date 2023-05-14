@@ -199,7 +199,7 @@ public class SinglePlayerMenu : Control
         {
             var settings = Collection.GetSettings(Level).AddRandomSeed();
             var goals = Collection.GetGoals(Level);
-            var package = new LevelsModeGamePackage(settings, goals);
+            var package = new LevelsModeGamePackage(settings, Level, goals);
             package.HideMedalProgress = HideMedals;
             return package;
         }
