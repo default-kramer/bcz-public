@@ -26,28 +26,20 @@ public class SinglePlayerMenu : Control
     const string MedalsHide = "Hide";
     const string MedalsShow = "Show";
 
-    private readonly ChoiceModel<string> TimeLimitChoices = new ChoiceModel<string>()
-        .AddChoices(TimeLimit2m, TimeLimit5m, TimeLimit10m);
-    const string TimeLimit2m = "2 minutes";
-    const string TimeLimit5m = "5 minutes";
-    const string TimeLimit10m = "10 minutes";
-
-    private readonly ChoiceModel<string> LayoutChoices = new ChoiceModel<string>()
-        .AddChoices(LayoutTall, LayoutWide);
-    const string LayoutTall = "Tall";
-    const string LayoutWide = "Wide";
-
-    private readonly ChoiceModel<int> EnemyCountChoices = new ChoiceModel<int>()
-        .AddChoices(Enumerable.Range(1, 20).Select(i => i * 4));
+    private readonly ChoiceModel<string> ChoiceScoreAttackGoal = new ChoiceModel<string>()
+        .AddChoices(ScoreAttackGoal_PB, ScoreAttackGoal_Beginner, ScoreAttackGoal_Advanced, ScoreAttackGoal_Elite, ScoreAttackGoal_WR);
+    const string ScoreAttackGoal_PB = "Personal Best";
+    const string ScoreAttackGoal_Beginner = "Beginner";
+    const string ScoreAttackGoal_Advanced = "Advanced";
+    const string ScoreAttackGoal_Elite = "Elite";
+    const string ScoreAttackGoal_WR = "World Record";
 
     readonly struct Members
     {
         public readonly MenuChoiceControl ChoiceGameMode;
         public readonly MenuChoiceControl ChoiceLevel;
         public readonly MenuChoiceControl ChoiceMedals;
-        public readonly MenuChoiceControl ChoiceTimeLimit;
-        public readonly MenuChoiceControl ChoiceLayout;
-        public readonly MenuChoiceControl ChoiceEnemyCount;
+        public readonly MenuChoiceControl ChoiceScoreAttackGoal;
         public readonly Button ButtonStartGame;
         public readonly Button ButtonBack;
 
@@ -68,14 +60,8 @@ public class SinglePlayerMenu : Control
             me.FindNode(out ChoiceMedals, nameof(ChoiceMedals));
             ChoiceMedals.Model = me.ChoiceMedals;
 
-            me.FindNode(out ChoiceTimeLimit, nameof(ChoiceTimeLimit));
-            ChoiceTimeLimit.Model = me.TimeLimitChoices;
-
-            me.FindNode(out ChoiceLayout, nameof(ChoiceLayout));
-            ChoiceLayout.Model = me.LayoutChoices;
-
-            me.FindNode(out ChoiceEnemyCount, nameof(ChoiceEnemyCount));
-            ChoiceEnemyCount.Model = me.EnemyCountChoices;
+            me.FindNode(out ChoiceScoreAttackGoal, nameof(ChoiceScoreAttackGoal));
+            ChoiceScoreAttackGoal.Model = me.ChoiceScoreAttackGoal;
 
             me.FindNode(out ButtonStartGame, nameof(ButtonStartGame));
             me.FindNode(out ButtonBack, nameof(ButtonBack));
@@ -144,43 +130,20 @@ public class SinglePlayerMenu : Control
         {
             var collection = BCZ.Core.SinglePlayerSettings.PvPSimSettings;
             int level = LevelChoices.SelectedItem;
-            var token = new LevelToken(level, collection, HideMedals);
+            var token = new LevelsModeToken(level, collection, HideMedals);
             NewRoot.FindRoot(this).StartGame(token);
         }
         else if (mode == ModeScoreAttack)
         {
-            var settings = ScoreAttackSettings;
-            var token = new LevelToken(1, new SingleItemSettingsCollection(settings), hideMedals: true);
+            var token = new ScoreAttackLevelToken(ScoreAttackSettings, ChoiceScoreAttackGoal.SelectedItem);
             NewRoot.FindRoot(this).StartGame(token);
         }
         else
         {
             var collection = LevelsModeSettings;
             int level = LevelChoices.SelectedItem;
-            var token = new LevelToken(level, collection, HideMedals);
+            var token = new LevelsModeToken(level, collection, HideMedals);
             NewRoot.FindRoot(this).StartGame(token);
-        }
-    }
-
-    class SingleItemSettingsCollection : ISettingsCollection
-    {
-        private readonly ISinglePlayerSettings settings;
-        public SingleItemSettingsCollection(ISinglePlayerSettings settings)
-        {
-            this.settings = settings;
-        }
-
-        public int MaxLevel => 1;
-
-        private static readonly List<IGoal> goals = new();
-        public IReadOnlyList<IGoal> GetGoals(int level)
-        {
-            return goals;
-        }
-
-        public ISinglePlayerSettings GetSettings(int level)
-        {
-            return settings;
         }
     }
 
@@ -189,39 +152,101 @@ public class SinglePlayerMenu : Control
         NewRoot.FindRoot(this).BackToMainMenu();
     }
 
-    public readonly struct LevelToken
+    /// <summary>
+    /// Handles responses to the "Game Over" menu, such as "retry" or "proceed to next level".
+    /// </summary>
+    public abstract class LevelToken
     {
-        private readonly int Level;
+        /// <summary>
+        /// Create a new game at the current level.
+        /// </summary>
+        public abstract GamePackage CreateGamePackage();
+
+        public abstract bool CanAdvance { get; }
+
+        /// <summary>
+        /// Advance to the next level. Should only be called when <see cref="CanAdvance"/>.
+        /// </summary>
+        public abstract bool NextLevel();
+    }
+
+    class LevelsModeToken : LevelToken
+    {
+        private int Level;
         private readonly ISettingsCollection Collection;
         private readonly bool HideMedals;
 
-        public LevelToken(int level, ISettingsCollection collection, bool hideMedals)
+        public LevelsModeToken(int level, ISettingsCollection collection, bool hideMedals)
         {
             this.Level = level;
             this.Collection = collection;
             this.HideMedals = hideMedals;
         }
 
-        public bool CanAdvance { get { return Level < Collection.MaxLevel; } }
+        public override bool CanAdvance { get { return Level < Collection.MaxLevel; } }
 
-        public bool NextLevel(out LevelToken result)
+        public override bool NextLevel()
         {
             if (CanAdvance)
             {
-                result = new LevelToken(Level + 1, Collection, HideMedals);
+                Level = Level + 1;
                 return true;
             }
-            result = this;
             return false;
         }
 
-        public GamePackage CreateGamePackage()
+        public override GamePackage CreateGamePackage()
         {
             var settings = Collection.GetSettings(Level).AddRandomSeed();
             var goals = Collection.GetGoals(Level);
-            var package = new GamePackage(settings, goals);
+            var package = new LevelsModeGamePackage(settings, goals);
             package.HideMedalProgress = HideMedals;
             return package;
+        }
+    }
+
+    class ScoreAttackLevelToken : LevelToken
+    {
+        private readonly ISinglePlayerSettings settings;
+        private readonly string goalType;
+
+        public ScoreAttackLevelToken(ISinglePlayerSettings settings, string goalType)
+        {
+            this.settings = settings;
+            this.goalType = goalType;
+        }
+
+        public override bool CanAdvance => false;
+
+        public override bool NextLevel()
+        {
+            throw new NotImplementedException("This should never be called");
+        }
+
+        public override GamePackage CreateGamePackage()
+        {
+            var settings = this.settings.AddRandomSeed();
+            var package = new ScoreAttackGamePackage(settings);
+            package.ScoreAttackGoal = GetGoal();
+            return package;
+        }
+
+        private int GetGoal()
+        {
+            switch (goalType)
+            {
+                case ScoreAttackGoal_PB:
+                    return Math.Max(100, SaveData.ScoreAttackPB);
+                case ScoreAttackGoal_Beginner:
+                    return 10000;
+                case ScoreAttackGoal_Advanced:
+                    return 20000;
+                case ScoreAttackGoal_Elite:
+                    return 30000;
+                case ScoreAttackGoal_WR:
+                    return 33000;
+            }
+            throw new Exception($"Unexpected goal type: {goalType}");
         }
     }
 }

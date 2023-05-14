@@ -171,7 +171,7 @@ public class GoalViewerControl : Control
                 float bar1 = Math.Min(1f, playerScore / headroom);
                 float bar2 = Math.Min(1f, projection / headroom);
                 models[0] = new GoalModel(bar1, GameColors.Green, bar2);
-                Console.WriteLine($"New Projection: {projection} / {scorePerMilli} / {countdown.RemainingMillis}");
+                //Console.WriteLine($"New Projection: {projection} / {scorePerMilli} / {countdown.RemainingMillis}");
             }
             return models;
         }

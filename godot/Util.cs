@@ -39,3 +39,8 @@ static class Util
     /// </summary>
     public static bool IsSuperuser = !string.IsNullOrWhiteSpace(System.Environment.GetEnvironmentVariable("BCZ_SUPERUSER"));
 }
+
+static class Empty<T>
+{
+    public static readonly IReadOnlyList<T> List = new List<T>();
+}

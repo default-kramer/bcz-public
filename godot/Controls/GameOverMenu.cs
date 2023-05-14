@@ -14,19 +14,20 @@ using System.Collections.Generic;
 
 public class GameOverMenu : Control
 {
-    readonly struct Members
+    internal readonly struct Members
     {
         public readonly Label LabelMessage;
+        private readonly Label LabelGreatNews;
         public readonly Button ButtonNext;
         public readonly Button ButtonReplay;
         public readonly Button ButtonQuit;
 
         // Grid and its members
         public readonly GridContainer GridContainer;
-        public readonly Label EfficiencyCaption;
-        public readonly Label EfficiencyValue;
+        private readonly Label EfficiencyCaption;
+        private readonly Label EfficiencyValue;
         public readonly Label MedalCaption;
-        public readonly Label MedalValue;
+        public readonly Label MedalValue; // Should we move the medal message to "Great News" ?
         public readonly Label ScoreCaption;
         public readonly Label ScoreValue;
         public readonly Label EnemyScoreValue;
@@ -39,6 +40,7 @@ public class GameOverMenu : Control
         public Members(GameOverMenu parent)
         {
             parent.FindNode(out LabelMessage, nameof(LabelMessage));
+            parent.FindNode(out LabelGreatNews, nameof(LabelGreatNews));
             parent.FindNode(out ButtonNext, nameof(ButtonNext));
             parent.FindNode(out ButtonReplay, nameof(ButtonReplay));
             parent.FindNode(out ButtonQuit, nameof(ButtonQuit));
@@ -62,6 +64,30 @@ public class GameOverMenu : Control
         {
             MedalCaption.Visible = visible;
             MedalValue.Visible = visible;
+        }
+
+        public void ShowEfficiency(int efficiency)
+        {
+            EfficiencyValue.Text = efficiency.ToString();
+            EfficiencyCaption.Visible = true;
+            EfficiencyValue.Visible = true;
+        }
+
+        public void HideEfficiency()
+        {
+            EfficiencyCaption.Visible = false;
+            EfficiencyValue.Visible = false;
+        }
+
+        public void ShowGreatNews(string message)
+        {
+            LabelGreatNews.Text = message;
+            LabelGreatNews.Visible = true;
+        }
+
+        public void HideGreatNews()
+        {
+            LabelGreatNews.Visible = false;
         }
     }
 
@@ -90,7 +116,7 @@ public class GameOverMenu : Control
             members.LabelMessage.Text = "Game Over";
         }
 
-        DisplayPostgameStats(state, gamePackage);
+        gamePackage.OnGameOver(members, state);
 
         if (state.ClearedAllEnemies && root.CanAdvanceToNextLevel())
         {
@@ -99,67 +125,9 @@ public class GameOverMenu : Control
         }
         else
         {
-
             members.ButtonNext.Visible = false;
             members.ButtonReplay.GrabFocus();
         }
-    }
-
-    private void DisplayPostgameStats(State state, GamePackage gamePackage)
-    {
-        var efficiency = state.Data.EfficiencyInt();
-        var medal = MostImpressiveGoal(gamePackage.Goals, efficiency);
-        bool showMedal = state.ClearedAllEnemies;
-        if (gamePackage.HideMedalProgress)
-        {
-            // Even if the user chose to hide the medal progress indicator, they might have
-            // earned a medal anyway. If they did, show it.
-            showMedal = showMedal && medal > MedalKind.None;
-        }
-
-        members.EfficiencyValue.Text = efficiency.ToString();
-        if (showMedal)
-        {
-            members.MedalValue.Text = medal.ToString();
-            members.SetMedalVisibility(true);
-        }
-        else
-        {
-            members.SetMedalVisibility(false);
-        }
-
-        var score = state.Score;
-        members.ScoreValue.Text = score.TotalScore.ToString();
-        members.EnemyScoreValue.Text = score.EnemyScore.ToString();
-        members.ComboScoreValue.Text = score.ComboScore.ToString();
-
-        members.BestComboValue.Text = state.BestCombo.ComboToReward.Describe("none");
-
-        var time = state.FinishTime;
-        if (time.HasValue)
-        {
-            var ts = time.Value.ToTimeSpan();
-            members.TimeValue.Text = ts.ToString("m\\:ss\\.fff");
-        }
-        else
-        {
-            members.TimeValue.Text = "?bug?";
-        }
-    }
-
-    private static MedalKind MostImpressiveGoal(IReadOnlyList<IGoal> goals, int playerValue)
-    {
-        MedalKind best = MedalKind.None;
-        for (int i = 0; i < goals.Count; i++)
-        {
-            var goal = goals[i];
-            if (playerValue >= goal.Target && goal.Kind > best)
-            {
-                best = goal.Kind;
-            }
-        }
-
-        return best;
     }
 
     private void NextLevel()
