@@ -107,7 +107,7 @@ public class GameOverMenu : Control
 
     private void DisplayPostgameStats(State state, GamePackage gamePackage)
     {
-        var efficiency = state.EfficiencyInt();
+        var efficiency = state.Data.EfficiencyInt();
         var medal = MostImpressiveGoal(gamePackage.Goals, efficiency);
         bool showMedal = state.ClearedAllEnemies;
         if (gamePackage.HideMedalProgress)

@@ -296,6 +296,11 @@ public class GameViewerControl : Control
             members.GoalViewerControl.SetLogic(state, goals);
             members.GoalViewerControl.Visible = true;
         }
+        else if (state.CountdownViewmodel != null)
+        {
+            members.GoalViewerControl.SetLogicForScoreAttack(state.Data, state.CountdownViewmodel, 30000);
+            members.GoalViewerControl.Visible = true;
+        }
         else
         {
             members.GoalViewerControl.Disable();

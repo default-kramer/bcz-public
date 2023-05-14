@@ -48,7 +48,7 @@ public class CountdownViewerControl : Control
 
     private static float CalcPosition(ICountdownViewmodel vm)
     {
-        float m = vm.CurrentMillis;
+        float m = vm.RemainingMillis;
         return m / vm.MaxMillis;
     }
 
@@ -84,7 +84,7 @@ public class CountdownViewerControl : Control
     {
         DrawRect(new Rect2(0, 0, RectSize), Godot.Colors.Black);
 
-        var ts = TimeSpan.FromMilliseconds(vm.CurrentMillis);
+        var ts = TimeSpan.FromMilliseconds(vm.RemainingMillis);
         bool draw = true;
         if (ts.TotalSeconds < 2)
         {
@@ -142,7 +142,7 @@ public class CountdownViewerControl : Control
         public static readonly NullModel Instance = new NullModel();
 
         public int MaxMillis => 1;
-        public int CurrentMillis => 1;
+        public int RemainingMillis => 1;
         public TimeSpan Time => default;
         public (Combo, int score) LastCombo => (Combo.Empty, 0);
         public int Score => 0;

@@ -62,7 +62,7 @@ namespace BCZ.Core
 
             public override int MaxMillis => gameDurationMillis;
 
-            public override int CurrentMillis => gameDurationMillis - timer.Now.Millis;
+            public override int RemainingMillis => gameDurationMillis - timer.Now.Millis;
 
             public override TimeSpan Time => TimeSpan.FromMilliseconds(gameDurationMillis - timer.Now.Millis);
         }

@@ -29,10 +29,13 @@ namespace BCZ.Core
     /// <summary>
     /// A read-only view of some mutable state data
     /// </summary>
-    interface IStateData
+    public interface IStateData
     {
         Score Score { get; }
         StateEvent CurrentEvent { get; }
+        Moment LastComboMoment { get; }
+
+        int EfficiencyInt();
     }
 
     public sealed class State : IDumpCallback
@@ -44,7 +47,6 @@ namespace BCZ.Core
         public ComboInfo BestCombo { get; private set; } = ComboInfo.Empty;
         private ComboInfo currentCombo;
         public ComboInfo? ActiveOrPreviousCombo { get; private set; } = null;
-        private int numCombos = 0;
         private readonly PayoutTable scorePayoutTable = PayoutTable.DefaultScorePayoutTable;
         private readonly int scorePerEnemy;
         private readonly IStateHook hook;
@@ -58,16 +60,12 @@ namespace BCZ.Core
         private readonly StateData stateData;
         public StateEvent CurrentEvent => stateData.currentEvent;
 
-        public Score Score => stateData.score;
-        public int NumCombos => numCombos;
+        public Score Score => stateData.Score;
+        public int NumCombos => stateData.NumCombos;
 
         public int NumCatalystsSpawned = 0; // Try not to use this...
 
-        public int EfficiencyInt()
-        {
-            if (NumCombos == 0) return 0;
-            return Score.TotalScore / NumCombos;
-        }
+        public IStateData Data => stateData;
 
         public static bool IsWaitingState(StateEventKind kind) => kind == StateEventKind.Spawned;
 
@@ -262,8 +260,8 @@ namespace BCZ.Core
             if (currentCombo.PermissiveCombo.AdjustedGroupCount > 0)
             {
                 var scorePayout = GetHypotheticalScore(currentCombo);
-                stateData.score += scorePayout;
-                numCombos++;
+                ITimer timer = timekeeper;
+                stateData.OnComboCompleted(scorePayout, timer.Now);
                 //Console.WriteLine($"Score: {score} (+{scorePayout})");
             }
             currentCombo = ComboInfo.Empty;
@@ -742,11 +740,26 @@ namespace BCZ.Core
 
         class StateData : IStateData
         {
-            public Score score;
+            public Score Score { get; private set; }
             public StateEvent currentEvent = StateEvent.StateConstructed;
+            public int NumCombos { get; private set; }
+            public Moment LastComboMoment { get; private set; }
 
-            Score IStateData.Score => score;
+            public void OnComboCompleted(Score score, Moment now)
+            {
+                this.Score += score;
+                this.NumCombos++;
+                this.LastComboMoment = now;
+            }
+
             StateEvent IStateData.CurrentEvent => currentEvent;
+
+            int IStateData.EfficiencyInt()
+            {
+                var comboCount = NumCombos;
+                if (comboCount == 0) return 0;
+                return Score.TotalScore / comboCount;
+            }
         }
     }
 }

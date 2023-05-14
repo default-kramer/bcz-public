@@ -21,7 +21,7 @@ namespace BCZ.Core.Viewmodels
 
         public abstract int MaxMillis { get; }
 
-        public abstract int CurrentMillis { get; }
+        public abstract int RemainingMillis { get; }
 
         public virtual TimeSpan Time => timer.Now.ToTimeSpan();
 
