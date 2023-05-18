@@ -8,24 +8,6 @@ using BCZ.Core.Viewmodels;
 
 namespace BCZ.Core
 {
-    public readonly struct Score
-    {
-        public readonly int ComboScore;
-        public readonly int EnemyScore;
-        public int TotalScore => ComboScore + EnemyScore;
-
-        public Score(int combo, int enemy)
-        {
-            this.ComboScore = combo;
-            this.EnemyScore = enemy;
-        }
-
-        public static Score operator +(Score a, Score b)
-        {
-            return new Score(a.ComboScore + b.ComboScore, a.EnemyScore + b.EnemyScore);
-        }
-    }
-
     /// <summary>
     /// A read-only view of some mutable state data
     /// </summary>

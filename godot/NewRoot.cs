@@ -69,15 +69,7 @@ public class NewRoot : Control
 
     internal static NewRoot FindRoot(Node child)
     {
-        while (child != null)
-        {
-            if (child is NewRoot me)
-            {
-                return me;
-            }
-            child = child.GetParent();
-        }
-        throw new Exception("Failed to find root node");
+        return child.FindAncestor<NewRoot>() ?? throw new Exception("Failed to find root node");
     }
 
     private SinglePlayerMenu.LevelToken? levelToken;

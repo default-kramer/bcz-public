@@ -41,15 +41,15 @@ static class Util
 
     public static T? FindAncestor<T>(this Node? node) where T : class
     {
-        if (node == null)
+        while (node != null)
         {
-            return null;
+            if (node is T t)
+            {
+                return t;
+            }
+            node = node.GetParent();
         }
-        else if (node is T t)
-        {
-            return t;
-        }
-        return FindAncestor<T>(node.GetParent());
+        return null;
     }
 }
 

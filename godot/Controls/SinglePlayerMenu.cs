@@ -38,7 +38,7 @@ public class SinglePlayerMenu : Control
         .AddChoices(ChoiceItem.ModeLevels, ChoiceItem.ModePuzzles, ChoiceItem.ModeScoreAttack);
 
     private static readonly ISettingsCollection LevelsModeSettings = SinglePlayerSettings.NormalSettings;
-    private static readonly ISinglePlayerSettings ScoreAttackSettings = SinglePlayerSettings.TODO;
+    private static readonly ISinglePlayerSettings ScoreAttackSettings = SinglePlayerSettings.ScoreAttackSettings;
 
     private readonly ChoiceModel<int> LevelChoices = new ChoiceModel<int>()
         .AddChoices(Enumerable.Range(1, LevelsModeSettings.MaxLevel));

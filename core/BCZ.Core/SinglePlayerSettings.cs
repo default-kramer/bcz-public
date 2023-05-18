@@ -86,7 +86,7 @@ namespace BCZ.Core
         public static readonly ISettingsCollection BeginnerSettings = BeginnerSettingsCollection.Instance;
         public static readonly ISettingsCollection NormalSettings = NormalSettingsCollection.Instance;
         public static readonly ISettingsCollection PvPSimSettings = PvPSimSettingsCollection.Instance;
-        public static readonly ISinglePlayerSettings TODO = NormalSettingsCollection.TODO;
+        public static readonly ISinglePlayerSettings ScoreAttackSettings = NormalSettingsCollection.ScoreAttack_Level14;
         private static readonly IReadOnlyList<IGoal> NoGoals = new List<IGoal>();
 
         abstract class SettingsCollection : ISettingsCollection
@@ -202,6 +202,9 @@ namespace BCZ.Core
             const int NumLevels = 20;
 
             private static readonly IReadOnlyList<IReadOnlyList<IGoal>> goals;
+            public static readonly NormalSettingsCollection Instance;
+            public static readonly ISinglePlayerSettings ScoreAttack_Level14; // Just put the Score Attack settings here for now...
+
             static NormalSettingsCollection()
             {
                 var goalsList = new List<IGoal>[NumLevels];
@@ -236,11 +239,8 @@ namespace BCZ.Core
                     GameMode = GameMode.ScoreAttack,
                     ScorePerEnemy = 200,
                 };
-                TODO = clone;
+                ScoreAttack_Level14 = clone;
             }
-
-            public static readonly NormalSettingsCollection Instance;
-            public static readonly ISinglePlayerSettings TODO;
 
             private NormalSettingsCollection() : base(NumLevels)
             {
