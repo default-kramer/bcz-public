@@ -4,7 +4,7 @@ using System.Collections.Generic;
 
 #nullable enable
 
-public class MainMenu : Control
+public class MainMenu : Control, IHelpText
 {
     private Members members;
 
@@ -19,6 +19,8 @@ public class MainMenu : Control
         public readonly Control MenuSinglePlayer;
         public readonly Control FileDialog;
         public readonly GameViewerControl GameViewerControl;
+        private readonly Control CopyrightNotice;
+        private readonly Label ExplanationLabel;
 
         public Members(Control me)
         {
@@ -31,6 +33,21 @@ public class MainMenu : Control
             me.FindNode(out MenuSinglePlayer, nameof(MenuSinglePlayer));
             me.FindNode(out FileDialog, nameof(FileDialog));
             me.FindNode(out GameViewerControl, nameof(GameViewerControl));
+            me.FindNode(out CopyrightNotice, nameof(CopyrightNotice));
+            me.FindNode(out ExplanationLabel, nameof(ExplanationLabel));
+        }
+
+        public void SetHelpText(string text)
+        {
+            CopyrightNotice.Visible = false;
+            ExplanationLabel.Visible = true;
+            ExplanationLabel.Text = text;
+        }
+
+        public void ShowCopyrightNotice()
+        {
+            ExplanationLabel.Visible = false;
+            CopyrightNotice.Visible = true;
         }
     }
 
@@ -46,6 +63,7 @@ public class MainMenu : Control
 
     public void ShowMainMenu()
     {
+        members.ShowCopyrightNotice();
         SwitchTo(members.MainContainer);
     }
 
@@ -115,5 +133,10 @@ public class MainMenu : Control
     private void PressedCredits()
     {
         NewRoot.FindRoot(this).ShowCredits();
+    }
+
+    void IHelpText.SetText(string? text)
+    {
+        members.SetHelpText(text ?? "");
     }
 }

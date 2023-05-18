@@ -11,17 +11,20 @@ public interface IChoiceModel
     void Next();
     void Previous();
     string DisplayValue { get; }
+    string? HelpText { get; }
     IReadOnlyList<string> AllDisplayValues { get; }
     int SelectedIndex { get; }
 }
 
 public sealed class ChoiceModel<T> : IChoiceModel
 {
+    private Func<T, string?> helpTextProvider = x => null;
     private readonly List<T> Choices = new List<T>();
-    private readonly List<string> DisplayValues = new List<string>();
+    private readonly List<string> DisplayValues = new();
     public int SelectedIndex { get; private set; } = -1;
     public T SelectedItem { get { return Choices[SelectedIndex]; } }
     public string DisplayValue { get { return DisplayValues[SelectedIndex]; } }
+    public string? HelpText { get; private set; }
 
     private Action<ChoiceModel<T>> onChanged = _ => { };
 
@@ -66,6 +69,7 @@ public sealed class ChoiceModel<T> : IChoiceModel
     {
         SelectedIndex = (index + Choices.Count) % Choices.Count;
         onChanged(this);
+        this.HelpText = helpTextProvider(SelectedItem);
     }
 
     public void Next()
@@ -81,5 +85,11 @@ public sealed class ChoiceModel<T> : IChoiceModel
     public IReadOnlyList<string> AllDisplayValues
     {
         get { return DisplayValues; }
+    }
+
+    public void AddHelpText(Func<T, string?> helpTextProvider)
+    {
+        this.helpTextProvider = helpTextProvider;
+        this.HelpText = helpTextProvider(SelectedItem);
     }
 }

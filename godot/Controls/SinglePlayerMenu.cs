@@ -8,12 +8,29 @@ using System.Linq;
 
 public class SinglePlayerMenu : Control
 {
-    private readonly ChoiceModel<string> GameModeChoices = new ChoiceModel<string>()
-        .AddChoices(ModeLevels, ModePuzzles, ModeScoreAttack);
-    const string ModeLevels = "Levels";
-    const string ModePuzzles = "Puzzles";
-    const string ModeScoreAttack = "Score Attack";
-    const string ModePvPSim = "PvP Simulator";
+    sealed class ChoiceItem
+    {
+        public readonly string DisplayValue;
+        public readonly string HelpText;
+
+        public ChoiceItem(string displayValue, string helpText)
+        {
+            this.DisplayValue = displayValue;
+            this.HelpText = helpText;
+        }
+
+        public override string ToString() => DisplayValue;
+
+        public static string GetHelpText(ChoiceItem item) => item.HelpText;
+
+        public static readonly ChoiceItem ModeLevels = new("Levels", "Eliminate all targets to clear the level.\nAccuracy matters more than speed.\nPlay large combos to earn medals.");
+        public static readonly ChoiceItem ModeScoreAttack = new("Score Attack", "Earn the highest score you can in a fixed amount of time.\nPlay quickly and combo aggressively!");
+        public static readonly ChoiceItem ModePuzzles = new("Puzzles", "Take your time and find the largest combo.");
+        public static readonly ChoiceItem ModePvPSim = new("PvP Simulator", "NO DESCRIPTION");
+    }
+
+    private readonly ChoiceModel<ChoiceItem> GameModeChoices = new ChoiceModel<ChoiceItem>()
+        .AddChoices(ChoiceItem.ModeLevels, ChoiceItem.ModePuzzles, ChoiceItem.ModeScoreAttack);
 
     private static readonly BCZ.Core.ISettingsCollection LevelsModeSettings = BCZ.Core.SinglePlayerSettings.NormalSettings;
     private static readonly ISinglePlayerSettings ScoreAttackSettings = SinglePlayerSettings.TODO;
@@ -73,9 +90,11 @@ public class SinglePlayerMenu : Control
     // Called when the node enters the scene tree for the first time.
     public override void _Ready()
     {
+        GameModeChoices.AddHelpText(ChoiceItem.GetHelpText);
+
         if (Util.IsSuperuser)
         {
-            GameModeChoices.AddChoice(ModePvPSim);
+            GameModeChoices.AddChoice(ChoiceItem.ModePvPSim);
         }
 
         this.members = new Members(this);
@@ -98,15 +117,14 @@ public class SinglePlayerMenu : Control
 
     private void GameModeChanged()
     {
-        switch (GameModeChoices.SelectedItem)
+        var item = GameModeChoices.SelectedItem;
+        if (item == ChoiceItem.ModeLevels || item == ChoiceItem.ModePvPSim)
         {
-            case ModeLevels:
-            case ModePvPSim:
-                Show(members.NormalModeOptions);
-                break;
-            case ModeScoreAttack:
-                Show(members.ScoreAttackOptions);
-                break;
+            Show(members.NormalModeOptions);
+        }
+        else if (item == ChoiceItem.ModeScoreAttack)
+        {
+            Show(members.ScoreAttackOptions);
         }
     }
 
@@ -122,18 +140,18 @@ public class SinglePlayerMenu : Control
     private void StartGame()
     {
         var mode = GameModeChoices.SelectedItem;
-        if (mode == ModePuzzles)
+        if (mode == ChoiceItem.ModePuzzles)
         {
             NewRoot.FindRoot(this).SolvePuzzles();
         }
-        else if (mode == ModePvPSim)
+        else if (mode == ChoiceItem.ModePvPSim)
         {
             var collection = BCZ.Core.SinglePlayerSettings.PvPSimSettings;
             int level = LevelChoices.SelectedItem;
             var token = new LevelsModeToken(level, collection, HideMedals);
             NewRoot.FindRoot(this).StartGame(token);
         }
-        else if (mode == ModeScoreAttack)
+        else if (mode == ChoiceItem.ModeScoreAttack)
         {
             var token = new ScoreAttackLevelToken(ScoreAttackSettings, ChoiceScoreAttackGoal.SelectedItem);
             NewRoot.FindRoot(this).StartGame(token);

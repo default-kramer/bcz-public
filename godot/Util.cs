@@ -38,6 +38,19 @@ static class Util
     /// For experimental stuff that I don't want the public to see (at least not by default)
     /// </summary>
     public static bool IsSuperuser = !string.IsNullOrWhiteSpace(System.Environment.GetEnvironmentVariable("BCZ_SUPERUSER"));
+
+    public static T? FindAncestor<T>(this Node? node) where T : class
+    {
+        if (node == null)
+        {
+            return null;
+        }
+        else if (node is T t)
+        {
+            return t;
+        }
+        return FindAncestor<T>(node.GetParent());
+    }
 }
 
 static class Empty<T>
