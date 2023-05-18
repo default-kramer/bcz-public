@@ -8,7 +8,7 @@ using System.Linq;
 
 public class SinglePlayerMenu : Control
 {
-    sealed class ChoiceItem
+    sealed class ChoiceItem : IHaveHelpText
     {
         public readonly string DisplayValue;
         public readonly string HelpText;
@@ -21,35 +21,37 @@ public class SinglePlayerMenu : Control
 
         public override string ToString() => DisplayValue;
 
-        public static string GetHelpText(ChoiceItem item) => item.HelpText;
+        string? IHaveHelpText.GetHelpText() => HelpText;
 
+        // Game Mode choices
         public static readonly ChoiceItem ModeLevels = new("Levels", "Eliminate all targets to clear the level.\nAccuracy matters more than speed.\nPlay large combos to earn medals.");
         public static readonly ChoiceItem ModeScoreAttack = new("Score Attack", "Earn the highest score you can in a fixed amount of time.\nPlay quickly and combo aggressively!");
         public static readonly ChoiceItem ModePuzzles = new("Puzzles", "Take your time and find the largest combo.");
         public static readonly ChoiceItem ModePvPSim = new("PvP Simulator", "NO DESCRIPTION");
+
+        // Show/Hide Medals
+        public static readonly ChoiceItem MedalsHide = new("Hide", "Do not display your progress towards each medal.\nYou can still earn medals anyway.");
+        public static readonly ChoiceItem MedalsShow = new("Show", "Display your progress towards each medal.\nLarge combos are needed to win the gold medal.");
     }
 
     private readonly ChoiceModel<ChoiceItem> GameModeChoices = new ChoiceModel<ChoiceItem>()
         .AddChoices(ChoiceItem.ModeLevels, ChoiceItem.ModePuzzles, ChoiceItem.ModeScoreAttack);
 
-    private static readonly BCZ.Core.ISettingsCollection LevelsModeSettings = BCZ.Core.SinglePlayerSettings.NormalSettings;
+    private static readonly ISettingsCollection LevelsModeSettings = SinglePlayerSettings.NormalSettings;
     private static readonly ISinglePlayerSettings ScoreAttackSettings = SinglePlayerSettings.TODO;
 
     private readonly ChoiceModel<int> LevelChoices = new ChoiceModel<int>()
         .AddChoices(Enumerable.Range(1, LevelsModeSettings.MaxLevel));
 
-    private readonly ChoiceModel<string> ChoiceMedals = new ChoiceModel<string>()
-        .AddChoices(MedalsHide, MedalsShow);
-    const string MedalsHide = "Hide";
-    const string MedalsShow = "Show";
+    private readonly ChoiceModel<ChoiceItem> ChoiceMedals = new ChoiceModel<ChoiceItem>()
+        .AddChoices(ChoiceItem.MedalsHide, ChoiceItem.MedalsShow);
 
-    private readonly ChoiceModel<string> ChoiceScoreAttackGoal = new ChoiceModel<string>()
-        .AddChoices(ScoreAttackGoal_PB, ScoreAttackGoal_Beginner, ScoreAttackGoal_Advanced, ScoreAttackGoal_Elite, ScoreAttackGoal_WR);
-    const string ScoreAttackGoal_PB = "Personal Best";
-    const string ScoreAttackGoal_Beginner = "Beginner";
-    const string ScoreAttackGoal_Advanced = "Advanced";
-    const string ScoreAttackGoal_Elite = "Elite";
-    const string ScoreAttackGoal_WR = "World Record";
+    private readonly ChoiceModel<ScoreAttackGoal> ChoiceScoreAttackGoal = new ChoiceModel<ScoreAttackGoal>().AddChoices(
+        ScoreAttackGoal.PersonalBest,
+        ScoreAttackGoal.Beginner,
+        ScoreAttackGoal.Advanced,
+        ScoreAttackGoal.Elite,
+        ScoreAttackGoal.WorldRecord);
 
     readonly struct Members
     {
@@ -90,7 +92,8 @@ public class SinglePlayerMenu : Control
     // Called when the node enters the scene tree for the first time.
     public override void _Ready()
     {
-        GameModeChoices.AddHelpText(ChoiceItem.GetHelpText);
+        LevelChoices.AddHelpText(GetLevelsModeHelpText);
+        ChoiceScoreAttackGoal.AddHelpText(GetScoreAttackGoalHelpText);
 
         if (Util.IsSuperuser)
         {
@@ -135,7 +138,7 @@ public class SinglePlayerMenu : Control
         // For now just placeholder code
     }
 
-    private bool HideMedals => ChoiceMedals.SelectedItem == MedalsHide;
+    private bool HideMedals => ChoiceMedals.SelectedItem == ChoiceItem.MedalsHide;
 
     private void StartGame()
     {
@@ -168,6 +171,38 @@ public class SinglePlayerMenu : Control
     private void BackToMainMenu()
     {
         NewRoot.FindRoot(this).BackToMainMenu();
+    }
+
+    private string?[] LevelsModeDescriptions = new string?[LevelsModeSettings.MaxLevel];
+    private string GetLevelsModeHelpText(int level)
+    {
+        int index = level - 1;
+        var item = LevelsModeDescriptions[index];
+        if (item != null) { return item; }
+
+        var count = LevelsModeSettings.GetSettings(level).EnemyCount;
+        var description = $"Eliminate {count} targets to win.";
+        LevelsModeDescriptions[index] = description;
+        return description;
+    }
+
+    private string? GetScoreAttackGoalHelpText(ScoreAttackGoal goal)
+    {
+        if (goal.FixedValue != null)
+        {
+            return goal.FixedValue.Value.helpText;
+        }
+        else if (goal == ScoreAttackGoal.PersonalBest)
+        {
+            var score = goal.GetTargetScore();
+            return $"Your current PB is {score.ToString("N0")}.";
+        }
+        else if (goal == ScoreAttackGoal.WorldRecord)
+        {
+            var score = goal.GetTargetScore();
+            return $"Are you serious?\nThe current WR is {score.ToString("N0")}... Good luck!";
+        }
+        return null;
     }
 
     /// <summary>
@@ -226,9 +261,9 @@ public class SinglePlayerMenu : Control
     class ScoreAttackLevelToken : LevelToken
     {
         private readonly ISinglePlayerSettings settings;
-        private readonly string goalType;
+        private readonly ScoreAttackGoal goalType;
 
-        public ScoreAttackLevelToken(ISinglePlayerSettings settings, string goalType)
+        public ScoreAttackLevelToken(ISinglePlayerSettings settings, ScoreAttackGoal goalType)
         {
             this.settings = settings;
             this.goalType = goalType;
@@ -249,22 +284,45 @@ public class SinglePlayerMenu : Control
             return package;
         }
 
-        private int GetGoal()
+        private int GetGoal() => goalType.GetTargetScore();
+    }
+
+    sealed class ScoreAttackGoal
+    {
+        public readonly string DisplayValue;
+        public readonly (int score, string helpText)? FixedValue;
+
+        private ScoreAttackGoal(string displayValue, (int score, string helpText)? fixedValue)
         {
-            switch (goalType)
+            this.DisplayValue = displayValue;
+            this.FixedValue = fixedValue;
+        }
+
+        public override string ToString() => DisplayValue;
+
+        public static readonly ScoreAttackGoal Beginner = new ScoreAttackGoal("Beginner", (10000, $"Try for {10000.ToString("N0")} points."));
+        public static readonly ScoreAttackGoal Advanced = new ScoreAttackGoal("Advanced", (20000, $"Try for {20000.ToString("N0")} points."));
+        public static readonly ScoreAttackGoal Elite = new ScoreAttackGoal("Elite", (30000, $"Try for {30000.ToString("N0")} points."));
+        public static readonly ScoreAttackGoal PersonalBest = new ScoreAttackGoal("Personal Best", null);
+        public static readonly ScoreAttackGoal WorldRecord = new ScoreAttackGoal("World Record", null);
+
+        public const int MinPersonalBest = 100; // To be used if the player doesn't have a PB yet
+
+        public int GetTargetScore()
+        {
+            if (FixedValue.HasValue)
             {
-                case ScoreAttackGoal_PB:
-                    return Math.Max(100, SaveData.ScoreAttackPB);
-                case ScoreAttackGoal_Beginner:
-                    return 10000;
-                case ScoreAttackGoal_Advanced:
-                    return 20000;
-                case ScoreAttackGoal_Elite:
-                    return 30000;
-                case ScoreAttackGoal_WR:
-                    return 33000;
+                return FixedValue.Value.score;
             }
-            throw new Exception($"Unexpected goal type: {goalType}");
+            else if (this == PersonalBest)
+            {
+                return Math.Max(MinPersonalBest, SaveData.ScoreAttackPB);
+            }
+            else if (this == WorldRecord)
+            {
+                return 33000;
+            }
+            throw new Exception("Assert fail");
         }
     }
 }

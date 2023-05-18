@@ -16,9 +16,27 @@ public interface IChoiceModel
     int SelectedIndex { get; }
 }
 
+public interface IHaveHelpText
+{
+    string? GetHelpText();
+}
+
 public sealed class ChoiceModel<T> : IChoiceModel
 {
-    private Func<T, string?> helpTextProvider = x => null;
+    private static readonly Func<T, string?> defaultHelpTextProvider;
+    static ChoiceModel()
+    {
+        if (typeof(IHaveHelpText).IsAssignableFrom(typeof(T)))
+        {
+            defaultHelpTextProvider = (T item) => ((IHaveHelpText)item!).GetHelpText();
+        }
+        else
+        {
+            defaultHelpTextProvider = x => null;
+        }
+    }
+
+    private Func<T, string?> helpTextProvider = defaultHelpTextProvider;
     private readonly List<T> Choices = new List<T>();
     private readonly List<string> DisplayValues = new();
     public int SelectedIndex { get; private set; } = -1;
@@ -68,8 +86,8 @@ public sealed class ChoiceModel<T> : IChoiceModel
     private void SetIndex(int index)
     {
         SelectedIndex = (index + Choices.Count) % Choices.Count;
-        onChanged(this);
         this.HelpText = helpTextProvider(SelectedItem);
+        onChanged(this);
     }
 
     public void Next()
