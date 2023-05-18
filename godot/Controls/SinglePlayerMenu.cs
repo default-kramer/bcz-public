@@ -35,7 +35,7 @@ public class SinglePlayerMenu : Control
     }
 
     private readonly ChoiceModel<ChoiceItem> GameModeChoices = new ChoiceModel<ChoiceItem>()
-        .AddChoices(ChoiceItem.ModeLevels, ChoiceItem.ModePuzzles, ChoiceItem.ModeScoreAttack);
+        .AddChoices(ChoiceItem.ModeLevels, ChoiceItem.ModeScoreAttack);
 
     private static readonly ISettingsCollection LevelsModeSettings = SinglePlayerSettings.NormalSettings;
     private static readonly ISinglePlayerSettings ScoreAttackSettings = SinglePlayerSettings.ScoreAttackSettings;
@@ -97,6 +97,7 @@ public class SinglePlayerMenu : Control
 
         if (Util.IsSuperuser)
         {
+            GameModeChoices.AddChoice(ChoiceItem.ModePuzzles);
             GameModeChoices.AddChoice(ChoiceItem.ModePvPSim);
         }
 
