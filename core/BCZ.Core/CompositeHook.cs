@@ -30,7 +30,7 @@ namespace BCZ.Core
             b.OnComboLikelyCompleted(state, combo, scheduler);
         }
 
-        public void OnComboUpdated(ComboInfo previous, ComboInfo current, IScheduler scheduler, int score)
+        public void OnComboUpdated(ComboInfo previous, ComboInfo current, IScheduler scheduler, Score score)
         {
             a.OnComboUpdated(previous, current, scheduler, score);
             b.OnComboUpdated(previous, current, scheduler, score);
@@ -40,6 +40,11 @@ namespace BCZ.Core
         {
             a.PreSpawn(state, spawnCount);
             b.PreSpawn(state, spawnCount);
+        }
+
+        public bool WillAddEnemies()
+        {
+            return a.WillAddEnemies() || b.WillAddEnemies();
         }
     }
 }

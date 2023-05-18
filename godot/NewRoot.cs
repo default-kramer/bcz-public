@@ -69,15 +69,7 @@ public class NewRoot : Control
 
     internal static NewRoot FindRoot(Node child)
     {
-        if (child == null)
-        {
-            throw new Exception("Failed to find root node");
-        }
-        if (child is NewRoot me)
-        {
-            return me;
-        }
-        return FindRoot(child.GetParent());
+        return child.FindAncestor<NewRoot>() ?? throw new Exception("Failed to find root node");
     }
 
     private SinglePlayerMenu.LevelToken? levelToken;
@@ -90,7 +82,7 @@ public class NewRoot : Control
 
     public bool CanAdvanceToNextLevel()
     {
-        return levelToken.HasValue && levelToken.Value.CanAdvance;
+        return levelToken != null && levelToken.CanAdvance;
     }
 
     public void AdvanceToNextLevel()
@@ -100,9 +92,9 @@ public class NewRoot : Control
             throw new InvalidOperationException("cannot advance");
         }
 
-        if (levelToken.Value.NextLevel(out var nextToken))
+        if (levelToken.NextLevel())
         {
-            StartGame(nextToken);
+            StartGame(levelToken.CreateGamePackage());
         }
         else
         {
@@ -116,7 +108,7 @@ public class NewRoot : Control
         {
             throw new InvalidOperationException("cannot replay");
         }
-        StartGame(levelToken.Value);
+        StartGame(levelToken);
     }
 
     private static void Remove(Control c)

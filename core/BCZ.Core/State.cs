@@ -11,9 +11,13 @@ namespace BCZ.Core
     /// <summary>
     /// A read-only view of some mutable state data
     /// </summary>
-    interface IStateData
+    public interface IStateData
     {
-        int Score { get; }
+        Score Score { get; }
+        StateEvent CurrentEvent { get; }
+        Moment LastComboMoment { get; }
+
+        int EfficiencyInt();
     }
 
     public sealed class State : IDumpCallback
@@ -25,8 +29,8 @@ namespace BCZ.Core
         public ComboInfo BestCombo { get; private set; } = ComboInfo.Empty;
         private ComboInfo currentCombo;
         public ComboInfo? ActiveOrPreviousCombo { get; private set; } = null;
-        private int numCombos = 0;
         private readonly PayoutTable scorePayoutTable = PayoutTable.DefaultScorePayoutTable;
+        private readonly int scorePerEnemy;
         private readonly IStateHook hook;
         private readonly StateEvent.Factory eventFactory;
         private readonly Timekeeper timekeeper;
@@ -36,22 +40,18 @@ namespace BCZ.Core
         private readonly IDestructionAnimator destructionAnimator;
         private readonly BarrierDestructionAnimator barrierDestructionAnimator;
         private readonly StateData stateData;
+        public StateEvent CurrentEvent => stateData.currentEvent;
 
-        private StateEvent __currentEvent = StateEvent.StateConstructed;
-        public StateEvent CurrentEvent => __currentEvent;
-
-        public int Score => stateData.score;
-        public int NumCombos => numCombos;
+        public Score Score => stateData.Score;
+        public int NumCombos => stateData.NumCombos;
 
         public int NumCatalystsSpawned = 0; // Try not to use this...
 
-        public int EfficiencyInt()
-        {
-            if (NumCombos == 0) return 0;
-            return Score / NumCombos;
-        }
+        public IStateData Data => stateData;
 
-        public bool IsWaitingOnUser => CurrentEvent.Kind == StateEventKind.Spawned;
+        public static bool IsWaitingState(StateEventKind kind) => kind == StateEventKind.Spawned;
+
+        public bool IsWaitingOnUser => IsWaitingState(CurrentEvent.Kind);
 
         public bool IsGameOver => CurrentEvent.Kind == StateEventKind.GameEnded;
 
@@ -76,13 +76,15 @@ namespace BCZ.Core
 
         public static State CreateWithInfiniteHealth(Grid grid, ISpawnDeck deck)
         {
-            return new State(grid, deck, NullStateHook.Instance, new Timekeeper(), new StateData(), null, null, null);
+            const int scorePerEnemy = 100;
+            return new State(grid, deck, NullStateHook.Instance, new Timekeeper(), new StateData(), null, null, null, scorePerEnemy);
         }
 
-        private State(Grid grid, ISpawnDeck spawnDeck, IStateHook makeHook, Timekeeper timekeeper, StateData stateData,
+        private State(Grid grid, ISpawnDeck spawnDeck, IStateHook hook, Timekeeper timekeeper, StateData stateData,
             IAttackGridViewmodel? attackGridViewmodel,
             ISwitchesViewmodel? switchesViewmodel,
-            ICountdownViewmodel? countdownViewmodel)
+            ICountdownViewmodel? countdownViewmodel,
+            int scorePerEnemy)
         {
             this.grid = grid;
             this.fallSampler = new FallAnimationSampler(grid);
@@ -97,10 +99,11 @@ namespace BCZ.Core
             barrierDestructionAnimator = new BarrierDestructionAnimator();
             mover = null;
             currentCombo = ComboInfo.Empty;
-            this.hook = makeHook;
+            this.hook = hook;
             this.AttackGridViewmodel = attackGridViewmodel;
             this.SwitchesViewmodel = switchesViewmodel;
             this.CountdownViewmodel = countdownViewmodel;
+            this.scorePerEnemy = scorePerEnemy;
         }
 
         public readonly ICountdownViewmodel? CountdownViewmodel;
@@ -113,23 +116,34 @@ namespace BCZ.Core
 
         public static State Create(SeededSettings ss)
         {
+            var settings = ss.Settings;
             var spawns = ss.Settings.SpawnBlanks ? Lists.MainDeck : Lists.BlanklessDeck;
             var deck = new InfiniteSpawnDeck(spawns, new PRNG(ss.Seed));
-            var grid = Core.Grid.Create(ss.Settings, new PRNG(ss.Seed));
             var timekeeper = new Timekeeper();
             var stateData = new StateData();
 
             var mode = ss.Settings.GameMode;
             if (mode == GameMode.PvPSim)
             {
+                var grid = Core.Grid.Create(ss.Settings, new PRNG(ss.Seed));
                 var switches = new Switches();
                 var hook = new SimulatedAttacker(switches);
-                return new State(grid, deck, hook, timekeeper, stateData, hook.VM, hook.SwitchVM, null);
+                return new State(grid, deck, hook, timekeeper, stateData, hook.VM, hook.SwitchVM, null, settings.ScorePerEnemy);
             }
             else if (mode == GameMode.Levels)
             {
-                var hook = new CountdownHook(timekeeper, stateData, grid, timekeeper);
-                return new State(grid, deck, hook, timekeeper, stateData, null, null, hook);
+                var grid = Core.Grid.Create(ss.Settings, new PRNG(ss.Seed));
+                var levelsHook = new HookLevelsMode(timekeeper);
+                IStateHook hook = levelsHook;
+                var countdownVM = levelsHook.BuildCountdownVM(timekeeper, grid, stateData, ref hook);
+                return new State(grid, deck, hook, timekeeper, stateData, null, null, countdownVM, settings.ScorePerEnemy);
+            }
+            else if (mode == GameMode.ScoreAttack)
+            {
+                var scoreAttackHook = new HookScoreAttack(stateData, timekeeper, ss, out var grid);
+                IStateHook hook = scoreAttackHook;
+                var countdownVM = scoreAttackHook.BuildCountdownVM(timekeeper, ref hook);
+                return new State(grid, deck, hook, timekeeper, stateData, null, null, countdownVM, settings.ScorePerEnemy);
             }
             else
             {
@@ -145,7 +159,7 @@ namespace BCZ.Core
         // TODO this should probably go away ...
         public void Elapse(Moment now)
         {
-            if (__currentEvent.Kind == StateEventKind.GameEnded)
+            if (CurrentEvent.Kind == StateEventKind.GameEnded)
             {
                 return;
             }
@@ -166,7 +180,17 @@ namespace BCZ.Core
 
         public bool HandleCommand(Command command, Moment now)
         {
+            if (CurrentEvent.Kind == StateEventKind.GameEnded)
+            {
+                return false;
+            }
+
             Elapse(now);
+
+            if (CurrentEvent.Kind == StateEventKind.GameEnded)
+            {
+                return false;
+            }
 
             switch (command)
             {
@@ -195,7 +219,7 @@ namespace BCZ.Core
             {
                 return false;
             }
-            __currentEvent = result.Value;
+            stateData.currentEvent = result.Value;
             return true;
         }
 
@@ -207,7 +231,7 @@ namespace BCZ.Core
 
         private bool Update(StateEvent result)
         {
-            __currentEvent = result;
+            stateData.currentEvent = result;
             return true;
         }
 
@@ -218,8 +242,8 @@ namespace BCZ.Core
             if (currentCombo.PermissiveCombo.AdjustedGroupCount > 0)
             {
                 var scorePayout = GetHypotheticalScore(currentCombo);
-                stateData.score += scorePayout;
-                numCombos++;
+                ITimer timer = timekeeper;
+                stateData.OnComboCompleted(scorePayout, timer.Now);
                 //Console.WriteLine($"Score: {score} (+{scorePayout})");
             }
             currentCombo = ComboInfo.Empty;
@@ -435,18 +459,18 @@ namespace BCZ.Core
         /// <summary>
         /// If the given <paramref name="combo"/> were played, how much would it score?
         /// </summary>
-        public int GetHypotheticalScore(ComboInfo combo)
+        public Score GetHypotheticalScore(ComboInfo combo)
         {
-            int enemyScore = combo.NumEnemiesDestroyed * 100;
+            int enemyScore = combo.NumEnemiesDestroyed * scorePerEnemy;
             int comboScore = scorePayoutTable.GetPayout(combo.ComboToReward.AdjustedGroupCount);
-            return enemyScore + comboScore;
+            return new Score(comboScore, enemyScore);
         }
 
         private bool Transition(Moment now)
         {
             bool retval = __SingleTransition();
             while (__SingleTransition()) { }
-            if (retval && grid.Stats.EnemyCount == 0)
+            if (retval && grid.Stats.EnemyCount == 0 && !hook.WillAddEnemies())
             {
                 // Don't change to GameOver immediately. Let the combo resolve.
                 ClearedAllEnemies = true;
@@ -698,9 +722,26 @@ namespace BCZ.Core
 
         class StateData : IStateData
         {
-            public int score;
+            public Score Score { get; private set; }
+            public StateEvent currentEvent = StateEvent.StateConstructed;
+            public int NumCombos { get; private set; }
+            public Moment LastComboMoment { get; private set; }
 
-            int IStateData.Score => score;
+            public void OnComboCompleted(Score score, Moment now)
+            {
+                this.Score += score;
+                this.NumCombos++;
+                this.LastComboMoment = now;
+            }
+
+            StateEvent IStateData.CurrentEvent => currentEvent;
+
+            int IStateData.EfficiencyInt()
+            {
+                var comboCount = NumCombos;
+                if (comboCount == 0) return 0;
+                return Score.TotalScore / comboCount;
+            }
         }
     }
 }

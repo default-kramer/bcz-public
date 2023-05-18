@@ -1,51 +1,64 @@
 using BCZ.Core;
 using Godot;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 
 #nullable enable
 
 public class SinglePlayerMenu : Control
 {
-    private readonly ChoiceModel<string> GameModeChoices = new ChoiceModel<string>()
-        .AddChoices(ModeLevels, ModePuzzles, ModeScoreAttack);
-    const string ModeLevels = "Levels";
-    const string ModePuzzles = "Puzzles";
-    const string ModeScoreAttack = "Score Attack";
-    const string ModePvPSim = "PvP Simulator";
+    sealed class ChoiceItem : IHaveHelpText
+    {
+        public readonly string DisplayValue;
+        public readonly string HelpText;
 
-    private static readonly BCZ.Core.ISettingsCollection LevelsModeSettings = BCZ.Core.SinglePlayerSettings.NormalSettings;
+        public ChoiceItem(string displayValue, string helpText)
+        {
+            this.DisplayValue = displayValue;
+            this.HelpText = helpText;
+        }
+
+        public override string ToString() => DisplayValue;
+
+        string? IHaveHelpText.GetHelpText() => HelpText;
+
+        // Game Mode choices
+        public static readonly ChoiceItem ModeLevels = new("Levels", "Eliminate all targets to clear the level.\nAccuracy matters more than speed.\nPlay large combos to earn medals.");
+        public static readonly ChoiceItem ModeScoreAttack = new("Score Attack", "Earn the highest score you can in a fixed amount of time.\nPlay quickly and combo aggressively!");
+        public static readonly ChoiceItem ModePuzzles = new("Puzzles", "Take your time and find the largest combo.");
+        public static readonly ChoiceItem ModePvPSim = new("PvP Simulator", "NO DESCRIPTION");
+
+        // Show/Hide Medals
+        public static readonly ChoiceItem MedalsHide = new("Hide", "Do not display your progress towards each medal.\nYou can still earn medals anyway.");
+        public static readonly ChoiceItem MedalsShow = new("Show", "Display your progress towards each medal.\nLarge combos are needed to win the gold medal.");
+    }
+
+    private readonly ChoiceModel<ChoiceItem> GameModeChoices = new ChoiceModel<ChoiceItem>()
+        .AddChoices(ChoiceItem.ModeLevels, ChoiceItem.ModePuzzles, ChoiceItem.ModeScoreAttack);
+
+    private static readonly ISettingsCollection LevelsModeSettings = SinglePlayerSettings.NormalSettings;
+    private static readonly ISinglePlayerSettings ScoreAttackSettings = SinglePlayerSettings.ScoreAttackSettings;
 
     private readonly ChoiceModel<int> LevelChoices = new ChoiceModel<int>()
         .AddChoices(Enumerable.Range(1, LevelsModeSettings.MaxLevel));
 
-    private readonly ChoiceModel<string> ChoiceMedals = new ChoiceModel<string>()
-        .AddChoices(MedalsHide, MedalsShow);
-    const string MedalsHide = "Hide";
-    const string MedalsShow = "Show";
+    private readonly ChoiceModel<ChoiceItem> ChoiceMedals = new ChoiceModel<ChoiceItem>()
+        .AddChoices(ChoiceItem.MedalsHide, ChoiceItem.MedalsShow);
 
-    private readonly ChoiceModel<string> TimeLimitChoices = new ChoiceModel<string>()
-        .AddChoices(TimeLimit2m, TimeLimit5m, TimeLimit10m);
-    const string TimeLimit2m = "2 minutes";
-    const string TimeLimit5m = "5 minutes";
-    const string TimeLimit10m = "10 minutes";
-
-    private readonly ChoiceModel<string> LayoutChoices = new ChoiceModel<string>()
-        .AddChoices(LayoutTall, LayoutWide);
-    const string LayoutTall = "Tall";
-    const string LayoutWide = "Wide";
-
-    private readonly ChoiceModel<int> EnemyCountChoices = new ChoiceModel<int>()
-        .AddChoices(Enumerable.Range(1, 20).Select(i => i * 4));
+    private readonly ChoiceModel<ScoreAttackGoal> ChoiceScoreAttackGoal = new ChoiceModel<ScoreAttackGoal>().AddChoices(
+        ScoreAttackGoal.PersonalBest,
+        ScoreAttackGoal.Beginner,
+        ScoreAttackGoal.Advanced,
+        ScoreAttackGoal.Elite,
+        ScoreAttackGoal.WorldRecord);
 
     readonly struct Members
     {
         public readonly MenuChoiceControl ChoiceGameMode;
         public readonly MenuChoiceControl ChoiceLevel;
         public readonly MenuChoiceControl ChoiceMedals;
-        public readonly MenuChoiceControl ChoiceTimeLimit;
-        public readonly MenuChoiceControl ChoiceLayout;
-        public readonly MenuChoiceControl ChoiceEnemyCount;
+        public readonly MenuChoiceControl ChoiceScoreAttackGoal;
         public readonly Button ButtonStartGame;
         public readonly Button ButtonBack;
 
@@ -66,14 +79,8 @@ public class SinglePlayerMenu : Control
             me.FindNode(out ChoiceMedals, nameof(ChoiceMedals));
             ChoiceMedals.Model = me.ChoiceMedals;
 
-            me.FindNode(out ChoiceTimeLimit, nameof(ChoiceTimeLimit));
-            ChoiceTimeLimit.Model = me.TimeLimitChoices;
-
-            me.FindNode(out ChoiceLayout, nameof(ChoiceLayout));
-            ChoiceLayout.Model = me.LayoutChoices;
-
-            me.FindNode(out ChoiceEnemyCount, nameof(ChoiceEnemyCount));
-            ChoiceEnemyCount.Model = me.EnemyCountChoices;
+            me.FindNode(out ChoiceScoreAttackGoal, nameof(ChoiceScoreAttackGoal));
+            ChoiceScoreAttackGoal.Model = me.ChoiceScoreAttackGoal;
 
             me.FindNode(out ButtonStartGame, nameof(ButtonStartGame));
             me.FindNode(out ButtonBack, nameof(ButtonBack));
@@ -85,9 +92,12 @@ public class SinglePlayerMenu : Control
     // Called when the node enters the scene tree for the first time.
     public override void _Ready()
     {
+        LevelChoices.AddHelpText(GetLevelsModeHelpText);
+        ChoiceScoreAttackGoal.AddHelpText(GetScoreAttackGoalHelpText);
+
         if (Util.IsSuperuser)
         {
-            GameModeChoices.AddChoice(ModePvPSim);
+            GameModeChoices.AddChoice(ChoiceItem.ModePvPSim);
         }
 
         this.members = new Members(this);
@@ -110,15 +120,14 @@ public class SinglePlayerMenu : Control
 
     private void GameModeChanged()
     {
-        switch (GameModeChoices.SelectedItem)
+        var item = GameModeChoices.SelectedItem;
+        if (item == ChoiceItem.ModeLevels || item == ChoiceItem.ModePvPSim)
         {
-            case ModeLevels:
-            case ModePvPSim:
-                Show(members.NormalModeOptions);
-                break;
-            case ModeScoreAttack:
-                Show(members.ScoreAttackOptions);
-                break;
+            Show(members.NormalModeOptions);
+        }
+        else if (item == ChoiceItem.ModeScoreAttack)
+        {
+            Show(members.ScoreAttackOptions);
         }
     }
 
@@ -129,27 +138,32 @@ public class SinglePlayerMenu : Control
         // For now just placeholder code
     }
 
-    private bool HideMedals => ChoiceMedals.SelectedItem == MedalsHide;
+    private bool HideMedals => ChoiceMedals.SelectedItem == ChoiceItem.MedalsHide;
 
     private void StartGame()
     {
         var mode = GameModeChoices.SelectedItem;
-        if (mode == ModePuzzles)
+        if (mode == ChoiceItem.ModePuzzles)
         {
             NewRoot.FindRoot(this).SolvePuzzles();
         }
-        else if (mode == ModePvPSim)
+        else if (mode == ChoiceItem.ModePvPSim)
         {
             var collection = BCZ.Core.SinglePlayerSettings.PvPSimSettings;
             int level = LevelChoices.SelectedItem;
-            var token = new LevelToken(level, collection, HideMedals);
+            var token = new LevelsModeToken(level, collection, HideMedals);
+            NewRoot.FindRoot(this).StartGame(token);
+        }
+        else if (mode == ChoiceItem.ModeScoreAttack)
+        {
+            var token = new ScoreAttackLevelToken(ScoreAttackSettings, ChoiceScoreAttackGoal.SelectedItem);
             NewRoot.FindRoot(this).StartGame(token);
         }
         else
         {
             var collection = LevelsModeSettings;
             int level = LevelChoices.SelectedItem;
-            var token = new LevelToken(level, collection, HideMedals);
+            var token = new LevelsModeToken(level, collection, HideMedals);
             NewRoot.FindRoot(this).StartGame(token);
         }
     }
@@ -159,39 +173,156 @@ public class SinglePlayerMenu : Control
         NewRoot.FindRoot(this).BackToMainMenu();
     }
 
-    public readonly struct LevelToken
+    private string?[] LevelsModeDescriptions = new string?[LevelsModeSettings.MaxLevel];
+    private string GetLevelsModeHelpText(int level)
     {
-        private readonly int Level;
+        int index = level - 1;
+        var item = LevelsModeDescriptions[index];
+        if (item != null) { return item; }
+
+        var count = LevelsModeSettings.GetSettings(level).EnemyCount;
+        var description = $"Eliminate {count} targets to win.";
+        LevelsModeDescriptions[index] = description;
+        return description;
+    }
+
+    private string? GetScoreAttackGoalHelpText(ScoreAttackGoal goal)
+    {
+        if (goal.FixedValue != null)
+        {
+            return goal.FixedValue.Value.helpText;
+        }
+        else if (goal == ScoreAttackGoal.PersonalBest)
+        {
+            var score = goal.GetTargetScore();
+            return $"Your current PB is {score.ToString("N0")}.";
+        }
+        else if (goal == ScoreAttackGoal.WorldRecord)
+        {
+            var score = goal.GetTargetScore();
+            return $"Are you serious?\nThe current WR is {score.ToString("N0")}... Good luck!";
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// Handles responses to the "Game Over" menu, such as "retry" or "proceed to next level".
+    /// </summary>
+    public abstract class LevelToken
+    {
+        /// <summary>
+        /// Create a new game at the current level.
+        /// </summary>
+        public abstract GamePackage CreateGamePackage();
+
+        public abstract bool CanAdvance { get; }
+
+        /// <summary>
+        /// Advance to the next level. Should only be called when <see cref="CanAdvance"/>.
+        /// </summary>
+        public abstract bool NextLevel();
+    }
+
+    class LevelsModeToken : LevelToken
+    {
+        private int Level;
         private readonly ISettingsCollection Collection;
         private readonly bool HideMedals;
 
-        public LevelToken(int level, ISettingsCollection collection, bool hideMedals)
+        public LevelsModeToken(int level, ISettingsCollection collection, bool hideMedals)
         {
             this.Level = level;
             this.Collection = collection;
             this.HideMedals = hideMedals;
         }
 
-        public bool CanAdvance { get { return Level < Collection.MaxLevel; } }
+        public override bool CanAdvance { get { return Level < Collection.MaxLevel; } }
 
-        public bool NextLevel(out LevelToken result)
+        public override bool NextLevel()
         {
             if (CanAdvance)
             {
-                result = new LevelToken(Level + 1, Collection, HideMedals);
+                Level = Level + 1;
                 return true;
             }
-            result = this;
             return false;
         }
 
-        public GamePackage CreateGamePackage()
+        public override GamePackage CreateGamePackage()
         {
             var settings = Collection.GetSettings(Level).AddRandomSeed();
             var goals = Collection.GetGoals(Level);
-            var package = new GamePackage(settings, goals);
+            var package = new LevelsModeGamePackage(settings, Level, goals);
             package.HideMedalProgress = HideMedals;
             return package;
+        }
+    }
+
+    class ScoreAttackLevelToken : LevelToken
+    {
+        private readonly ISinglePlayerSettings settings;
+        private readonly ScoreAttackGoal goalType;
+
+        public ScoreAttackLevelToken(ISinglePlayerSettings settings, ScoreAttackGoal goalType)
+        {
+            this.settings = settings;
+            this.goalType = goalType;
+        }
+
+        public override bool CanAdvance => false;
+
+        public override bool NextLevel()
+        {
+            throw new NotImplementedException("This should never be called");
+        }
+
+        public override GamePackage CreateGamePackage()
+        {
+            var settings = this.settings.AddRandomSeed();
+            var package = new ScoreAttackGamePackage(settings);
+            package.ScoreAttackGoal = GetGoal();
+            return package;
+        }
+
+        private int GetGoal() => goalType.GetTargetScore();
+    }
+
+    sealed class ScoreAttackGoal
+    {
+        public readonly string DisplayValue;
+        public readonly (int score, string helpText)? FixedValue;
+
+        private ScoreAttackGoal(string displayValue, (int score, string helpText)? fixedValue)
+        {
+            this.DisplayValue = displayValue;
+            this.FixedValue = fixedValue;
+        }
+
+        public override string ToString() => DisplayValue;
+
+        public static readonly ScoreAttackGoal Beginner = new ScoreAttackGoal("Beginner", (10000, $"Try for {10000.ToString("N0")} points."));
+        public static readonly ScoreAttackGoal Advanced = new ScoreAttackGoal("Advanced", (20000, $"Try for {20000.ToString("N0")} points."));
+        public static readonly ScoreAttackGoal Elite = new ScoreAttackGoal("Elite", (30000, $"Try for {30000.ToString("N0")} points."));
+        public static readonly ScoreAttackGoal PersonalBest = new ScoreAttackGoal("Personal Best", null);
+        public static readonly ScoreAttackGoal WorldRecord = new ScoreAttackGoal("World Record", null);
+
+        public const int MinPersonalBest = 100; // To be used if the player doesn't have a PB yet
+
+        public int GetTargetScore()
+        {
+            if (FixedValue.HasValue)
+            {
+                return FixedValue.Value.score;
+            }
+            else if (this == PersonalBest)
+            {
+                return Math.Max(MinPersonalBest, SaveData.ScoreAttackPB);
+            }
+            else if (this == WorldRecord)
+            {
+                return 33000;
+            }
+            throw new Exception("Assert fail");
         }
     }
 }

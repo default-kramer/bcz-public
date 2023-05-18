@@ -39,6 +39,7 @@ public class MenuChoiceControl : Control
     }
 
     private Members members;
+    private IHelpText helpText = NullHelpText.Instance;
 
     private IChoiceModel? model;
 
@@ -101,6 +102,7 @@ public class MenuChoiceControl : Control
     {
         members = new Members(this);
         labels.Add(members.LabelValue);
+        helpText = this.FindAncestor<IHelpText>() ?? helpText;
     }
 
     private void StyleFocus(Control control)
@@ -115,6 +117,11 @@ public class MenuChoiceControl : Control
         control.Set("custom_colors/font_color", null);
     }
 
+    private void SetHelpText()
+    {
+        helpText.SetText(Model?.HelpText);
+    }
+
     private void GotFocus()
     {
         StyleFocus(members.ButtonLeft);
@@ -123,10 +130,13 @@ public class MenuChoiceControl : Control
         {
             StyleFocus(labels[i]);
         }
+
+        SetHelpText();
     }
 
     private void LostFocus()
     {
+        helpText.SetText(null);
         StyleUnfocus(members.ButtonLeft);
         StyleUnfocus(members.ButtonRight);
         for (int i = 0; i < labels.Count; i++)
@@ -153,6 +163,7 @@ public class MenuChoiceControl : Control
             UpdateLabelVisibility(model.SelectedIndex);
             // We need to grab focus after the left/right button gets a mouse click
             this.GrabFocus();
+            SetHelpText();
         }
     }
 

@@ -1,4 +1,5 @@
 using BCZ.Core;
+using BCZ.Core.Viewmodels;
 using Godot;
 using System;
 using System.Collections.Generic;
@@ -16,7 +17,12 @@ public class GoalViewerControl : Control
 
     public void SetLogic(State state, IReadOnlyList<IGoal> goals)
     {
-        this.viewmodel = new Viewmodel(goals, state);
+        this.viewmodel = new Viewmodel(goals, state.Data);
+    }
+
+    public void SetLogicForScoreAttack(IStateData state, ICountdownViewmodel countdown, int targetScore)
+    {
+        this.viewmodel = new ScoreAttackViewmodel(state, countdown, targetScore);
     }
 
     public override void _Draw()
@@ -37,7 +43,13 @@ public class GoalViewerControl : Control
         {
             var goal = goals[i];
             float xOffset = padding * (i + 1) + barWidth * i;
-            float height = maxHeight * goal.Progress;
+            float height;
+            if (goal.Projection != null)
+            {
+                height = maxHeight * goal.Projection.Value;
+                DrawRect(new Rect2(xOffset, yStart - height, barWidth, height), goal.Color, filled: false);
+            }
+            height = maxHeight * goal.Progress;
             DrawRect(new Rect2(xOffset, yStart - height, barWidth, height), goal.Color);
         }
     }
@@ -60,7 +72,7 @@ public class GoalViewerControl : Control
     class Viewmodel : IViewmodel
     {
         private readonly IReadOnlyList<IGoal> goals;
-        private readonly State state;
+        private readonly IStateData state;
         private readonly int[] bars;
         private readonly GoalModel[] models;
         private int headroom = int.MinValue;
@@ -71,7 +83,7 @@ public class GoalViewerControl : Control
         const int playerIndex = 0;
         const int goalsOffset = 1;
 
-        public Viewmodel(IReadOnlyList<IGoal> goals, State state)
+        public Viewmodel(IReadOnlyList<IGoal> goals, IStateData state)
         {
             this.goals = goals;
             this.state = state;
@@ -129,15 +141,55 @@ public class GoalViewerControl : Control
         }
     }
 
+    class ScoreAttackViewmodel : IViewmodel
+    {
+        private readonly IStateData state;
+        private readonly ICountdownViewmodel countdown;
+        private readonly int targetScore;
+        private readonly float headroom;
+        private readonly GoalModel[] models = new GoalModel[2];
+        private int lastPlayerScore = 0;
+
+        public ScoreAttackViewmodel(IStateData state, ICountdownViewmodel countdown, int targetScore)
+        {
+            this.state = state;
+            this.countdown = countdown;
+            this.targetScore = targetScore;
+            this.headroom = targetScore * 1.2f;
+            models[1] = new GoalModel(targetScore / headroom, GameColors.Silver);
+            models[0] = new GoalModel(lastPlayerScore, GameColors.Green, 0f);
+        }
+
+        public ReadOnlySpan<GoalModel> Recalculate()
+        {
+            var playerScore = state.Score.TotalScore;
+            if (playerScore != lastPlayerScore)
+            {
+                lastPlayerScore = playerScore;
+                float scorePerMilli = playerScore * 1f / state.LastComboMoment.Millis;
+                float projection = playerScore + scorePerMilli * countdown.RemainingMillis;
+                float bar1 = Math.Min(1f, playerScore / headroom);
+                float bar2 = Math.Min(1f, projection / headroom);
+                models[0] = new GoalModel(bar1, GameColors.Green, bar2);
+                //Console.WriteLine($"New Projection: {projection} / {scorePerMilli} / {countdown.RemainingMillis}");
+            }
+            return models;
+        }
+    }
+
     readonly struct GoalModel
     {
         public readonly float Progress;
         public readonly Godot.Color Color;
+        public readonly float? Projection;
 
-        public GoalModel(float progress, Godot.Color color)
+        public GoalModel(float progress, Godot.Color color) : this(progress, color, null) { }
+
+        public GoalModel(float progress, Godot.Color color, float? projection)
         {
             this.Progress = progress;
             this.Color = color;
+            this.Projection = projection;
         }
     }
 }

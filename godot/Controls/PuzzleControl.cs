@@ -189,7 +189,7 @@ public class PuzzleControl : Control, PuzzleMenu.ILogic
                 gameOver = true;
                 var targetScore = state.GetHypotheticalScore(puzzle.LastCombo);
                 var userScore = state.Score;
-                if (userScore >= targetScore)
+                if (userScore.TotalScore >= targetScore.TotalScore)
                 {
                     parent.OnSuccess();
                 }

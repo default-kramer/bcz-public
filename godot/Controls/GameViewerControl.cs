@@ -258,51 +258,6 @@ public class GameViewerControl : Control
         }
     }
 
-    private static void StandardInitialize(Members members, Ticker ticker, IReadOnlyList<IGoal> goals)
-    {
-        members.GridViewer.SetLogic(ticker);
-        var state = ticker.state;
-        members.QueueViewer.Model = state.MakeQueueModel();
-
-        members.GridViewer.Visible = true;
-        members.QueueViewer.Visible = true;
-
-        members.CountdownViewer.SetModel(state.CountdownViewmodel);
-
-        if (state.SwitchesViewmodel != null)
-        {
-            members.SwitchViewerControl.SetModel(state.SwitchesViewmodel);
-            members.SwitchViewerControl.Visible = true;
-        }
-        else
-        {
-            members.SwitchViewerControl.Visible = false;
-        }
-
-        if (state.AttackGridViewmodel != null)
-        {
-            members.AttackGridViewer.SetLogicForAttackGrid(state.AttackGridViewmodel);
-            members.SwitchViewerControl.AttackViewer = members.AttackGridViewer;
-            members.AttackGridViewer.Visible = true;
-        }
-        else
-        {
-            members.AttackGridViewer.Visible = false;
-            members.SwitchViewerControl.AttackViewer = null;
-        }
-
-        if (goals.Count > 0)
-        {
-            members.GoalViewerControl.SetLogic(state, goals);
-            members.GoalViewerControl.Visible = true;
-        }
-        else
-        {
-            members.GoalViewerControl.Disable();
-            members.GoalViewerControl.Visible = false;
-        }
-    }
-
     internal abstract class LogicBase : ILogic
     {
         protected readonly DotnetTicker ticker;
@@ -366,9 +321,43 @@ public class GameViewerControl : Control
 
         protected virtual IReadOnlyList<IGoal> Goals => NoGoals;
 
-        public void Initialize(Members members)
+        public virtual void Initialize(Members members)
         {
-            StandardInitialize(members, ticker, Goals);
+            StandardInitialize(members, ticker);
+        }
+
+        public static void StandardInitialize(Members members, Ticker ticker)
+        {
+            members.GridViewer.SetLogic(ticker);
+            var state = ticker.state;
+            members.QueueViewer.Model = state.MakeQueueModel();
+
+            members.GridViewer.Visible = true;
+            members.QueueViewer.Visible = true;
+
+            members.CountdownViewer.SetModel(state.CountdownViewmodel);
+
+            if (state.SwitchesViewmodel != null)
+            {
+                members.SwitchViewerControl.SetModel(state.SwitchesViewmodel);
+                members.SwitchViewerControl.Visible = true;
+            }
+            else
+            {
+                members.SwitchViewerControl.Visible = false;
+            }
+
+            if (state.AttackGridViewmodel != null)
+            {
+                members.AttackGridViewer.SetLogicForAttackGrid(state.AttackGridViewmodel);
+                members.SwitchViewerControl.AttackViewer = members.AttackGridViewer;
+                members.AttackGridViewer.Visible = true;
+            }
+            else
+            {
+                members.AttackGridViewer.Visible = false;
+                members.SwitchViewerControl.AttackViewer = null;
+            }
         }
     }
 
@@ -384,18 +373,6 @@ public class GameViewerControl : Control
             this.replayWriter = replayWriter;
             this.members = members;
             this.gamePackage = gamePackage;
-        }
-
-        protected override IReadOnlyList<IGoal> Goals
-        {
-            get
-            {
-                if (gamePackage.HideMedalProgress)
-                {
-                    return NoGoals;
-                }
-                return gamePackage.Goals;
-            }
         }
 
         public override void Cleanup()
@@ -417,6 +394,12 @@ public class GameViewerControl : Control
                 Cleanup();
                 members.GameOverMenu.OnGameOver(state, gamePackage);
             }
+        }
+
+        public override void Initialize(Members members)
+        {
+            base.Initialize(members);
+            gamePackage.Initialize(members, ticker);
         }
     }
 
@@ -452,7 +435,7 @@ public class GameViewerControl : Control
 
         public void Initialize(Members members)
         {
-            StandardInitialize(members, replayDriver.Ticker, NoGoals);
+            LogicBase.StandardInitialize(members, replayDriver.Ticker);
         }
     }
 
