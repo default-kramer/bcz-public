@@ -136,6 +136,7 @@ public class MenuChoiceControl : Control
 
     private void LostFocus()
     {
+        helpText.SetText(null);
         StyleUnfocus(members.ButtonLeft);
         StyleUnfocus(members.ButtonRight);
         for (int i = 0; i < labels.Count; i++)
