@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace BCZ.Core.ReplayModel
 {
-    class InvalidReplayException : Exception
+    public sealed class InvalidReplayException : Exception
     {
         public InvalidReplayException(string message) : base(message) { }
 
@@ -37,6 +37,14 @@ namespace BCZ.Core.ReplayModel
             {
                 new ReplayReader(reader, parser).Read();
             }
+        }
+
+        public static (SeededSettings settings, int finalScore) ValidateReplay(TextReader replayFile)
+        {
+            var parser = new ReplayParser();
+            var reader = new ReplayReader(replayFile, parser);
+            reader.Read();
+            return parser.TODO();
         }
 
         public static ReplayDriver BuildReplayDriver(string filename)

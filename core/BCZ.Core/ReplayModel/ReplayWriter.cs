@@ -22,14 +22,21 @@ namespace BCZ.Core.ReplayModel
 
             writer.WriteLine("version -1"); // use negative numbers until I am ready to promise forward compatibility
             writer.WriteLine("s seed {0}", ss.Seed.Serialize());
-            writer.WriteLine("s mode {0}", settings.GameMode);
-            writer.WriteLine("s enemyCount {0}", settings.EnemyCount);
-            writer.WriteLine("s spawnBlanks {0}", settings.SpawnBlanks);
-            writer.WriteLine("s gridWidth {0}", settings.GridWidth);
-            writer.WriteLine("s gridHeight {0}", settings.GridHeight);
-            writer.WriteLine("s enemiesPerStripe {0}", settings.EnemiesPerStripe);
-            writer.WriteLine("s rowsPerStripe {0}", settings.RowsPerStripe);
-            writer.WriteLine("s scorePerEnemy {0}", settings.ScorePerEnemy);
+            if (settings.OfficialSettingsId.HasValue)
+            {
+                writer.WriteLine("s officialSettingsId {0}", settings.OfficialSettingsId.Value.Id);
+            }
+            else
+            {
+                writer.WriteLine("s mode {0}", settings.GameMode);
+                writer.WriteLine("s enemyCount {0}", settings.EnemyCount);
+                writer.WriteLine("s spawnBlanks {0}", settings.SpawnBlanks);
+                writer.WriteLine("s gridWidth {0}", settings.GridWidth);
+                writer.WriteLine("s gridHeight {0}", settings.GridHeight);
+                writer.WriteLine("s enemiesPerStripe {0}", settings.EnemiesPerStripe);
+                writer.WriteLine("s rowsPerStripe {0}", settings.RowsPerStripe);
+                writer.WriteLine("s scorePerEnemy {0}", settings.ScorePerEnemy);
+            }
 
             return new ReplayWriter(writer);
         }
