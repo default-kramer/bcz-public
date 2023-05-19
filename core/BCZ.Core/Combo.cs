@@ -15,7 +15,7 @@ namespace BCZ.Core
         private ComboInfo(Combo strict, Combo permissive, int enemiesDestroyed)
         {
             this.StrictCombo = strict;
-            this.PermissiveCombo = permissive;
+            this.PermissiveCombo = permissive.ApplyDeductions(strict);
             this.NumEnemiesDestroyed = enemiesDestroyed;
         }
 
@@ -52,16 +52,32 @@ namespace BCZ.Core
         public readonly int NumVerticalGroups;
         public readonly int NumHorizontalGroups;
 
+        /// <summary>
+        /// This number will usually be zero. It will never be negative.
+        /// A positive number indicates how much the <see cref="Rank"/> must be reduced
+        /// in order to respect the <see cref="PermissiveLimit"/>.
+        /// </summary>
+        public readonly int Deductions;
+
+        /// <summary>
+        /// We usually reward the permissive combo.
+        /// To discourage spamming combos that contain relatively few enemies, we enforce that the <see cref="Rank"/>
+        /// of the permissive combo cannot exceed that of the strict combo by more than this number.
+        /// </summary>
+        const int PermissiveLimit = 2;
+
         public Combo()
         {
             NumVerticalGroups = 0;
             NumHorizontalGroups = 0;
+            Deductions = 0;
         }
 
-        private Combo(int numVerticalGroups, int numHorizontalGroups)
+        private Combo(int numVerticalGroups, int numHorizontalGroups, int deductions)
         {
             this.NumVerticalGroups = numVerticalGroups;
             this.NumHorizontalGroups = numHorizontalGroups;
+            this.Deductions = deductions;
         }
 
         public static readonly Combo Empty = new Combo();
@@ -71,9 +87,21 @@ namespace BCZ.Core
             get { return NumVerticalGroups + NumHorizontalGroups * 2; }
         }
 
+        public int Rank => AdjustedGroupCount - Deductions;
+
         public Combo AfterDestruction(int numVerticalGroups, int numHorizontalGroups)
         {
-            return new Combo(this.NumVerticalGroups + numVerticalGroups, this.NumHorizontalGroups + numHorizontalGroups);
+            return new Combo(this.NumVerticalGroups + numVerticalGroups, this.NumHorizontalGroups + numHorizontalGroups, 0);
+        }
+
+        /// <summary>
+        /// Assumes that this combo is the permissive combo.
+        /// </summary>
+        public Combo ApplyDeductions(Combo strictCombo)
+        {
+            int excess = this.AdjustedGroupCount - strictCombo.AdjustedGroupCount;
+            int deductions = Math.Max(0, excess - PermissiveLimit);
+            return new Combo(this.NumVerticalGroups, this.NumHorizontalGroups, deductions);
         }
 
         public string Describe(string ifZero)
@@ -89,14 +117,21 @@ namespace BCZ.Core
         {
             get
             {
-                int index = Math.Min(AdjustedGroupCount, Numerals.Length - 1);
+                int index = Math.Min(Rank, Numerals.Length - 1);
                 return Numerals[index];
             }
         }
 
         public string Description()
         {
-            return $"{NumVerticalGroups}v{NumHorizontalGroups}h";
+            if (Deductions > 0)
+            {
+                return $"{NumVerticalGroups}v{NumHorizontalGroups}h-{Deductions}";
+            }
+            else
+            {
+                return $"{NumVerticalGroups}v{NumHorizontalGroups}h";
+            }
         }
 
         private static readonly string[] Numerals = new[] { "ZERO", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII", "XII", "XIV", "XV", "XVI" };

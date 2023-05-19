@@ -437,20 +437,23 @@ namespace BCZ.Core
             return result;
         }
 
+        private static int ComboQuality(Combo combo)
+        {
+            // The actual value doesn't really matter here.
+            // It's just a convenient way to implement tiebreakers.
+            return 0
+                + 10000 * combo.Rank
+                + 100 * combo.AdjustedGroupCount
+                + 1 * combo.NumHorizontalGroups;
+        }
+
         private bool UpdateBestCombo(ComboInfo candidate)
         {
             var exist = BestCombo.ComboToReward;
             var cand = candidate.ComboToReward;
-            if (cand.AdjustedGroupCount < exist.AdjustedGroupCount)
+            if (ComboQuality(cand) <= ComboQuality(exist))
             {
                 return false;
-            }
-            if (cand.AdjustedGroupCount == exist.AdjustedGroupCount)
-            {
-                if (cand.NumHorizontalGroups <= exist.NumHorizontalGroups)
-                {
-                    return false;
-                }
             }
             BestCombo = candidate;
             return true;
@@ -462,7 +465,9 @@ namespace BCZ.Core
         public Score GetHypotheticalScore(ComboInfo combo)
         {
             int enemyScore = combo.NumEnemiesDestroyed * scorePerEnemy;
-            int comboScore = scorePayoutTable.GetPayout(combo.ComboToReward.AdjustedGroupCount);
+            // By adding a single point per deduction, it will be super-obvious at the end of the game.
+            // For example, if your final score is 16,407 you most likely had 7 deductions throughout the game.
+            int comboScore = scorePayoutTable.GetPayout(combo.ComboToReward.Rank) + combo.ComboToReward.Deductions;
             return new Score(comboScore, enemyScore);
         }
 
