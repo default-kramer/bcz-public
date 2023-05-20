@@ -9,7 +9,7 @@ namespace BCZ.Core
 {
     sealed class HookScoreAttack : EmptyStateHook
     {
-        private const int gameDurationMillis = 1000 * 60 * 5; // 1 minute for now
+        private const int gameDurationMillis = 1000 * 60 * 1;
         private readonly IStateData data;
         private readonly ISinglePlayerSettings settings;
         private readonly Appointment countdown;
