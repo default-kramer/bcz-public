@@ -48,34 +48,18 @@ public class GameViewerControl : Control
             }
             var filename = System.IO.Path.Combine(replayDir, $"{DateTime.Now.ToString("yyyyMMdd_HHmmss")}_{settings.Seed.Serialize()}.ffr");
             var writer = new System.IO.StreamWriter(filename);
-            replayWriter = ReplayWriter.Begin(writer, settings);
+            replayWriter = ReplayWriter.Begin(writer, settings, shouldDispose: true);
             replayCollector = replayCollector.Combine(replayWriter);
         }
 
         var server = NewRoot.FindRoot(this).GetServerConnection();
-        StringWriter? TODO = null;
         if (server != null)
         {
-            Console.WriteLine("Got server connection");
-            TODO = new StringWriter();
-            var blha = ReplayWriter.Begin(TODO, settings);
-            replayCollector = replayCollector.Combine(blha);
+            replayCollector = replayCollector.Combine(new GameUploader(server, settings));
         }
 
         var ticker = new DotnetTicker(state, replayCollector);
         var newLogic = new LiveGameLogic(replayWriter, ticker, members, gamePackage);
-
-        if (server != null && TODO != null)
-        {
-            newLogic.OnGameOver(it =>
-            {
-                Console.WriteLine("SENDING UPLOAD TO SERVER");
-                TODO.Flush();
-                var replayContent = TODO.GetStringBuilder().ToString();
-                server.UploadGame(replayContent);
-            });
-        }
-
         SetLogic(newLogic);
     }
 
@@ -386,7 +370,7 @@ public class GameViewerControl : Control
 
     sealed class LiveGameLogic : LogicBase
     {
-        private ReplayWriter? replayWriter;
+        private IReplayCollector? replayWriter;
         private readonly Members members;
         private readonly GamePackage gamePackage;
 
@@ -398,35 +382,12 @@ public class GameViewerControl : Control
             this.gamePackage = gamePackage;
         }
 
-        private Action<LiveGameLogic> onGameOver = x => { };
-        public void OnGameOver(Action<LiveGameLogic> callback)
-        {
-            var temp = onGameOver;
-            onGameOver = x =>
-            {
-                temp(x);
-                callback(x);
-            };
-        }
-
-        public override void Cleanup()
-        {
-            if (replayWriter != null)
-            {
-                replayWriter.Flush();
-                replayWriter.Close();
-                replayWriter.Dispose();
-                replayWriter = null;
-            }
-        }
-
         public override void CheckGameOver()
         {
             var state = ticker.state;
             if (state.IsGameOver && !members.GameOverMenu.Visible)
             {
-                Cleanup();
-                onGameOver(this);
+                replayWriter?.OnGameEnded();
                 members.GameOverMenu.OnGameOver(state, gamePackage);
             }
         }

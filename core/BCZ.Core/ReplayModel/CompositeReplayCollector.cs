@@ -28,5 +28,11 @@ namespace BCZ.Core.ReplayModel
             first.Collect(command);
             second.Collect(command);
         }
+
+        public void OnGameEnded()
+        {
+            first.OnGameEnded();
+            second.OnGameEnded();
+        }
     }
 }

@@ -40,6 +40,8 @@ namespace BCZ.Core
         void Collect(Stamped<Command> command);
 
         void AfterCommand(Moment moment, State state);
+
+        void OnGameEnded();
     }
 
     public interface ISettingsCollection
