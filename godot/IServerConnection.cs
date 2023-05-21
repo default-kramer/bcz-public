@@ -12,6 +12,7 @@ interface IServerConnection
 
 /// <summary>
 /// Relies on the player token cookie... Not sure how PC version will work yet.
+/// Note that we inherit Godot.Node here because HTTPRequest is also a node that needs a parent.
 /// </summary>
 class BrowserBasedServerConnection : Godot.Node, IServerConnection
 {
