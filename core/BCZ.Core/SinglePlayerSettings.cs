@@ -58,11 +58,6 @@ namespace BCZ.Core
 
     public sealed class SinglePlayerSettings : ISinglePlayerSettings
     {
-        public void DUMP()
-        {
-            Console.WriteLine($"{EnemyCount} / {SpawnBlanks} / {GridWidth} / {GridHeight} / {EnemiesPerStripe} / {RowsPerStripe} / {GameMode} / {ScorePerEnemy}");
-        }
-
         public OfficialSettingsId? OfficialSettingsId { get; set; } = null;
         public int EnemyCount { get; set; } = 15;
         public bool SpawnBlanks { get; set; } = true;
