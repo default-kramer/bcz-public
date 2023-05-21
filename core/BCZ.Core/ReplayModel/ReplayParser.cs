@@ -18,10 +18,7 @@ namespace BCZ.Core.ReplayModel
     {
         readonly struct GameInfo
         {
-            /// <summary>
-            /// The initial state is returned to the caller.
-            /// </summary>
-            public readonly State InitialState;
+            public readonly SeededSettings Settings;
 
             /// <summary>
             /// This ticker is used internally to validate that the replay file
@@ -34,12 +31,14 @@ namespace BCZ.Core.ReplayModel
             /// </summary>
             public readonly ListReplayCollector ReplayCollector;
 
-            public GameInfo(State initialState, Ticker ticker, ListReplayCollector replayCollector)
+            public GameInfo(SeededSettings settings, Ticker ticker, ListReplayCollector replayCollector)
             {
-                this.InitialState = initialState;
+                this.Settings = settings;
                 this.Ticker = ticker;
                 this.ReplayCollector = replayCollector;
             }
+
+            public State CreateInitialState() => State.Create(Settings);
         }
 
         private GameInfo __gameInfo;
@@ -47,12 +46,13 @@ namespace BCZ.Core.ReplayModel
         {
             get
             {
-                if (__gameInfo.InitialState == null)
+                if (__gameInfo.Ticker == null)
                 {
-                    var state = BuildState();
+                    var settings = BuildSettings();
+                    var state = State.Create(settings);
                     var collector = new ListReplayCollector();
                     var ticker = new Ticker(state, collector);
-                    __gameInfo = new GameInfo(BuildState(), ticker, collector);
+                    __gameInfo = new GameInfo(settings, ticker, collector);
                 }
                 return __gameInfo;
             }
@@ -60,6 +60,7 @@ namespace BCZ.Core.ReplayModel
 
         int? version = null;
         private PRNG.State? seed = null;
+        private OfficialSettingsId? officialSettingsId = null;
         private GameMode? mode;
         private int? enemyCount;
         private bool? spawnBlanks;
@@ -69,8 +70,25 @@ namespace BCZ.Core.ReplayModel
         private int? rowsPerStripe;
         private int? scorePerEnemy;
 
-        private State BuildState()
+        private SeededSettings BuildSettings()
         {
+            if (seed == null)
+            {
+                throw new InvalidReplayException("Missing random seed");
+            }
+
+            if (officialSettingsId.HasValue)
+            {
+                if (officialSettingsId.Value.Validate(out var officialSettings))
+                {
+                    return new SeededSettings(seed.Value, officialSettings);
+                }
+                else
+                {
+                    throw new InvalidReplayException($"Unrecognized official settings: {officialSettingsId}");
+                }
+            }
+
             var settings = new SinglePlayerSettings();
             settings.EnemyCount = this.enemyCount ?? settings.EnemyCount;
             settings.SpawnBlanks = this.spawnBlanks ?? settings.SpawnBlanks;
@@ -79,13 +97,8 @@ namespace BCZ.Core.ReplayModel
             settings.EnemiesPerStripe = this.enemiesPerStripe ?? settings.EnemiesPerStripe;
             settings.RowsPerStripe = this.rowsPerStripe ?? settings.RowsPerStripe;
             settings.ScorePerEnemy = this.scorePerEnemy ?? 100;
-            // TODO before going public, should make game mode required with no default...
             settings.GameMode = this.mode ?? GameMode.Levels;
-            if (seed == null)
-            {
-                throw new InvalidReplayException("Missing random seed");
-            }
-            return State.Create(new SeededSettings(seed.Value, settings));
+            return new SeededSettings(seed.Value, settings);
         }
 
         public void Parse(VersionElement v)
@@ -106,6 +119,10 @@ namespace BCZ.Core.ReplayModel
             if (setting.Name == "seed")
             {
                 seed = PRNG.State.Deserialize(setting.Value);
+            }
+            if (setting.Name == "officialSettingsId")
+            {
+                officialSettingsId = new OfficialSettingsId(setting.Value);
             }
             if (setting.Name == "mode")
             {
@@ -166,14 +183,22 @@ namespace BCZ.Core.ReplayModel
 
         public ReplayDriver BuildReplayDriver()
         {
-            var ticker = new Ticker(Game.InitialState, NullReplayCollector.Instance);
+            var ticker = new Ticker(Game.CreateInitialState(), NullReplayCollector.Instance);
             return new ReplayDriver(ticker, Game.ReplayCollector.Commands);
         }
 
         public IReadOnlyList<Puzzle> GetRawPuzzles()
         {
-            var ticker = new Ticker(BuildState(), NullReplayCollector.Instance);
+            var ticker = new Ticker(Game.CreateInitialState(), NullReplayCollector.Instance);
             return Puzzle.FindRawPuzzles(ticker, Game.ReplayCollector.Commands);
+        }
+
+        /// <summary>
+        /// WARNING: This should only be called after the replay has been completely read/parsed.
+        /// </summary>
+        public CompletedGameInfo AsCompletedGame()
+        {
+            return new CompletedGameInfo(Game.Settings, Game.Ticker.state.Data);
         }
     }
 }

@@ -13,6 +13,8 @@ namespace BCZ.Core
         public void Collect(Stamped<Command> command) { }
 
         public void AfterCommand(Moment moment, State state) { }
+
+        public void OnGameEnded() { }
     }
 
     public sealed class ListReplayCollector : IReplayCollector
@@ -27,5 +29,7 @@ namespace BCZ.Core
         }
 
         public void AfterCommand(Moment moment, State state) { }
+
+        public void OnGameEnded() { }
     }
 }

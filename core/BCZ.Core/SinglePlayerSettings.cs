@@ -33,6 +33,7 @@ namespace BCZ.Core
 
     public interface ISinglePlayerSettings
     {
+        OfficialSettingsId? OfficialSettingsId { get; }
         int EnemyCount { get; }
         bool SpawnBlanks { get; }
         int GridWidth { get; }
@@ -57,6 +58,7 @@ namespace BCZ.Core
 
     public sealed class SinglePlayerSettings : ISinglePlayerSettings
     {
+        public OfficialSettingsId? OfficialSettingsId { get; set; } = null;
         public int EnemyCount { get; set; } = 15;
         public bool SpawnBlanks { get; set; } = true;
         public int GridWidth { get; set; } = Grid.DefaultWidth;
@@ -86,7 +88,6 @@ namespace BCZ.Core
         public static readonly ISettingsCollection BeginnerSettings = BeginnerSettingsCollection.Instance;
         public static readonly ISettingsCollection NormalSettings = NormalSettingsCollection.Instance;
         public static readonly ISettingsCollection PvPSimSettings = PvPSimSettingsCollection.Instance;
-        public static readonly ISinglePlayerSettings ScoreAttackSettings = NormalSettingsCollection.ScoreAttack_Level14;
         private static readonly IReadOnlyList<IGoal> NoGoals = new List<IGoal>();
 
         abstract class SettingsCollection : ISettingsCollection
@@ -203,7 +204,6 @@ namespace BCZ.Core
 
             private static readonly IReadOnlyList<IReadOnlyList<IGoal>> goals;
             public static readonly NormalSettingsCollection Instance;
-            public static readonly ISinglePlayerSettings ScoreAttack_Level14; // Just put the Score Attack settings here for now...
 
             static NormalSettingsCollection()
             {
@@ -225,21 +225,6 @@ namespace BCZ.Core
                 goals = goalsList;
 
                 Instance = new NormalSettingsCollection();
-                var level14 = Instance.GetSettings(14);
-                var clone = new SinglePlayerSettings()
-                {
-                    // copy data:
-                    EnemyCount = level14.EnemyCount,
-                    EnemiesPerStripe = level14.EnemiesPerStripe,
-                    RowsPerStripe = level14.RowsPerStripe,
-                    GridHeight = level14.GridHeight,
-                    GridWidth = level14.GridWidth,
-                    SpawnBlanks = level14.SpawnBlanks,
-                    // different data:
-                    GameMode = GameMode.ScoreAttack,
-                    ScorePerEnemy = 200,
-                };
-                ScoreAttack_Level14 = clone;
             }
 
             private NormalSettingsCollection() : base(NumLevels)

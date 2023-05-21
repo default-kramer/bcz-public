@@ -27,8 +27,7 @@ public class NewRoot : Control
     }
 
     private Members members;
-    private readonly HTTPRequest http = new HTTPRequest();
-    private Uri? browserLocation = null;
+    private IServerConnection? serverConnection = null;
 
     // Called when the node enters the scene tree for the first time.
     public override void _Ready()
@@ -37,7 +36,10 @@ public class NewRoot : Control
         Console.WriteLine("Got location: " + location);
         if (location != null)
         {
-            browserLocation = new Uri(location);
+            var uri = new Uri(location);
+            var conn = new BrowserBasedServerConnection($"{uri.Scheme}://{uri.Host}:{uri.Port}");
+            serverConnection = conn;
+            this.AddChild(conn);
         }
 
         var userAgent = JavaScript.Eval("navigator.userAgent") as string;
@@ -48,23 +50,6 @@ public class NewRoot : Control
 
         this.members = new Members(this);
         BackToMainMenu();
-
-        AddChild(http);
-        http.Connect("request_completed", this, nameof(OnRequestCompleted));
-        CallDeferred(nameof(CheckSession));
-    }
-
-    private void CheckSession()
-    {
-        if (browserLocation != null)
-        {
-            http.Request($"{browserLocation.Scheme}://{browserLocation.Host}:{browserLocation.Port}/browser/session-info", method: HTTPClient.Method.Get);
-        }
-    }
-
-    private void OnRequestCompleted(long result, long responseCode, string[] headers, byte[] body)
-    {
-        Console.WriteLine($"Request completed! Got {result} / {responseCode} / {body.GetStringFromUTF8()}");
     }
 
     internal static NewRoot FindRoot(Node child)
@@ -178,4 +163,6 @@ public class NewRoot : Control
         SwitchTo(members.TutorialControl);
         members.TutorialControl.Reset();
     }
+
+    internal IServerConnection? GetServerConnection() => serverConnection;
 }

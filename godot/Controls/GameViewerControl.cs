@@ -3,6 +3,7 @@ using BCZ.Core.ReplayModel;
 using Godot;
 using System;
 using System.Collections.Generic;
+using System.IO;
 
 #nullable enable
 
@@ -47,8 +48,14 @@ public class GameViewerControl : Control
             }
             var filename = System.IO.Path.Combine(replayDir, $"{DateTime.Now.ToString("yyyyMMdd_HHmmss")}_{settings.Seed.Serialize()}.ffr");
             var writer = new System.IO.StreamWriter(filename);
-            replayWriter = ReplayWriter.Begin(writer, settings);
+            replayWriter = ReplayWriter.Begin(writer, settings, shouldDispose: true);
             replayCollector = replayCollector.Combine(replayWriter);
+        }
+
+        var server = NewRoot.FindRoot(this).GetServerConnection();
+        if (server != null)
+        {
+            replayCollector = replayCollector.Combine(new GameUploader(server, settings));
         }
 
         var ticker = new DotnetTicker(state, replayCollector);
@@ -363,7 +370,7 @@ public class GameViewerControl : Control
 
     sealed class LiveGameLogic : LogicBase
     {
-        private ReplayWriter? replayWriter;
+        private IReplayCollector? replayWriter;
         private readonly Members members;
         private readonly GamePackage gamePackage;
 
@@ -375,23 +382,12 @@ public class GameViewerControl : Control
             this.gamePackage = gamePackage;
         }
 
-        public override void Cleanup()
-        {
-            if (replayWriter != null)
-            {
-                replayWriter.Flush();
-                replayWriter.Close();
-                replayWriter.Dispose();
-                replayWriter = null;
-            }
-        }
-
         public override void CheckGameOver()
         {
             var state = ticker.state;
             if (state.IsGameOver && !members.GameOverMenu.Visible)
             {
-                Cleanup();
+                replayWriter?.OnGameEnded();
                 members.GameOverMenu.OnGameOver(state, gamePackage);
             }
         }

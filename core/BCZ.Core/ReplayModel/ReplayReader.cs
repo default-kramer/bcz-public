@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace BCZ.Core.ReplayModel
 {
-    class InvalidReplayException : Exception
+    public sealed class InvalidReplayException : Exception
     {
         public InvalidReplayException(string message) : base(message) { }
 
@@ -36,6 +36,23 @@ namespace BCZ.Core.ReplayModel
             using (var reader = new StreamReader(filename))
             {
                 new ReplayReader(reader, parser).Read();
+            }
+        }
+
+        public static bool ValidateReplay(TextReader replayFile, out CompletedGameInfo gameInfo)
+        {
+            try
+            {
+                var parser = new ReplayParser();
+                var reader = new ReplayReader(replayFile, parser);
+                reader.Read();
+                gameInfo = parser.AsCompletedGame();
+                return true;
+            }
+            catch (InvalidReplayException)
+            {
+                gameInfo = default!;
+                return false;
             }
         }
 
