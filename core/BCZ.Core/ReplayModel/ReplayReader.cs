@@ -56,6 +56,16 @@ namespace BCZ.Core.ReplayModel
             }
         }
 
+        public static ReplayDriver BuildReplayDriver2(string replayContent)
+        {
+            var parser = new ReplayParser();
+            using (var reader = new StringReader(replayContent))
+            {
+                new ReplayReader(reader, parser).Read();
+            }
+            return parser.BuildReplayDriver();
+        }
+
         public static ReplayDriver BuildReplayDriver(string filename)
         {
             var parser = new ReplayParser();

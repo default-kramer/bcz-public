@@ -72,18 +72,9 @@ public class MainMenu : Control, IHelpText
     {
         members = new Members(this);
         members.ButtonWatchReplay.Visible = Util.IsSuperuser;
-
-        try
-        {
-            // TODO - this replay continues to run in the background, that should be fixed
-            // Probably want to SetProcess(false) on inactive components
-            members.GameViewerControl.WatchReplay(@"C:\fission-flare-recordings\raw\20230212_161427_1990999595-197713288-3821534300-4226900136-1326336242-3242883821.ffr");
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine(ex.ToString());
-        }
-
+        // TODO - this replay continues to run in the background, that should be fixed
+        // Probably want to SetProcess(false) on inactive components?
+        members.GameViewerControl.WatchDemo();
         members.ButtonSinglePlayer.Connect("pressed", this, nameof(PressedSinglePlayer));
         members.ButtonTutorial.Connect("pressed", this, nameof(PressedTutorial));
         members.ButtonControllerSetup.Connect("pressed", this, nameof(PressedControllerSetup));
