@@ -193,9 +193,12 @@ namespace BCZ.Core.ReplayModel
             return Puzzle.FindRawPuzzles(ticker, Game.ReplayCollector.Commands);
         }
 
-        public (SeededSettings settings, int finalScore) TODO()
+        /// <summary>
+        /// WARNING: This should only be called after the replay has been completely read/parsed.
+        /// </summary>
+        public CompletedGameInfo AsCompletedGame()
         {
-            return (Game.Settings, 0);
+            return new CompletedGameInfo(Game.Settings, Game.Ticker.state.Data);
         }
     }
 }

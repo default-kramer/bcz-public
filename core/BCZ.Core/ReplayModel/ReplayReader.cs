@@ -39,12 +39,21 @@ namespace BCZ.Core.ReplayModel
             }
         }
 
-        public static (SeededSettings settings, int finalScore) ValidateReplay(TextReader replayFile)
+        public static bool ValidateReplay(TextReader replayFile, out CompletedGameInfo gameInfo)
         {
-            var parser = new ReplayParser();
-            var reader = new ReplayReader(replayFile, parser);
-            reader.Read();
-            return parser.TODO();
+            try
+            {
+                var parser = new ReplayParser();
+                var reader = new ReplayReader(replayFile, parser);
+                reader.Read();
+                gameInfo = parser.AsCompletedGame();
+                return true;
+            }
+            catch (InvalidReplayException)
+            {
+                gameInfo = default!;
+                return false;
+            }
         }
 
         public static ReplayDriver BuildReplayDriver(string filename)
