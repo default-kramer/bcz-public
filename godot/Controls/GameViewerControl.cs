@@ -3,7 +3,6 @@ using BCZ.Core.ReplayModel;
 using Godot;
 using System;
 using System.Collections.Generic;
-using System.IO;
 
 #nullable enable
 
@@ -26,6 +25,7 @@ public class GameViewerControl : Control
         logic.Cleanup();
         var driver = ReplayReader.BuildReplayDriver2(demoReplayContent);
         var newLogic = new WatchReplayLogic(driver);
+        newLogic.DisablePausing = true;
         SetLogic(newLogic);
     }
 
@@ -223,8 +223,22 @@ public class GameViewerControl : Control
         base._Draw();
     }
 
+    private bool paused;
     public override void _Process(float delta)
     {
+        if (Input.IsActionJustPressed("game_pause"))
+        {
+            if (logic.TrySetPaused(!paused))
+            {
+                this.paused = !paused;
+            }
+        }
+
+        if (paused)
+        {
+            return;
+        }
+
         this.logic.Process(delta);
         this.logic.HandleInput();
 
@@ -251,6 +265,11 @@ public class GameViewerControl : Control
         void HandleInput();
         void CheckGameOver();
         void Initialize(Members members);
+
+        /// <summary>
+        /// Return true iff the game was succesfully paused or unpaused.
+        /// </summary>
+        bool TrySetPaused(bool paused);
     }
 
     sealed class NullLogic : ILogic
@@ -271,6 +290,8 @@ public class GameViewerControl : Control
             // TODO should set a null model here... but we'll just make them invisible for now
             members.QueueViewer.Visible = false;
         }
+
+        public bool TrySetPaused(bool paused) => false;
     }
 
     internal abstract class LogicBase : ILogic
@@ -286,6 +307,12 @@ public class GameViewerControl : Control
         private bool HandleCommand(Command command)
         {
             return ticker.HandleCommand(command);
+        }
+
+        public virtual bool TrySetPaused(bool paused)
+        {
+            ticker.SetPaused(paused);
+            return true;
         }
 
         public virtual void HandleInput()
@@ -410,6 +437,9 @@ public class GameViewerControl : Control
     class WatchReplayLogic : ILogic
     {
         private readonly IReplayDriver replayDriver;
+        private bool paused = false;
+
+        public bool DisablePausing { get; set; }
 
         public WatchReplayLogic(IReplayDriver replayDriver)
         {
@@ -422,9 +452,25 @@ public class GameViewerControl : Control
 
         public void HandleInput() { }
 
+        public bool TrySetPaused(bool paused)
+        {
+            if (DisablePausing)
+            {
+                return false;
+            }
+
+            this.paused = paused;
+            return true;
+        }
+
         private Moment now = new Moment(-1);
         public void Process(float delta)
         {
+            if (paused)
+            {
+                return;
+            }
+
             if (now.Millis < 0)
             {
                 now = new Moment(0);

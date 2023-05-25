@@ -196,12 +196,12 @@ public class SinglePlayerMenu : Control
         else if (goal == ScoreAttackGoal.PersonalBest)
         {
             var score = goal.GetTargetScore();
-            return $"Your current PB is {score.ToString("N0")}.";
+            return $"Your current Personal Best is {score.ToString("N0")}.";
         }
         else if (goal == ScoreAttackGoal.WorldRecord)
         {
             var score = goal.GetTargetScore();
-            return $"Are you serious?\nThe current WR is {score.ToString("N0")}... Good luck!";
+            return $"Leaderboards/replays are coming soon...\nFor now, you can try to beat my PB: {score.ToString("N0")}";
         }
         return null;
     }
@@ -321,7 +321,7 @@ public class SinglePlayerMenu : Control
             }
             else if (this == WorldRecord)
             {
-                return 33000;
+                return 32350;
             }
             throw new Exception("Assert fail");
         }
