@@ -15,7 +15,6 @@ public class GameViewerControl : Control
         logic.Cleanup();
         logic = newLogic;
         logic.Initialize(members);
-        members.GameOverMenu.Visible = false;
 
         OnSizeChanged(); // In case the grid size changed
     }
@@ -82,6 +81,10 @@ public class GameViewerControl : Control
         public readonly GridViewerControl AttackGridViewer;
         public readonly GoalViewerControl GoalViewerControl;
         private readonly Control GridViewerContainer;
+        public readonly Control PauseMenuContainer;
+        public readonly Button ButtonResume;
+        public readonly Button ButtonRestart;
+        public readonly Button ButtonQQQ; // WARNING!! Renaming this to ButtonQuit causes the handler to stop working!!
 
         public Members(Control me)
         {
@@ -94,6 +97,10 @@ public class GameViewerControl : Control
             me.FindNode(out AttackGridViewer, nameof(AttackGridViewer));
             me.FindNode(out GoalViewerControl, nameof(GoalViewerControl));
             me.FindNode(out GridViewerContainer, nameof(GridViewerContainer));
+            me.FindNode(out PauseMenuContainer, nameof(PauseMenuContainer));
+            me.FindNode(out ButtonResume, nameof(ButtonResume));
+            me.FindNode(out ButtonRestart, nameof(ButtonRestart));
+            me.FindNode(out ButtonQQQ, nameof(ButtonQQQ));
 
             QueueViewer.GridViewer = GridViewer;
         }
@@ -101,9 +108,10 @@ public class GameViewerControl : Control
         public void SetGridViewerSize(Vector2 rectMinSize)
         {
             GridViewerContainer.RectMinSize = rectMinSize;
-            // Ensure that both children take up the full space
+            // Ensure that these all take up the full space
             GridViewer.RectMinSize = rectMinSize;
             GameOverMenu.RectMinSize = rectMinSize;
+            PauseMenuContainer.RectMinSize = rectMinSize;
         }
     }
 
@@ -118,6 +126,9 @@ public class GameViewerControl : Control
     public override void _Ready()
     {
         this.members = new Members(this);
+        members.ButtonResume.Connect("pressed", this, nameof(PressedResume));
+        members.ButtonRestart.Connect("pressed", this, nameof(PressedRestart));
+        members.ButtonQQQ.Connect("pressed", this, nameof(PressedQuit));
         OnSizeChanged();
     }
 
@@ -223,15 +234,34 @@ public class GameViewerControl : Control
         base._Draw();
     }
 
+    private void ForceSetPaused(bool paused)
+    {
+        this.paused = paused;
+        members.GridViewer.SetPaused(paused);
+        members.GridViewer.Update();
+        members.PauseMenuContainer.Visible = paused;
+        if (paused)
+        {
+            members.PauseMenuContainer.FindNextValidFocus().GrabFocus();
+        }
+    }
+
+    private bool TryTogglePause()
+    {
+        if (logic.TrySetPaused(!paused))
+        {
+            ForceSetPaused(!paused);
+            return true;
+        }
+        return false;
+    }
+
     private bool paused;
     public override void _Process(float delta)
     {
         if (Input.IsActionJustPressed("game_pause"))
         {
-            if (logic.TrySetPaused(!paused))
-            {
-                this.paused = !paused;
-            }
+            TryTogglePause();
         }
 
         if (paused)
@@ -256,6 +286,31 @@ public class GameViewerControl : Control
     {
         NewGame(package);
         members.GameOverMenu.Visible = false;
+    }
+
+    private void ForceUnpause()
+    {
+        if (paused)
+        {
+            if (!TryTogglePause())
+            {
+                ForceSetPaused(false);
+            }
+        }
+    }
+
+    void PressedResume() => ForceUnpause();
+    void PressedRestart()
+    {
+        ForceUnpause();
+        // TODO need to stop the current game! And the Logic should have a say in this!
+        NewRoot.FindRoot(this).ReplayCurrentLevel();
+    }
+    public void PressedQuit()
+    {
+        ForceUnpause();
+        // TODO need to stop the current game! And the Logic should have a say in this!
+        NewRoot.FindRoot(this).BackToMainMenu();
     }
 
     internal interface ILogic
@@ -370,6 +425,9 @@ public class GameViewerControl : Control
 
         public static void StandardInitialize(Members members, Ticker ticker)
         {
+            members.GridViewer.SetShrouded(false);
+            members.GameOverMenu.Visible = false;
+
             members.GridViewer.SetLogic(ticker);
             var state = ticker.state;
             members.QueueViewer.Model = state.MakeQueueModel();
@@ -423,6 +481,7 @@ public class GameViewerControl : Control
             if (state.IsGameOver && !members.GameOverMenu.Visible)
             {
                 replayWriter?.OnGameEnded();
+                members.GridViewer.SetShrouded(true);
                 members.GameOverMenu.OnGameOver(state, gamePackage);
             }
         }

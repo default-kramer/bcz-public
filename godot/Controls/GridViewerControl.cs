@@ -50,6 +50,18 @@ public class GridViewerControl : Control
         elapsedSeconds += delta;
     }
 
+    private bool shrouded = false;
+    public void SetShrouded(bool shrouded)
+    {
+        this.shrouded = shrouded;
+    }
+
+    private bool paused = false;
+    public void SetPaused(bool paused)
+    {
+        this.paused = paused;
+    }
+
     private static float GetCellSize(Vector2 maxSize, GridSize gridSize)
     {
         return Math.Min(maxSize.x / gridSize.Width, maxSize.y / gridSize.Height);
@@ -225,6 +237,11 @@ public class GridViewerControl : Control
         {
             var height = Logic.LastChanceProgress * RectSize.y;
             DrawRect(new Rect2(0, 0, RectSize.x, height), shroudColor, filled: true);
+        }
+
+        if (paused || shrouded)
+        {
+            DrawRect(new Rect2(0, 0, RectSize), GameColors.Shroud, filled: true);
         }
 
         // help debug size

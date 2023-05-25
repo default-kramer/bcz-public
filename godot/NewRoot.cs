@@ -107,6 +107,9 @@ public class NewRoot : Control
     /// implement pausing the game, I can hijack it for this purpose.
     /// I will keep the SceneTree paused *at all times* which will stop processing on all
     /// nodes except those which are set to <see cref="Godot.Node.PauseModeEnum.Process"/>.
+    ///
+    /// The "proper" way to do this is probably using SceneTree.ChangeScene,
+    /// but that's more work than I care to do right now.
     /// </summary>
     const bool AlwaysPausedHack = true;
 
