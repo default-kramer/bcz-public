@@ -85,7 +85,7 @@ margin_right = 81.0
 margin_bottom = 64.0
 text = "Restart"
 
-[node name="ButtonQQQ" type="Button" parent="MarginContainer/HBoxContainer/GridViewerContainer/PauseMenuContainer/VBoxContainer"]
+[node name="ButtonQuit" type="Button" parent="MarginContainer/HBoxContainer/GridViewerContainer/PauseMenuContainer/VBoxContainer"]
 margin_right = 12.0
 margin_bottom = 30.0
 text = "Quit"

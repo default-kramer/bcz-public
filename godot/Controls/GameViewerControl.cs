@@ -84,7 +84,7 @@ public class GameViewerControl : Control
         public readonly Control PauseMenuContainer;
         public readonly Button ButtonResume;
         public readonly Button ButtonRestart;
-        public readonly Button ButtonQQQ; // WARNING!! Renaming this to ButtonQuit causes the handler to stop working!!
+        public readonly Button ButtonQuit;
 
         public Members(Control me)
         {
@@ -100,7 +100,7 @@ public class GameViewerControl : Control
             me.FindNode(out PauseMenuContainer, nameof(PauseMenuContainer));
             me.FindNode(out ButtonResume, nameof(ButtonResume));
             me.FindNode(out ButtonRestart, nameof(ButtonRestart));
-            me.FindNode(out ButtonQQQ, nameof(ButtonQQQ));
+            me.FindNode(out ButtonQuit, nameof(ButtonQuit));
 
             QueueViewer.GridViewer = GridViewer;
         }
@@ -128,7 +128,7 @@ public class GameViewerControl : Control
         this.members = new Members(this);
         members.ButtonResume.Connect("pressed", this, nameof(PressedResume));
         members.ButtonRestart.Connect("pressed", this, nameof(PressedRestart));
-        members.ButtonQQQ.Connect("pressed", this, nameof(PressedQuit));
+        members.ButtonQuit.Connect("pressed", this, nameof(PressedQuit));
         OnSizeChanged();
     }
 
