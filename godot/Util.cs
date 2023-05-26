@@ -9,12 +9,63 @@ using Godot;
 
 static class Util
 {
-    // This would be a great place to use CallerArgumentExpression but it's not available on Mono
-    public static void FindNode<T>(this Control parent, out T target, string name)
+    /// <summary>
+    /// Similar to the built-in FindNode except that it will not recurse into nested tscn files.
+    /// The problem I had was something like this:
+    /// * GameViewerControl
+    /// * * stuff
+    /// * * * more stuff
+    /// * * * * GameOverMenu [nested tscn]
+    /// * * other stuff
+    /// * * * * ButtonQuit
+    /// And when I used FindNode("ButtonQuit") I was expecting to get the ButtonQuit that is local
+    /// to the GameViewerControl, but instead it found a different ButtonQuit inside the GameOverMenu.
+    /// Tricky!
+    ///
+    /// This method solves this problem by using GetType().Assembly to detect that GameOverMenu
+    /// is a custom control and avoids recursing into it.
+    /// This means that it will find the local "ButtonQuit" instead.
+    /// </summary>
+    /// <remarks>
+    /// This would be a great place to use CallerArgumentExpression but it's not available on Mono.
+    /// </remarks>
+    public static void FindNode<T>(this Control parent, out T target, string name) where T : Node
     {
-        object node = parent.FindNode(name)
-            ?? throw new ArgumentException("Couldn't find: " + name);
-        target = (T)node;
+        var result = FindNode<T>(parent, name, depth: 0);
+        if (result != null)
+        {
+            target = result;
+        }
+        else
+        {
+            throw new Exception($"Couldn't find node: {name}");
+        }
+    }
+
+    private static T? FindNode<T>(Node candidate, string name, int depth) where T : Node
+    {
+        if (candidate.Name == name)
+        {
+            return (T)candidate;
+        }
+        // Check that depth > 0, obviously the caller meant to explore beyond just the root node.
+        else if (depth > 0 && candidate.GetType().Assembly == typeof(GameViewerControl).Assembly)
+        {
+            //Console.WriteLine($"Skipping custom control: {candidate.Name} / {candidate.GetType().FullName}");
+            return null;
+        }
+
+        int count = candidate.GetChildCount();
+        for (int i = 0; i < count; i++)
+        {
+            var child = candidate.GetChild(i);
+            var result = FindNode<T>(child, name, depth + 1);
+            if (result != null)
+            {
+                return result;
+            }
+        }
+        return null;
     }
 
     public static void ScaleAndCenter(this Sprite sprite, Rect2 box)

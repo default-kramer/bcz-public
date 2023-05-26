@@ -4,7 +4,7 @@ using System;
 
 #nullable enable
 
-public class NewRoot : Control
+public class NewRoot : Control, IRoot
 {
     readonly struct Members
     {
@@ -52,9 +52,9 @@ public class NewRoot : Control
         BackToMainMenu();
     }
 
-    internal static NewRoot FindRoot(Node child)
+    internal static IRoot FindRoot(Node child)
     {
-        return child.FindAncestor<NewRoot>() ?? throw new Exception("Failed to find root node");
+        return child.FindAncestor<IRoot>() ?? throw new Exception("Failed to find root node");
     }
 
     private SinglePlayerMenu.LevelToken? levelToken;
@@ -96,22 +96,39 @@ public class NewRoot : Control
         StartGame(levelToken);
     }
 
-    private static void Remove(Control c)
-    {
-        c.GetParent()?.RemoveChild(c);
-    }
 
-    // It's difficult to remove children without leaking them at shutdown.
-    // This seems to work just as well:
+    /// <summary>
+    /// It's difficult to remove children without leaking them at shutdown.
+    /// So let's stop processing instead.
+    /// Hmm... I thought that SetProcess(bool) would affect the entire subtree,
+    /// but unfortunately it only affects that one node.
+    /// (In Godot 4, I could use PROCESS_MODE_DISABLED.)
+    /// But there is still a way! Because I am not planning on using SceneTree.Paused to
+    /// implement pausing the game, I can hijack it for this purpose.
+    /// I will keep the SceneTree paused *at all times* which will stop processing on all
+    /// nodes except those which are set to <see cref="Godot.Node.PauseModeEnum.Process"/>.
+    ///
+    /// The "proper" way to do this is probably using SceneTree.ChangeScene,
+    /// but that's more work than I care to do right now.
+    /// </summary>
+    const bool AlwaysPausedHack = true;
+
+    /// <summary>
+    /// See <see cref="AlwaysPausedHack"/>
+    /// </summary>
     private static void SetEnabled(Control c, bool enabled)
     {
         c.Visible = enabled;
+        c.PauseMode = enabled ? PauseModeEnum.Process : PauseModeEnum.Inherit;
+        // These are probably redundant now:
         c.SetProcess(enabled);
         c.SetProcessInput(enabled);
     }
 
     private void SwitchTo(Control control)
     {
+        GetTree().Paused = AlwaysPausedHack;
+
         SetEnabled(members.GameViewer, false);
         SetEnabled(members.PuzzleControl, false);
         SetEnabled(members.MainMenu, false);
@@ -164,5 +181,5 @@ public class NewRoot : Control
         members.TutorialControl.Reset();
     }
 
-    internal IServerConnection? GetServerConnection() => serverConnection;
+    IServerConnection? IRoot.GetServerConnection() => serverConnection;
 }

@@ -3,7 +3,6 @@ using BCZ.Core.ReplayModel;
 using Godot;
 using System;
 using System.Collections.Generic;
-using System.IO;
 
 #nullable enable
 
@@ -16,7 +15,6 @@ public class GameViewerControl : Control
         logic.Cleanup();
         logic = newLogic;
         logic.Initialize(members);
-        members.GameOverMenu.Visible = false;
 
         OnSizeChanged(); // In case the grid size changed
     }
@@ -26,6 +24,7 @@ public class GameViewerControl : Control
         logic.Cleanup();
         var driver = ReplayReader.BuildReplayDriver2(demoReplayContent);
         var newLogic = new WatchReplayLogic(driver);
+        newLogic.DisablePausing = true;
         SetLogic(newLogic);
     }
 
@@ -82,6 +81,16 @@ public class GameViewerControl : Control
         public readonly GridViewerControl AttackGridViewer;
         public readonly GoalViewerControl GoalViewerControl;
         private readonly Control GridViewerContainer;
+        public readonly Control PauseMenuContainer;
+        public readonly Button ButtonResume;
+        public readonly Button ButtonRestart;
+        public readonly Button ButtonQuit;
+
+        /// <summary>
+        /// Be careful if you're thinking about relocating this.
+        /// If it lives too close to the occupants sprites, you will have a hard time drawing the sprites behind the shroud.
+        /// </summary>
+        public readonly ColorRect Shroud;
 
         public Members(Control me)
         {
@@ -94,6 +103,11 @@ public class GameViewerControl : Control
             me.FindNode(out AttackGridViewer, nameof(AttackGridViewer));
             me.FindNode(out GoalViewerControl, nameof(GoalViewerControl));
             me.FindNode(out GridViewerContainer, nameof(GridViewerContainer));
+            me.FindNode(out PauseMenuContainer, nameof(PauseMenuContainer));
+            me.FindNode(out ButtonResume, nameof(ButtonResume));
+            me.FindNode(out ButtonRestart, nameof(ButtonRestart));
+            me.FindNode(out ButtonQuit, nameof(ButtonQuit));
+            me.FindNode(out Shroud, nameof(Shroud));
 
             QueueViewer.GridViewer = GridViewer;
         }
@@ -101,9 +115,10 @@ public class GameViewerControl : Control
         public void SetGridViewerSize(Vector2 rectMinSize)
         {
             GridViewerContainer.RectMinSize = rectMinSize;
-            // Ensure that both children take up the full space
+            // Ensure that these all take up the full space
             GridViewer.RectMinSize = rectMinSize;
             GameOverMenu.RectMinSize = rectMinSize;
+            PauseMenuContainer.RectMinSize = rectMinSize;
         }
     }
 
@@ -118,6 +133,9 @@ public class GameViewerControl : Control
     public override void _Ready()
     {
         this.members = new Members(this);
+        members.ButtonResume.Connect("pressed", this, nameof(PressedResume));
+        members.ButtonRestart.Connect("pressed", this, nameof(PressedRestart));
+        members.ButtonQuit.Connect("pressed", this, nameof(PressedQuit));
         OnSizeChanged();
     }
 
@@ -223,8 +241,53 @@ public class GameViewerControl : Control
         base._Draw();
     }
 
+    private PauseMenuActions pauseMenuAllowedActions = PauseMenuActions.None;
+    private void ForceSetPaused(bool paused)
+    {
+        this.paused = paused;
+        members.Shroud.Visible = paused;
+        members.GridViewer.SetPaused(paused);
+        members.GridViewer.Update();
+        members.PauseMenuContainer.Visible = paused;
+        if (paused)
+        {
+            members.PauseMenuContainer.FindNextValidFocus().GrabFocus();
+            members.ButtonRestart.Visible = pauseMenuAllowedActions.HasFlag(PauseMenuActions.Restart);
+            members.ButtonQuit.Visible = pauseMenuAllowedActions.HasFlag(PauseMenuActions.Quit);
+        }
+    }
+
+    private bool TryTogglePause()
+    {
+        if (logic.TrySetPaused(!paused, out pauseMenuAllowedActions))
+        {
+            ForceSetPaused(!paused);
+            return true;
+        }
+        return false;
+    }
+
+    private bool paused;
     public override void _Process(float delta)
     {
+        if (Input.IsActionJustPressed("game_pause"))
+        {
+            if (members.GameOverMenu.Visible)
+            {
+                // Cannot pause. Might as well make sure we are unpaused.
+                ForceSetPaused(false);
+            }
+            else
+            {
+                TryTogglePause();
+            }
+        }
+
+        if (paused)
+        {
+            return;
+        }
+
         this.logic.Process(delta);
         this.logic.HandleInput();
 
@@ -244,6 +307,31 @@ public class GameViewerControl : Control
         members.GameOverMenu.Visible = false;
     }
 
+    private void ForceUnpause()
+    {
+        if (paused)
+        {
+            if (!TryTogglePause())
+            {
+                ForceSetPaused(false);
+            }
+        }
+    }
+
+    void PressedResume() => ForceUnpause();
+    void PressedRestart()
+    {
+        ForceUnpause();
+        var root = NewRoot.FindRoot(this);
+        logic.HandlePauseAction(PauseMenuActions.Restart, root);
+    }
+    void PressedQuit()
+    {
+        ForceUnpause();
+        var root = NewRoot.FindRoot(this);
+        logic.HandlePauseAction(PauseMenuActions.Quit, root);
+    }
+
     internal interface ILogic
     {
         void Cleanup();
@@ -251,6 +339,17 @@ public class GameViewerControl : Control
         void HandleInput();
         void CheckGameOver();
         void Initialize(Members members);
+
+        /// <summary>
+        /// Return true iff the game was succesfully paused or unpaused.
+        /// </summary>
+        bool TrySetPaused(bool paused, out PauseMenuActions allowedActions);
+
+        /// <summary>
+        /// Even though <paramref name="action"/> is a flags enum, this will only ever
+        /// be called with a single value from the enum definition.
+        /// </summary>
+        void HandlePauseAction(PauseMenuActions action, IRoot root);
     }
 
     sealed class NullLogic : ILogic
@@ -271,6 +370,17 @@ public class GameViewerControl : Control
             // TODO should set a null model here... but we'll just make them invisible for now
             members.QueueViewer.Visible = false;
         }
+
+        public bool TrySetPaused(bool paused, out PauseMenuActions allowedActions)
+        {
+            allowedActions = PauseMenuActions.None;
+            return false;
+        }
+
+        public void HandlePauseAction(PauseMenuActions action, IRoot root)
+        {
+            throw new Exception("Should never be called");
+        }
     }
 
     internal abstract class LogicBase : ILogic
@@ -287,6 +397,9 @@ public class GameViewerControl : Control
         {
             return ticker.HandleCommand(command);
         }
+
+        public abstract bool TrySetPaused(bool paused, out PauseMenuActions allowedActions);
+        public abstract void HandlePauseAction(PauseMenuActions action, IRoot root);
 
         public virtual void HandleInput()
         {
@@ -343,6 +456,9 @@ public class GameViewerControl : Control
 
         public static void StandardInitialize(Members members, Ticker ticker)
         {
+            members.Shroud.Visible = false;
+            members.GameOverMenu.Visible = false;
+
             members.GridViewer.SetLogic(ticker);
             var state = ticker.state;
             members.QueueViewer.Model = state.MakeQueueModel();
@@ -396,6 +512,7 @@ public class GameViewerControl : Control
             if (state.IsGameOver && !members.GameOverMenu.Visible)
             {
                 replayWriter?.OnGameEnded();
+                members.Shroud.Visible = true;
                 members.GameOverMenu.OnGameOver(state, gamePackage);
             }
         }
@@ -405,11 +522,36 @@ public class GameViewerControl : Control
             base.Initialize(members);
             gamePackage.Initialize(members, ticker);
         }
+
+        public override bool TrySetPaused(bool paused, out PauseMenuActions allowedActions)
+        {
+            ticker.SetPaused(paused);
+            allowedActions = PauseMenuActions.Restart | PauseMenuActions.Quit;
+            return true;
+        }
+
+        public override void HandlePauseAction(PauseMenuActions action, IRoot root)
+        {
+            switch (action)
+            {
+                case PauseMenuActions.Restart:
+                    root.ReplayCurrentLevel();
+                    break;
+                case PauseMenuActions.Quit:
+                    root.BackToMainMenu();
+                    break;
+                default:
+                    throw new Exception("Cannot handle: " + action);
+            }
+        }
     }
 
     class WatchReplayLogic : ILogic
     {
         private readonly IReplayDriver replayDriver;
+        private bool paused = false;
+
+        public bool DisablePausing { get; set; }
 
         public WatchReplayLogic(IReplayDriver replayDriver)
         {
@@ -422,9 +564,39 @@ public class GameViewerControl : Control
 
         public void HandleInput() { }
 
+        public bool TrySetPaused(bool paused, out PauseMenuActions allowedActions)
+        {
+            allowedActions = PauseMenuActions.Quit;
+
+            if (DisablePausing)
+            {
+                return false;
+            }
+
+            this.paused = paused;
+            return true;
+        }
+
+        public void HandlePauseAction(PauseMenuActions action, IRoot root)
+        {
+            switch (action)
+            {
+                case PauseMenuActions.Quit:
+                    root.BackToMainMenu();
+                    break;
+                default:
+                    throw new Exception("Cannot handle: " + action);
+            }
+        }
+
         private Moment now = new Moment(-1);
         public void Process(float delta)
         {
+            if (paused)
+            {
+                return;
+            }
+
             if (now.Millis < 0)
             {
                 now = new Moment(0);

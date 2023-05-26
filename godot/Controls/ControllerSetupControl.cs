@@ -205,7 +205,7 @@ public class ControllerSetupControl : Control
 
         new Prompt("Confirm", "-cross", 0, "ui_accept"),
         new Prompt("Cancel", "-circle", 0, "ui_cancel"),
-        new Prompt("Pause", "-start", 0), // The "game_pause" action does not yet exist...
+        new Prompt("Pause", "-start", 0, "game_pause"),
     };
 
     private static readonly string[] Actions = Prompts.SelectMany(x => x.Actions).ToArray();

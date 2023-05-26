@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace BCZ.Core
 {
@@ -118,8 +117,15 @@ namespace BCZ.Core
 
     public sealed class DotnetTicker : Ticker
     {
-        private DateTime startTime = default(DateTime);
-        private Moment now;
+        // Godot's `Process(float delta)` timekeeping mechanism loses time against a wall clock
+        // if the game starts dropping frames.
+        // (Even if you never drop frames, I'm not sure that it would precisely match a wall clock.)
+        // So we also use a Stopwatch and use whichever one runs faster.
+        private readonly System.Diagnostics.Stopwatch stopwatch = new System.Diagnostics.Stopwatch();
+        private float accumulatedGodotSeconds = 0;
+        private bool isPaused;
+        private bool isStarted;
+        private Moment now = Moment.Zero;
 
         public DotnetTicker(State state, IReplayCollector replayCollector)
             : base(state, replayCollector)
@@ -141,15 +147,50 @@ namespace BCZ.Core
                 startDelay -= delta;
                 return;
             }
-
-            if (startTime == default(DateTime))
+            if (isPaused)
             {
-                startTime = DateTime.UtcNow;
+                return;
             }
 
-            var millis = (DateTime.UtcNow - startTime).TotalMilliseconds;
-            now = new Moment(Convert.ToInt32(millis));
+            if (!isStarted)
+            {
+                // Frame 0
+                isStarted = true;
+                stopwatch.Start();
+            }
+            else
+            {
+                // Frame N>0
+                accumulatedGodotSeconds += delta;
+            }
+
+            int totalStopwatchMillis = Convert.ToInt32(stopwatch.ElapsedMilliseconds);
+            int totalMillisGodot = Convert.ToInt32(accumulatedGodotSeconds * 1000);
+
+            var totalMillis = Math.Max(totalStopwatchMillis, totalMillisGodot);
+            if (totalMillis < now.Millis)
+            {
+                throw new Exception("Cannot reverse time!");
+            }
+
+            //Console.WriteLine($"Total Millis: Godot {totalMillisGodot} / dotnet {totalStopwatchMillis}");
+
+            now = new Moment(totalMillis);
             Advance(now);
+        }
+
+        public void SetPaused(bool paused)
+        {
+            if (paused && !this.isPaused)
+            {
+                stopwatch.Stop();
+                isPaused = true;
+            }
+            if (!paused && this.isPaused)
+            {
+                isPaused = false;
+                stopwatch.Start();
+            }
         }
 
         public bool HandleCommand(Command command)
