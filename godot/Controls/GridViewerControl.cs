@@ -84,12 +84,89 @@ public class GridViewerControl : Control
     private static readonly Godot.Color bgColor = Godot.Color.Color8(0, 0, 0);
     private static readonly Godot.Color shroudColor = Godot.Color.Color8(0, 0, 0, 120);
 
+    /// <summary>
+    /// Should be calculated once per <see cref="_Draw"/>
+    /// </summary>
+    ref struct Dimensions
+    {
+        public GridSize gridSize;
+        public float screenCellSize;
+        public float extraX;
+        public float extraY;
+        public float spriteWTF;
+
+        /// <summary>
+        /// Should be calculated once per <paramref name="loc"/>.
+        /// </summary>
+        public CellDimensions CalculateCellDimensions(Loc loc)
+        {
+            var gridY = gridSize.Height - (loc.Y + 1);
+            var screenY = gridY * screenCellSize + extraY / 2 + yPadding;
+            var screenX = loc.X * screenCellSize + extraX / 2 + 1f;
+            return new CellDimensions()
+            {
+                dimensions = this,
+                gridY = gridY,
+                screenX = screenX,
+                screenY = screenY,
+            };
+        }
+    }
+
+    ref struct CellDimensions
+    {
+        public Dimensions dimensions;
+        public float gridY;
+        public float screenX;
+        public float screenY;
+
+        public void DrawBorder(Control control, Loc loc, ILogic Logic)
+        {
+            var (borderLight, borderDark) = Logic.BorderColor(loc);
+            var screenCellSize = dimensions.screenCellSize;
+
+            control.DrawRect(new Rect2(screenX - 1, gridY * screenCellSize + yPadding, screenCellSize + 2, screenCellSize + 2), borderDark);
+            control.DrawRect(new Rect2(screenX, gridY * screenCellSize + 1 + yPadding, screenCellSize, screenCellSize), borderLight);
+            control.DrawRect(new Rect2(screenX + 1, gridY * screenCellSize + 2 + yPadding, screenCellSize - 2, screenCellSize - 2), bgColor);
+        }
+    }
+
+    private Dimensions CalculateDimensions(GridSize gridSize)
+    {
+        var fullSize = this.RectSize - new Vector2(0, yPadding * 2);
+        float screenCellSize = GetCellSize(fullSize, gridSize);
+        float extraX = Math.Max(0, fullSize.x - screenCellSize * gridSize.Width);
+        float extraY = Math.Max(0, fullSize.y - screenCellSize * gridSize.Height);
+        float spriteWTF = -extraY / 2; // not sure why this is needed, but it works
+        return new Dimensions()
+        {
+            gridSize = gridSize,
+            screenCellSize = screenCellSize,
+            extraX = extraX,
+            extraY = extraY,
+            spriteWTF = spriteWTF,
+        };
+    }
+
     public override void _Draw()
     {
         Logic.Update();
 
         var grid = Logic.Grid;
         var gridSize = grid.Size;
+
+        DrawRect(new Rect2(default(Vector2), this.RectSize), bgColor);
+        // For debugging, show the excess width/height as brown:
+        //DrawRect(new Rect2(0, 0, fullSize), Colors.Brown);
+        //DrawRect(new Rect2(extraX / 2, extraY / 2, fullSize.x - extraX, fullSize.y - extraY), Colors.Black);
+
+        var dimensions = CalculateDimensions(gridSize);
+
+        if (paused)
+        {
+            DrawPaused(grid, ref dimensions);
+            return;
+        }
 
         if (Logic.ShouldFlicker)
         {
@@ -101,24 +178,13 @@ public class GridViewerControl : Control
             flicker = FlickerState.Initial;
         }
 
-        DrawRect(new Rect2(default(Vector2), this.RectSize), bgColor);
-
-        var fullSize = this.RectSize - new Vector2(0, yPadding * 2);
-
-        float screenCellSize = GetCellSize(fullSize, gridSize);
-        float extraX = Math.Max(0, fullSize.x - screenCellSize * gridSize.Width);
-        float extraY = Math.Max(0, fullSize.y - screenCellSize * gridSize.Height);
-        float spriteWTF = -extraY / 2; // not sure why this is needed, but it works
-
-        // For debugging, show the excess width/height as brown:
-        //DrawRect(new Rect2(0, 0, fullSize), Colors.Brown);
-        //DrawRect(new Rect2(extraX / 2, extraY / 2, fullSize.x - extraX, fullSize.y - extraY), Colors.Black);
-
         // Occupant sprites are always 360x360 pixels
+        var screenCellSize = dimensions.screenCellSize;
         float spriteScale = screenCellSize / 360.0f;
         var spriteScale2 = new Vector2(spriteScale, spriteScale);
         CurrentSpriteScale = spriteScale2;
         CurrentCellSize = screenCellSize;
+        var offset = screenCellSize / 2; // Used to position sprites in the center (instead of the upper left)
 
         var temp = Logic.PreviewPlummet();
 
@@ -141,22 +207,15 @@ public class GridViewerControl : Control
                     occ = destroyedOcc;
                 }
 
-                var gridY = gridSize.Height - (y + 1);
-                var screenY = gridY * screenCellSize + extraY / 2 + yPadding;
-                var screenX = x * screenCellSize + extraX / 2 + 1f;
+                var cellDimensions = dimensions.CalculateCellDimensions(loc);
 
                 float adder = fallAnimator.GetAdder(loc);
                 adder += Logic.FallSampleOverride(loc);
-                screenY -= adder * screenCellSize;
+                var screenY = cellDimensions.screenY - adder * screenCellSize;
 
                 if (flicker.ShowGrid && !previewOcc.HasValue)
                 {
-                    var (borderLight, borderDark) = Logic.BorderColor(loc);
-
-                    var YY = gridY;
-                    DrawRect(new Rect2(screenX - 1, YY * screenCellSize + yPadding, screenCellSize + 2, screenCellSize + 2), borderDark);
-                    DrawRect(new Rect2(screenX, YY * screenCellSize + 1 + yPadding, screenCellSize, screenCellSize), borderLight);
-                    DrawRect(new Rect2(screenX + 1, YY * screenCellSize + 2 + yPadding, screenCellSize - 2, screenCellSize - 2), bgColor);
+                    cellDimensions.DrawBorder(this, loc, Logic);
                 }
 
                 if (!Logic.OverrideSpriteKind(occ, loc, out var kind))
@@ -189,11 +248,10 @@ public class GridViewerControl : Control
                 if (currentSprite != null)
                 {
                     activeSprites[index] = currentSprite;
-
                     var sprite = currentSprite;
-                    var offset = screenCellSize / 2;
+                    sprite.Visible = true;
+                    sprite.Position = new Vector2(cellDimensions.screenX + offset, screenY + offset + dimensions.spriteWTF);
 
-                    sprite.Position = new Vector2(screenX + offset, screenY + offset + spriteWTF);
                     sprite.Scale = spriteScale2;
                     if (previewOcc.HasValue)
                     {
@@ -241,11 +299,51 @@ public class GridViewerControl : Control
 
         if (paused || shrouded)
         {
-            DrawRect(new Rect2(0, 0, RectSize), GameColors.Shroud, filled: true);
+            DrawShroud();
         }
 
         // help debug size
         //DrawRect(new Rect2(5, 5, this.RectSize - new Vector2(10, 10)), Godot.Colors.LightGreen, filled: false);
+    }
+
+    private void DrawPaused(IReadOnlyGridSlim grid, ref Dimensions dimensions)
+    {
+        // We're not going to respect recently-destroyed occupants or the fall adder.
+        // Look at the grid only; it's good enough and maybe better.
+
+        var gridSize = grid.Size;
+        var screenCellSize = dimensions.screenCellSize;
+        var padding = screenCellSize * 0.15f;
+        var smallerSize = screenCellSize - padding * 2;
+
+        for (int x = 0; x < gridSize.Width; x++)
+        {
+            for (int y = 0; y < gridSize.Height; y++)
+            {
+                var loc = new Loc(x, y); var sprite = activeSprites[loc.ToIndex(gridSize)];
+                if (sprite != null)
+                {
+                    sprite.Visible = false;
+                }
+
+                var cellDimensions = dimensions.CalculateCellDimensions(loc);
+                cellDimensions.DrawBorder(this, loc, Logic);
+
+                var occ = grid.Get(loc);
+                if (occ != Occupant.None)
+                {
+                    var rect = new Rect2(cellDimensions.screenX + padding, cellDimensions.screenY + padding, smallerSize, smallerSize);
+                    DrawRect(rect, GameColors.OccupantDuringPause);
+                }
+            }
+        }
+
+        DrawShroud();
+    }
+
+    private void DrawShroud()
+    {
+        DrawRect(new Rect2(0, 0, RectSize + new Vector2(1, 1)), GameColors.Shroud, filled: true);
     }
 
     internal static SpriteKind GetSpriteKind(Occupant occ, Loc loc)
