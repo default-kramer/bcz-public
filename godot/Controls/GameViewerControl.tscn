@@ -58,6 +58,10 @@ margin_bottom = 580.0
 [node name="GridViewer" parent="MarginContainer/HBoxContainer/GridViewerContainer" instance=ExtResource( 2 )]
 margin_bottom = 580.0
 
+[node name="Shroud" type="ColorRect" parent="MarginContainer/HBoxContainer/GridViewerContainer"]
+margin_bottom = 580.0
+color = Color( 0.211765, 0.364706, 0.341176, 0.705882 )
+
 [node name="GameOverMenu" parent="MarginContainer/HBoxContainer/GridViewerContainer" instance=ExtResource( 5 )]
 anchor_right = 0.0
 anchor_bottom = 0.0

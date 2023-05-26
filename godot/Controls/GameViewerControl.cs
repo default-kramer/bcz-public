@@ -86,6 +86,12 @@ public class GameViewerControl : Control
         public readonly Button ButtonRestart;
         public readonly Button ButtonQuit;
 
+        /// <summary>
+        /// Be careful if you're thinking about relocating this.
+        /// If it lives too close to the occupants sprites, you will have a hard time drawing the sprites behind the shroud.
+        /// </summary>
+        public readonly ColorRect Shroud;
+
         public Members(Control me)
         {
             me.FindNode(out GridViewer, nameof(GridViewer));
@@ -101,6 +107,7 @@ public class GameViewerControl : Control
             me.FindNode(out ButtonResume, nameof(ButtonResume));
             me.FindNode(out ButtonRestart, nameof(ButtonRestart));
             me.FindNode(out ButtonQuit, nameof(ButtonQuit));
+            me.FindNode(out Shroud, nameof(Shroud));
 
             QueueViewer.GridViewer = GridViewer;
         }
@@ -238,6 +245,7 @@ public class GameViewerControl : Control
     private void ForceSetPaused(bool paused)
     {
         this.paused = paused;
+        members.Shroud.Visible = paused;
         members.GridViewer.SetPaused(paused);
         members.GridViewer.Update();
         members.PauseMenuContainer.Visible = paused;
@@ -448,7 +456,7 @@ public class GameViewerControl : Control
 
         public static void StandardInitialize(Members members, Ticker ticker)
         {
-            members.GridViewer.SetShrouded(false);
+            members.Shroud.Visible = false;
             members.GameOverMenu.Visible = false;
 
             members.GridViewer.SetLogic(ticker);
@@ -504,7 +512,7 @@ public class GameViewerControl : Control
             if (state.IsGameOver && !members.GameOverMenu.Visible)
             {
                 replayWriter?.OnGameEnded();
-                members.GridViewer.SetShrouded(true);
+                members.Shroud.Visible = true;
                 members.GameOverMenu.OnGameOver(state, gamePackage);
             }
         }

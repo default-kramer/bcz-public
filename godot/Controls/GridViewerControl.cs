@@ -50,12 +50,6 @@ public class GridViewerControl : Control
         elapsedSeconds += delta;
     }
 
-    private bool shrouded = false;
-    public void SetShrouded(bool shrouded)
-    {
-        this.shrouded = shrouded;
-    }
-
     private bool paused = false;
     public void SetPaused(bool paused)
     {
@@ -297,17 +291,21 @@ public class GridViewerControl : Control
             DrawRect(new Rect2(0, 0, RectSize.x, height), shroudColor, filled: true);
         }
 
-        if (paused || shrouded)
-        {
-            DrawShroud();
-        }
-
         // help debug size
         //DrawRect(new Rect2(5, 5, this.RectSize - new Vector2(10, 10)), Godot.Colors.LightGreen, filled: false);
     }
 
     private void DrawPaused(IReadOnlyGridSlim grid, ref Dimensions dimensions)
     {
+        // I had a problem where it was difficult to make the occupant sprites draw *behind* the shroud.
+        // Then I realized "why not just hide the sprites while the game is paused?"
+        // Otherwise the player could just pause the game, take all the time they need to find the best move
+        // unpause, move, and repeat the process.
+        // Then I realized the shroud should be a separate control because the z-index problem was also affecting
+        // the Game Over menu, where we don't want to hide the sprites.
+        // So now I am only hiding the sprites for game design reasons, no longer for technical reasons.
+        // Anyway...
+        //
         // We're not going to respect recently-destroyed occupants or the fall adder.
         // Look at the grid only; it's good enough and maybe better.
 
@@ -337,13 +335,6 @@ public class GridViewerControl : Control
                 }
             }
         }
-
-        DrawShroud();
-    }
-
-    private void DrawShroud()
-    {
-        DrawRect(new Rect2(0, 0, RectSize + new Vector2(1, 1)), GameColors.Shroud, filled: true);
     }
 
     internal static SpriteKind GetSpriteKind(Occupant occ, Loc loc)
