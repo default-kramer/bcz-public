@@ -261,7 +261,15 @@ public class GameViewerControl : Control
     {
         if (Input.IsActionJustPressed("game_pause"))
         {
-            TryTogglePause();
+            if (members.GameOverMenu.Visible)
+            {
+                // Cannot pause. Might as well make sure we are unpaused.
+                ForceSetPaused(false);
+            }
+            else
+            {
+                TryTogglePause();
+            }
         }
 
         if (paused)
