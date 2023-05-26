@@ -4,7 +4,7 @@ using System;
 
 #nullable enable
 
-public class NewRoot : Control
+public class NewRoot : Control, IRoot
 {
     readonly struct Members
     {
@@ -52,9 +52,9 @@ public class NewRoot : Control
         BackToMainMenu();
     }
 
-    internal static NewRoot FindRoot(Node child)
+    internal static IRoot FindRoot(Node child)
     {
-        return child.FindAncestor<NewRoot>() ?? throw new Exception("Failed to find root node");
+        return child.FindAncestor<IRoot>() ?? throw new Exception("Failed to find root node");
     }
 
     private SinglePlayerMenu.LevelToken? levelToken;
@@ -181,5 +181,5 @@ public class NewRoot : Control
         members.TutorialControl.Reset();
     }
 
-    internal IServerConnection? GetServerConnection() => serverConnection;
+    IServerConnection? IRoot.GetServerConnection() => serverConnection;
 }

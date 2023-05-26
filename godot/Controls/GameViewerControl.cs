@@ -234,6 +234,7 @@ public class GameViewerControl : Control
         base._Draw();
     }
 
+    private PauseMenuActions pauseMenuAllowedActions = PauseMenuActions.None;
     private void ForceSetPaused(bool paused)
     {
         this.paused = paused;
@@ -243,12 +244,14 @@ public class GameViewerControl : Control
         if (paused)
         {
             members.PauseMenuContainer.FindNextValidFocus().GrabFocus();
+            members.ButtonRestart.Visible = pauseMenuAllowedActions.HasFlag(PauseMenuActions.Restart);
+            members.ButtonQuit.Visible = pauseMenuAllowedActions.HasFlag(PauseMenuActions.Quit);
         }
     }
 
     private bool TryTogglePause()
     {
-        if (logic.TrySetPaused(!paused))
+        if (logic.TrySetPaused(!paused, out pauseMenuAllowedActions))
         {
             ForceSetPaused(!paused);
             return true;
@@ -311,14 +314,14 @@ public class GameViewerControl : Control
     void PressedRestart()
     {
         ForceUnpause();
-        // TODO need to stop the current game! And the Logic should have a say in this!
-        NewRoot.FindRoot(this).ReplayCurrentLevel();
+        var root = NewRoot.FindRoot(this);
+        logic.HandlePauseAction(PauseMenuActions.Restart, root);
     }
-    public void PressedQuit()
+    void PressedQuit()
     {
         ForceUnpause();
-        // TODO need to stop the current game! And the Logic should have a say in this!
-        NewRoot.FindRoot(this).BackToMainMenu();
+        var root = NewRoot.FindRoot(this);
+        logic.HandlePauseAction(PauseMenuActions.Quit, root);
     }
 
     internal interface ILogic
@@ -332,7 +335,13 @@ public class GameViewerControl : Control
         /// <summary>
         /// Return true iff the game was succesfully paused or unpaused.
         /// </summary>
-        bool TrySetPaused(bool paused);
+        bool TrySetPaused(bool paused, out PauseMenuActions allowedActions);
+
+        /// <summary>
+        /// Even though <paramref name="action"/> is a flags enum, this will only ever
+        /// be called with a single value from the enum definition.
+        /// </summary>
+        void HandlePauseAction(PauseMenuActions action, IRoot root);
     }
 
     sealed class NullLogic : ILogic
@@ -354,7 +363,16 @@ public class GameViewerControl : Control
             members.QueueViewer.Visible = false;
         }
 
-        public bool TrySetPaused(bool paused) => false;
+        public bool TrySetPaused(bool paused, out PauseMenuActions allowedActions)
+        {
+            allowedActions = PauseMenuActions.None;
+            return false;
+        }
+
+        public void HandlePauseAction(PauseMenuActions action, IRoot root)
+        {
+            throw new Exception("Should never be called");
+        }
     }
 
     internal abstract class LogicBase : ILogic
@@ -372,11 +390,8 @@ public class GameViewerControl : Control
             return ticker.HandleCommand(command);
         }
 
-        public virtual bool TrySetPaused(bool paused)
-        {
-            ticker.SetPaused(paused);
-            return true;
-        }
+        public abstract bool TrySetPaused(bool paused, out PauseMenuActions allowedActions);
+        public abstract void HandlePauseAction(PauseMenuActions action, IRoot root);
 
         public virtual void HandleInput()
         {
@@ -499,6 +514,28 @@ public class GameViewerControl : Control
             base.Initialize(members);
             gamePackage.Initialize(members, ticker);
         }
+
+        public override bool TrySetPaused(bool paused, out PauseMenuActions allowedActions)
+        {
+            ticker.SetPaused(paused);
+            allowedActions = PauseMenuActions.Restart | PauseMenuActions.Quit;
+            return true;
+        }
+
+        public override void HandlePauseAction(PauseMenuActions action, IRoot root)
+        {
+            switch (action)
+            {
+                case PauseMenuActions.Restart:
+                    root.ReplayCurrentLevel();
+                    break;
+                case PauseMenuActions.Quit:
+                    root.BackToMainMenu();
+                    break;
+                default:
+                    throw new Exception("Cannot handle: " + action);
+            }
+        }
     }
 
     class WatchReplayLogic : ILogic
@@ -519,8 +556,10 @@ public class GameViewerControl : Control
 
         public void HandleInput() { }
 
-        public bool TrySetPaused(bool paused)
+        public bool TrySetPaused(bool paused, out PauseMenuActions allowedActions)
         {
+            allowedActions = PauseMenuActions.Quit;
+
             if (DisablePausing)
             {
                 return false;
@@ -528,6 +567,18 @@ public class GameViewerControl : Control
 
             this.paused = paused;
             return true;
+        }
+
+        public void HandlePauseAction(PauseMenuActions action, IRoot root)
+        {
+            switch (action)
+            {
+                case PauseMenuActions.Quit:
+                    root.BackToMainMenu();
+                    break;
+                default:
+                    throw new Exception("Cannot handle: " + action);
+            }
         }
 
         private Moment now = new Moment(-1);

@@ -199,6 +199,24 @@ public class PuzzleControl : Control, PuzzleMenu.ILogic
                 }
             }
         }
+
+        public override bool TrySetPaused(bool paused, out PauseMenuActions allowedActions)
+        {
+            allowedActions = PauseMenuActions.Quit;
+            return true;
+        }
+
+        public override void HandlePauseAction(PauseMenuActions action, IRoot root)
+        {
+            switch (action)
+            {
+                case PauseMenuActions.Quit:
+                    root.BackToMainMenu();
+                    break;
+                default:
+                    throw new Exception("Cannot handle: " + action);
+            }
+        }
     }
 
     readonly struct PuzzleProvider
