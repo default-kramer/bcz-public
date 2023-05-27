@@ -82,9 +82,9 @@ custom_fonts/normal_font = SubResource( 2 )
 text = "Default Keybindings:
   A - Left
   D - Right
-  TBD - Rotate Anti-Clockwise
-  TBD - Rotate Clockwise
-  TBD - Drop (hold to Burst)
+  J  - Rotate Clockwise
+  K - Rotate Anti-Clockwise
+  H - Drop (hold to Burst)
 
 Most game controllers should work automatically."
 
