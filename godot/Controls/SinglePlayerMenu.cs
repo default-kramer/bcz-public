@@ -32,19 +32,25 @@ public class SinglePlayerMenu : Control
         // Show/Hide Medals
         public static readonly ChoiceItem MedalsHide = new("Hide", "Do not display your progress towards each medal.\nYou can still earn medals anyway.");
         public static readonly ChoiceItem MedalsShow = new("Show", "Display your progress towards each medal.\nLarge combos are needed to win the gold medal.");
+
+        // Enable/Disable blanks
+        public static readonly ChoiceItem BlanksOn = new("On", "Play with blank pieces.");
+        public static readonly ChoiceItem BlanksOff = new("Off", "Playing without blanks might help beginners learn.\n(But earning medals will be practically impossible.)");
     }
 
     private readonly ChoiceModel<ChoiceItem> GameModeChoices = new ChoiceModel<ChoiceItem>()
         .AddChoices(ChoiceItem.ModeLevels, ChoiceItem.ModeScoreAttack);
 
-    private static readonly ISettingsCollection LevelsModeSettings = SinglePlayerSettings.NormalSettings;
     private static readonly ISinglePlayerSettings ScoreAttackSettings = OfficialSettings.ScoreAttackV0;
 
     private readonly ChoiceModel<int> LevelChoices = new ChoiceModel<int>()
-        .AddChoices(Enumerable.Range(1, LevelsModeSettings.MaxLevel));
+        .AddChoices(Enumerable.Range(1, SinglePlayerSettings.MaxLevel));
 
     private readonly ChoiceModel<ChoiceItem> ChoiceMedals = new ChoiceModel<ChoiceItem>()
         .AddChoices(ChoiceItem.MedalsHide, ChoiceItem.MedalsShow);
+
+    private readonly ChoiceModel<ChoiceItem> ChoiceBlanks = new ChoiceModel<ChoiceItem>()
+        .AddChoices(ChoiceItem.BlanksOn, ChoiceItem.BlanksOff);
 
     private readonly ChoiceModel<ScoreAttackGoal> ChoiceScoreAttackGoal = new ChoiceModel<ScoreAttackGoal>().AddChoices(
         ScoreAttackGoal.PersonalBest,
@@ -58,6 +64,7 @@ public class SinglePlayerMenu : Control
         public readonly MenuChoiceControl ChoiceGameMode;
         public readonly MenuChoiceControl ChoiceLevel;
         public readonly MenuChoiceControl ChoiceMedals;
+        public readonly MenuChoiceControl ChoiceBlanks;
         public readonly MenuChoiceControl ChoiceScoreAttackGoal;
         public readonly Button ButtonStartGame;
         public readonly Button ButtonBack;
@@ -78,6 +85,9 @@ public class SinglePlayerMenu : Control
 
             me.FindNode(out ChoiceMedals, nameof(ChoiceMedals));
             ChoiceMedals.Model = me.ChoiceMedals;
+
+            me.FindNode(out ChoiceBlanks, nameof(ChoiceBlanks));
+            ChoiceBlanks.Model = me.ChoiceBlanks;
 
             me.FindNode(out ChoiceScoreAttackGoal, nameof(ChoiceScoreAttackGoal));
             ChoiceScoreAttackGoal.Model = me.ChoiceScoreAttackGoal;
@@ -162,7 +172,8 @@ public class SinglePlayerMenu : Control
         }
         else
         {
-            var collection = LevelsModeSettings;
+            bool blanksOn = ChoiceBlanks.SelectedItem == ChoiceItem.BlanksOn;
+            var collection = blanksOn ? SinglePlayerSettings.LevelsModeWithBlanks : SinglePlayerSettings.LevelsModeWithoutBlanks;
             int level = LevelChoices.SelectedItem;
             var token = new LevelsModeToken(level, collection, HideMedals);
             NewRoot.FindRoot(this).StartGame(token);
@@ -174,14 +185,18 @@ public class SinglePlayerMenu : Control
         NewRoot.FindRoot(this).BackToMainMenu();
     }
 
-    private string?[] LevelsModeDescriptions = new string?[LevelsModeSettings.MaxLevel];
+    private string?[] LevelsModeDescriptions = new string?[SinglePlayerSettings.MaxLevel];
     private string GetLevelsModeHelpText(int level)
     {
         int index = level - 1;
         var item = LevelsModeDescriptions[index];
         if (item != null) { return item; }
 
-        var count = LevelsModeSettings.GetSettings(level).EnemyCount;
+        // Blanks On / Blanks Off should be identical in all other respects including enemy count.
+        // So we can choose either collection:
+        var collection = SinglePlayerSettings.LevelsModeWithBlanks;
+
+        var count = collection.GetSettings(level).EnemyCount;
         var description = $"Eliminate {count} targets to win.";
         LevelsModeDescriptions[index] = description;
         return description;

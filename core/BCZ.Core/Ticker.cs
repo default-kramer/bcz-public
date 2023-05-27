@@ -160,7 +160,6 @@ namespace BCZ.Core
         private float accumulatedGodotSeconds = 0;
         private bool isPaused;
         private bool isStarted;
-        private bool isGameOver;
         private Moment now = Moment.Zero;
 
         public DotnetTicker(State state, IReplayCollector replayCollector)

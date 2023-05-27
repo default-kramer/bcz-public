@@ -85,8 +85,9 @@ namespace BCZ.Core
             return stripeCount * RowsPerStripe;
         }
 
-        public static readonly ISettingsCollection BeginnerSettings = BeginnerSettingsCollection.Instance;
-        public static readonly ISettingsCollection NormalSettings = NormalSettingsCollection.Instance;
+        public const int MaxLevel = LevelsModeSettingsCollection.NumLevels;
+        public static readonly ISettingsCollection LevelsModeWithoutBlanks = LevelsModeSettingsCollection.WithoutBlanks;
+        public static readonly ISettingsCollection LevelsModeWithBlanks = LevelsModeSettingsCollection.WithBlanks;
         public static readonly ISettingsCollection PvPSimSettings = PvPSimSettingsCollection.Instance;
         private static readonly IReadOnlyList<IGoal> NoGoals = new List<IGoal>();
 
@@ -178,34 +179,15 @@ namespace BCZ.Core
             public abstract IReadOnlyList<IGoal> GetGoals(int level);
         }
 
-        class BeginnerSettingsCollection : SettingsCollection
+        class LevelsModeSettingsCollection : SettingsCollection
         {
-            public static readonly BeginnerSettingsCollection Instance = new();
-
-            private BeginnerSettingsCollection() : base(20)
-            {
-                AddAll();
-            }
-
-            protected override bool SpawnBlanks(int level)
-            {
-                return false;
-            }
-
-            public override IReadOnlyList<IGoal> GetGoals(int level)
-            {
-                return NoGoals;
-            }
-        }
-
-        class NormalSettingsCollection : SettingsCollection
-        {
-            const int NumLevels = 20;
+            public const int NumLevels = 20;
 
             private static readonly IReadOnlyList<IReadOnlyList<IGoal>> goals;
-            public static readonly NormalSettingsCollection Instance;
+            public static readonly LevelsModeSettingsCollection WithBlanks;
+            public static readonly LevelsModeSettingsCollection WithoutBlanks;
 
-            static NormalSettingsCollection()
+            static LevelsModeSettingsCollection()
             {
                 var goalsList = new List<IGoal>[NumLevels];
 
@@ -224,17 +206,20 @@ namespace BCZ.Core
 
                 goals = goalsList;
 
-                Instance = new NormalSettingsCollection();
+                WithBlanks = new LevelsModeSettingsCollection(true);
+                WithoutBlanks = new LevelsModeSettingsCollection(false);
             }
 
-            private NormalSettingsCollection() : base(NumLevels)
+            private readonly bool spawnBlanks;
+            private LevelsModeSettingsCollection(bool spawnBlanks) : base(NumLevels)
             {
+                this.spawnBlanks = spawnBlanks;
                 AddAll();
             }
 
             protected override bool SpawnBlanks(int level)
             {
-                return true;
+                return spawnBlanks;
             }
 
             public override IReadOnlyList<IGoal> GetGoals(int level)
