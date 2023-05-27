@@ -40,7 +40,6 @@ public class GameViewerControl : Control
     {
         var settings = gamePackage.Settings;
         var state = State.Create(settings);
-        ReplayWriter? replayWriter = null;
         var listReplayCollector = new ListReplayCollector();
         IReplayCollector replayCollector = listReplayCollector;
 
@@ -55,7 +54,7 @@ public class GameViewerControl : Control
             }
             var filename = System.IO.Path.Combine(replayDir, $"{DateTime.Now.ToString("yyyyMMdd_HHmmss")}_{settings.Seed.Serialize()}.ffr");
             var writer = new System.IO.StreamWriter(filename);
-            replayWriter = ReplayWriter.Begin(writer, settings, shouldDispose: true);
+            var replayWriter = ReplayWriter.Begin(writer, settings, shouldDispose: true);
             replayCollector = replayCollector.Combine(replayWriter);
         }
 
@@ -66,7 +65,7 @@ public class GameViewerControl : Control
         }
 
         var ticker = new DotnetTicker(state, replayCollector);
-        var newLogic = new LiveGameLogic(replayWriter, ticker, members, gamePackage);
+        var newLogic = new LiveGameLogic(ticker, members, gamePackage);
         SetLogic(newLogic);
     }
 
@@ -494,14 +493,12 @@ public class GameViewerControl : Control
 
     sealed class LiveGameLogic : LogicBase
     {
-        private IReplayCollector? replayWriter;
         private readonly Members members;
         private readonly GamePackage gamePackage;
 
-        public LiveGameLogic(ReplayWriter? replayWriter, DotnetTicker ticker, Members members, GamePackage gamePackage)
+        public LiveGameLogic(DotnetTicker ticker, Members members, GamePackage gamePackage)
             : base(ticker)
         {
-            this.replayWriter = replayWriter;
             this.members = members;
             this.gamePackage = gamePackage;
         }
@@ -511,7 +508,7 @@ public class GameViewerControl : Control
             var state = ticker.state;
             if (state.IsGameOver && !members.GameOverMenu.Visible)
             {
-                replayWriter?.OnGameEnded();
+                Console.WriteLine("Check game over!");
                 members.Shroud.Visible = true;
                 members.GameOverMenu.OnGameOver(state, gamePackage);
             }
