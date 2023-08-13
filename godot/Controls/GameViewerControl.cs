@@ -508,7 +508,7 @@ public class GameViewerControl : Control
             var state = ticker.state;
             if (state.IsGameOver && !members.GameOverMenu.Visible)
             {
-                Console.WriteLine("Check game over!");
+                //Console.WriteLine("Check game over!");
                 members.Shroud.Visible = true;
                 members.GameOverMenu.OnGameOver(state, gamePackage);
             }
