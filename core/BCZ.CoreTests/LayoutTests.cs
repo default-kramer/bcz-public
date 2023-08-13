@@ -14,7 +14,7 @@ namespace BCZ.CoreTests
         [TestMethod]
         public void will_not_generate_groups_of_3()
         {
-            var settingsCollection = SinglePlayerSettings.NormalSettings;
+            var settingsCollection = SinglePlayerSettings.LevelsModeWithBlanks;
             var settings = settingsCollection.GetSettings(settingsCollection.MaxLevel);
 
             var prng = PRNG.Create();

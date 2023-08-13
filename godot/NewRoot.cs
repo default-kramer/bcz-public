@@ -40,6 +40,7 @@ public class NewRoot : Control, IRoot
             var conn = new BrowserBasedServerConnection($"{uri.Scheme}://{uri.Host}:{uri.Port}");
             serverConnection = conn;
             this.AddChild(conn);
+            conn.PauseMode = AlwaysPausedHack.Process;
         }
 
         var userAgent = JavaScript.Eval("navigator.userAgent") as string;
@@ -111,15 +112,16 @@ public class NewRoot : Control, IRoot
     /// The "proper" way to do this is probably using SceneTree.ChangeScene,
     /// but that's more work than I care to do right now.
     /// </summary>
-    const bool AlwaysPausedHack = true;
+    static class AlwaysPausedHack
+    {
+        public const bool True = true;
+        public static readonly PauseModeEnum Process = PauseModeEnum.Process;
+    }
 
-    /// <summary>
-    /// See <see cref="AlwaysPausedHack"/>
-    /// </summary>
     private static void SetEnabled(Control c, bool enabled)
     {
         c.Visible = enabled;
-        c.PauseMode = enabled ? PauseModeEnum.Process : PauseModeEnum.Inherit;
+        c.PauseMode = enabled ? AlwaysPausedHack.Process : PauseModeEnum.Inherit;
         // These are probably redundant now:
         c.SetProcess(enabled);
         c.SetProcessInput(enabled);
@@ -127,7 +129,7 @@ public class NewRoot : Control, IRoot
 
     private void SwitchTo(Control control)
     {
-        GetTree().Paused = AlwaysPausedHack;
+        GetTree().Paused = AlwaysPausedHack.True;
 
         SetEnabled(members.GameViewer, false);
         SetEnabled(members.PuzzleControl, false);

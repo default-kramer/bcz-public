@@ -12,6 +12,7 @@ namespace BCZ.Core
     {
         public readonly State state;
         private readonly IReplayCollector replayCollector;
+        private bool isGameOver;
         private Moment lastMoment;
 
         public Ticker(State state, IReplayCollector replayCollector)
@@ -101,6 +102,40 @@ namespace BCZ.Core
         private void Advance(Moment cursor, Moment target)
         {
             state.Elapse(target);
+            CheckGameOver();
+        }
+
+        /// <summary>
+        /// Return true if the game is over, false otherwise.
+        /// </summary>
+        protected bool CheckGameOver()
+        {
+            if (isGameOver)
+            {
+                return true;
+            }
+
+            if (state.IsGameOver)
+            {
+                bool doCleanup = false;
+
+                // Only lock once per game. I'm not even sure if locking is necessary at all,
+                // but I've already seen some double-Dispose() exceptions so let's be safe.
+                lock (this)
+                {
+                    if (!isGameOver)
+                    {
+                        isGameOver = true;
+                        doCleanup = true;
+                    }
+                }
+                if (doCleanup)
+                {
+                    replayCollector.OnGameEnded();
+                }
+            }
+
+            return isGameOver;
         }
 
         /// <summary>
@@ -162,6 +197,12 @@ namespace BCZ.Core
             {
                 // Frame N>0
                 accumulatedGodotSeconds += delta;
+            }
+
+            if (CheckGameOver())
+            {
+                stopwatch.Stop();
+                return;
             }
 
             int totalStopwatchMillis = Convert.ToInt32(stopwatch.ElapsedMilliseconds);

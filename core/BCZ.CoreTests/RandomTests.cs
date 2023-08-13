@@ -44,8 +44,8 @@ namespace BCZ.CoreTests
         [TestMethod]
         public void TODO_MOVE_THIS_TEST()
         {
-            AssertStuff(SinglePlayerSettings.BeginnerSettings, false);
-            AssertStuff(SinglePlayerSettings.NormalSettings, true);
+            AssertStuff(SinglePlayerSettings.LevelsModeWithoutBlanks, false);
+            AssertStuff(SinglePlayerSettings.LevelsModeWithBlanks, true);
         }
 
         [TestMethod]

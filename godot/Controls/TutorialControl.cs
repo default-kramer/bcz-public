@@ -19,7 +19,10 @@ public class TutorialControl : Control
     {
         public readonly GameViewerControl GameViewerControl;
         public readonly MessageScroller Message;
-        public readonly Texture EnemyTexture;
+        public readonly Texture TargetRed;
+        public readonly Texture TargetBlue;
+        public readonly Texture TargetYellow;
+        public readonly Texture Blank;
 
         public Members(Control me)
         {
@@ -27,13 +30,25 @@ public class TutorialControl : Control
             me.FindNode(out RichTextLabel lbl, "MessageLabel");
             Message = new MessageScroller(lbl);
 
-            EnemyTexture = (Texture)ResourceLoader.Load("res://Sprites/enemy.bmp");
+            TargetRed = (Texture)ResourceLoader.Load("res://Sprites/for-tutorial/target-red.png");
+            TargetBlue = (Texture)ResourceLoader.Load("res://Sprites/for-tutorial/target-blue.png");
+            TargetYellow = (Texture)ResourceLoader.Load("res://Sprites/for-tutorial/target-yellow.png");
+            Blank = (Texture)ResourceLoader.Load("res://Sprites/for-tutorial/left-blank.png"); ;
         }
     }
 
     private Members members;
     private Challenge challenge;
     private Progress progress;
+    const int imageSize = 20;
+
+    private static void AddImages(MessageScroller message, params Texture[] images)
+    {
+        for (int i = 0; i < images.Length; i++)
+        {
+            message.AddImage(images[i], imageSize, imageSize);
+        }
+    }
 
     public override void _Ready()
     {
@@ -93,7 +108,7 @@ public class TutorialControl : Control
         }
         else if (progress == Progress.Challenge3_Success)
         {
-            SetText("This concludes the tutorial. If you're having trouble, just focus on destroying [icon] targets, and worry about combos and blanks later.");
+            SetText("This concludes the tutorial. If you're having trouble, try completing Levels mode with blanks turned off.");
             progress = Progress.Farewell;
         }
         else if (progress == Progress.Farewell)
@@ -104,10 +119,11 @@ public class TutorialControl : Control
 
     private Challenge Challenge0()
     {
-        members.Message.Clear();
-        members.Message.AddText("Drop pieces to make groups of matching colors. Groups of 4 or more are destroyed. Destroy all ");
-        members.Message.AddImage(members.EnemyTexture, 20, 0);
-        members.Message.AddText(" to proceed.");
+        var msg = members.Message;
+        msg.Clear();
+        msg.AddText("Drop pieces to make groups of matching colors. Groups of 4 or more are destroyed. Destroy all ");
+        AddImages(msg, members.TargetRed, members.TargetYellow, members.TargetBlue);
+        members.Message.AddText(" targets to proceed.");
 
         var grid = Grid.Create();
         grid.Set(new Loc(1, 2), enemyYellow);
@@ -151,7 +167,11 @@ public class TutorialControl : Control
 
     private Challenge Challenge2()
     {
-        SetText("Blank pieces [icon] have no color and do not form groups."
+        var msg = members.Message;
+        msg.Clear();
+        msg.AddText("Blank pieces ");
+        AddImages(msg, members.Blank);
+        msg.AddText(" have no color and do not form groups."
             + " Holding the drop button Bursts all blanks."
             + " A 2-group combo is already set up here, all you have to do is hold the drop button.");
 
@@ -219,12 +239,12 @@ public class TutorialControl : Control
         {
             if (progress == Progress.Challenge0_Active)
             {
-                SetText("NOICE!\n\nThe Levels game mode requires you to destroy all targets to win.");
+                SetText("Nice! The Levels game mode requires you to destroy all targets to win.");
                 progress = Progress.Challenge0_Success;
             }
             else if (progress == Progress.Challenge1_Active)
             {
-                SetText("Brilliant! Combos keep you healthy in Levels mode, and earn bonus points in Score Attack mode.");
+                SetText("Brilliant! Combos increase your score, making them essential in Score Attack mode. Combos are also the key to earning medals in the Levels game mode.");
                 progress = Progress.Challenge1_Success;
             }
             else if (progress == Progress.Challenge2_Active)
@@ -252,7 +272,13 @@ public class TutorialControl : Control
         {
             if (progress == Progress.Challenge0_Active)
             {
-                SetText("Try again. Drop the yellow pieces onto the yellow target, and the blue pieces onto the blue target.");
+                var msg = members.Message;
+                msg.Clear();
+                msg.AddText("Try again. Drop the yellow pieces onto the ");
+                AddImages(msg, members.TargetYellow);
+                msg.AddText(" yellow target, and the blue pieces onto the ");
+                AddImages(msg, members.TargetBlue);
+                msg.AddText(" blue target.");
                 progress = Progress.Challenge0_Fail;
             }
             else if (progress == Progress.Challenge1_Active)
@@ -262,7 +288,11 @@ public class TutorialControl : Control
             }
             else if (progress == Progress.Challenge2_Active)
             {
-                SetText("Try again. Hold the drop button to Burst the [icon] blank piece.");
+                var msg = members.Message;
+                msg.Clear();
+                msg.AddText("Try again. Hold the drop button to Burst the ");
+                AddImages(msg, members.Blank);
+                msg.AddText(" blank piece.");
                 progress = Progress.Challenge2_Fail;
             }
             else if (progress == Progress.Challenge3_Active)

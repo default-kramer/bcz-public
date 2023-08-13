@@ -23,6 +23,7 @@ class BrowserBasedServerConnection : Godot.Node, IServerConnection
     {
         this.baseUrl = baseUrl;
         AddChild(http);
+        http.Timeout = 20;
         http.Connect("request_completed", this, nameof(OnRequestCompleted));
     }
 
@@ -33,6 +34,10 @@ class BrowserBasedServerConnection : Godot.Node, IServerConnection
 
     public void UploadGame(string replayFile)
     {
-        http.Request($"{baseUrl}/api/upload-game/v1", method: HTTPClient.Method.Post, requestData: replayFile);
+        string url = $"{baseUrl}/api/upload-game/v1";
+        //Console.WriteLine($"Uploading! To {url}");
+        http.Timeout = 20;
+        var error = http.Request(url, method: HTTPClient.Method.Post, requestData: replayFile);
+        //Console.WriteLine($"Result: {error}");
     }
 }
