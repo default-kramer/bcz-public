@@ -66,7 +66,7 @@ public class CountdownViewerControl : Control
 
         var desiredPosition = CalcPosition(vm);
 
-        float maxJumpRestore = delta * 0.25f;
+        float maxJumpRestore = delta * TODO_FACTOR;
         if (desiredPosition - position > maxJumpRestore)
         {
             position += maxJumpRestore;
@@ -76,6 +76,8 @@ public class CountdownViewerControl : Control
             position = desiredPosition;
         }
     }
+
+    public const float TODO_FACTOR = 0.25f;
 
     static readonly Godot.Color darkGreen = Godot.Colors.Black;// green.Darkened(0.7f);
     static readonly Godot.Color orange = Godot.Colors.Orange;// Godot.Color.Color8(244, 185, 58);

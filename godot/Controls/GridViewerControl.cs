@@ -160,11 +160,7 @@ public class GridViewerControl : Control
         {
             var blah = Logic.LastChanceProgress;
             var delta = blah - countdown;
-            var maxDelta = drawSeconds * 0.25f;
-            if (delta < 0)
-            {
-                Console.WriteLine($"delta {delta}, max {maxDelta}");
-            }
+            var maxDelta = drawSeconds * CountdownViewerControl.TODO_FACTOR;
             if (delta > maxDelta) { delta = maxDelta; }
             else if (delta < -maxDelta) { delta = -maxDelta; }
             countdown += delta;
