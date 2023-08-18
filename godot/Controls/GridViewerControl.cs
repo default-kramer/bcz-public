@@ -10,20 +10,22 @@ using Color = BCZ.Core.Color;
 public class GridViewerControl : Control
 {
     private ILogic Logic = NullLogic.Instance;
+    private float countdown = 0; // 1f is "no time remains"?
 
     public void SetLogic(ILogic logic)
     {
         this.Logic = logic;
+        countdown = logic.LastChanceProgress;
     }
 
     public void SetLogic(Ticker ticker)
     {
-        this.Logic = new StandardLogic(ticker);
+        SetLogic(new StandardLogic(ticker));
     }
 
     public void SetLogicForAttackGrid(IAttackGridViewmodel vm)
     {
-        this.Logic = new AttackGridLogic(vm);
+        SetLogic(new AttackGridLogic(vm));
     }
 
     /// <summary>
@@ -45,9 +47,14 @@ public class GridViewerControl : Control
     }
 
     float elapsedSeconds = 0;
+    float drawSeconds = 0; // seconds since last Draw() call
     public override void _Process(float delta)
     {
         elapsedSeconds += delta;
+        if (!paused)
+        {
+            drawSeconds += delta;
+        }
     }
 
     private bool paused = false;
@@ -144,7 +151,24 @@ public class GridViewerControl : Control
 
     public override void _Draw()
     {
+        var drawSeconds = this.drawSeconds;
+        this.drawSeconds = 0;
+
         Logic.Update();
+
+        // Update countdown, limiting how fast it can change
+        {
+            var blah = Logic.LastChanceProgress;
+            var delta = blah - countdown;
+            var maxDelta = drawSeconds * 0.25f;
+            if (delta < 0)
+            {
+                Console.WriteLine($"delta {delta}, max {maxDelta}");
+            }
+            if (delta > maxDelta) { delta = maxDelta; }
+            else if (delta < -maxDelta) { delta = -maxDelta; }
+            countdown += delta;
+        }
 
         var grid = Logic.Grid;
         var gridSize = grid.Size;
@@ -285,10 +309,31 @@ public class GridViewerControl : Control
             }
         }
 
-        if (Logic.ShouldFlicker)
+        if (true || Logic.ShouldFlicker)
         {
-            var height = Logic.LastChanceProgress * RectSize.y;
-            DrawRect(new Rect2(0, 0, RectSize.x, height), shroudColor, filled: true);
+            const float RESERVED_ROWS = 2f;
+            const float GAME_ROWS = 20f;
+            const float TOTAL_ROWS = 22f;
+
+            const float xOffset = 2;
+            float width = RectSize.x - xOffset;
+
+            float topArea = RectSize.y * RESERVED_ROWS / TOTAL_ROWS;
+            const float yOffset = 2;
+            topArea += yOffset;
+
+            float topEnd = RectSize.y - topArea;
+
+            // Apply shroud to partially depleted rows (and completely depleted rows too)
+            var height = GAME_ROWS * countdown / GAME_ROWS * topEnd;
+            //height = Math.Max(height - yOffset, 0);
+            DrawRect(new Rect2(xOffset, topArea, width, height), shroudColor, filled: true);
+
+            // Hide rows that are completely depleted.
+            const float magic = 0.5f; // I can't explain why this is needed
+            height = Convert.ToInt32(GAME_ROWS * countdown - magic) / GAME_ROWS * topEnd;
+            height = Math.Max(height - yOffset, 0);
+            DrawRect(new Rect2(xOffset, topArea, width, height), bgColor, filled: true);
         }
 
         // help debug size
@@ -480,7 +525,7 @@ public class GridViewerControl : Control
 
         public override IReadOnlyGridSlim Grid => grid;
 
-        public override bool ShouldFlicker => state.LastGaspProgress() > 0;
+        public override bool ShouldFlicker => false;// state.LastGaspProgress() > 0;
 
         public override float LastChanceProgress => state.LastGaspProgress();
 
