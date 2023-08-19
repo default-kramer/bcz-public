@@ -10,6 +10,7 @@ namespace BCZ.Core
     sealed class HookScoreAttack : EmptyStateHook
     {
         private const int gameDurationMillis = 1000 * 60 * 5;
+        private const float gameDurationMillisAsSingle = gameDurationMillis;
         private readonly IStateData data;
         private readonly ISinglePlayerSettings settings;
         private readonly Appointment countdown;
@@ -61,6 +62,7 @@ namespace BCZ.Core
             public CountdownVM(ITimer timer, Grid grid, IStateData data) : base(timer, grid, data) { }
 
             public override int MaxMillis => gameDurationMillis;
+            public override float MaxMillisAsSingle => gameDurationMillisAsSingle;
 
             public override int RemainingMillis => gameDurationMillis - timer.Now.Millis;
 

@@ -10,12 +10,10 @@ using Color = BCZ.Core.Color;
 public class GridViewerControl : Control
 {
     private ILogic Logic = NullLogic.Instance;
-    private float countdown = 0; // 1f is "no time remains"?
 
     public void SetLogic(ILogic logic)
     {
         this.Logic = logic;
-        countdown = logic.LastChanceProgress;
     }
 
     public void SetLogic(Ticker ticker)
@@ -151,20 +149,8 @@ public class GridViewerControl : Control
 
     public override void _Draw()
     {
-        var drawSeconds = this.drawSeconds;
+        Logic.Update(this.drawSeconds);
         this.drawSeconds = 0;
-
-        Logic.Update();
-
-        // Update countdown, limiting how fast it can change
-        {
-            var blah = Logic.LastChanceProgress;
-            var delta = blah - countdown;
-            var maxDelta = drawSeconds * CountdownViewerControl.TODO_FACTOR;
-            if (delta > maxDelta) { delta = maxDelta; }
-            else if (delta < -maxDelta) { delta = -maxDelta; }
-            countdown += delta;
-        }
 
         var grid = Logic.Grid;
         var gridSize = grid.Size;
@@ -319,6 +305,7 @@ public class GridViewerControl : Control
             topArea += yOffset;
 
             float topEnd = RectSize.y - topArea;
+            var countdown = 1f - Logic.Countdown;
 
             // Apply shroud to partially depleted rows (and completely depleted rows too)
             var height = GAME_ROWS * countdown / GAME_ROWS * topEnd;
@@ -455,18 +442,17 @@ public class GridViewerControl : Control
 
     public abstract class ILogic
     {
+        /// <summary>
+        /// Counts down from 1.0 to 0.0 depending on how much time is left in the game.
+        /// </summary>
+        public virtual float Countdown => 1;
+
         public abstract IReadOnlyGridSlim Grid { get; }
 
         /// <summary>
         /// This is used to make the grid flicker when there is very little time left.
         /// </summary>
         public virtual bool ShouldFlicker => false;
-
-        /// <summary>
-        /// A value from 0 to 1, where 0 means "plenty of time left" and 0.98 means "you're almost done!"
-        /// Note: Current implementation can return negative numbers I think.
-        /// </summary>
-        public virtual float LastChanceProgress => 0;
 
         public virtual Mover? PreviewPlummet() => null;
 
@@ -488,8 +474,10 @@ public class GridViewerControl : Control
 
         /// <summary>
         /// Allows the implementation to collect/cache data to be used during the Draw() routine.
+        /// The <paramref name="elapsedSeconds"/> is the amount of Godot (wall clock) time that has
+        /// elapsed since the last time this method was called.
         /// </summary>
-        public virtual void Update() { }
+        public virtual void Update(float elapsedSeconds) { }
     }
 
     public sealed class NullLogic : ILogic
@@ -507,6 +495,7 @@ public class GridViewerControl : Control
     {
         private readonly Ticker ticker;
         private readonly State state;
+        private readonly CountdownSmoother countdown;
         private readonly ITickCalculations tickCalculations;
         private readonly IReadOnlyGridSlim grid;
 
@@ -514,16 +503,22 @@ public class GridViewerControl : Control
         {
             this.ticker = ticker;
             this.state = ticker.state;
+            this.countdown = new CountdownSmoother(state.CountdownViewmodel ?? NullCountdownViewmodel.Instance);
             this.tickCalculations = state.TickCalculations;
 
             grid = new GridWithMover(state);
         }
 
+        public override void Update(float elapsedSeconds)
+        {
+            countdown.Update(elapsedSeconds);
+        }
+
+        public override float Countdown => countdown.Smoothed;
+
         public override IReadOnlyGridSlim Grid => grid;
 
         public override bool ShouldFlicker => false;// state.LastGaspProgress() > 0;
-
-        public override float LastChanceProgress => state.LastGaspProgress();
 
         public override Mover? PreviewPlummet() => state.PreviewPlummet();
 

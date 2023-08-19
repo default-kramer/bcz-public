@@ -7,8 +7,8 @@ using System;
 
 public class CountdownViewerControl : Control
 {
-    private ICountdownViewmodel vm = NullModel.Instance;
-    private float position = 1f;
+    private ICountdownViewmodel vm = NullCountdownViewmodel.Instance;
+    private readonly CountdownSmoother countdown = new CountdownSmoother(NullCountdownViewmodel.Instance);
     private Members members;
 
     readonly struct Members
@@ -42,14 +42,8 @@ public class CountdownViewerControl : Control
 
     public void SetModel(ICountdownViewmodel? viewmodel)
     {
-        this.vm = viewmodel ?? NullModel.Instance;
-        this.position = CalcPosition(vm);
-    }
-
-    private static float CalcPosition(ICountdownViewmodel vm)
-    {
-        float m = vm.RemainingMillis;
-        return m / vm.MaxMillis;
+        this.vm = viewmodel ?? NullCountdownViewmodel.Instance;
+        this.countdown.Reset(this.vm);
     }
 
     private const float slowBlinkRate = 0.5f;
@@ -64,20 +58,8 @@ public class CountdownViewerControl : Control
         slowBlinker = (slowBlinker + delta) % slowBlinkRate;
         fastBlinker = (fastBlinker + delta) % fastBlinkRate;
 
-        var desiredPosition = CalcPosition(vm);
-
-        float maxJumpRestore = delta * TODO_FACTOR;
-        if (desiredPosition - position > maxJumpRestore)
-        {
-            position += maxJumpRestore;
-        }
-        else
-        {
-            position = desiredPosition;
-        }
+        countdown.Update(delta);
     }
-
-    public const float TODO_FACTOR = 0.25f;
 
     static readonly Godot.Color darkGreen = Godot.Colors.Black;// green.Darkened(0.7f);
     static readonly Godot.Color orange = Godot.Colors.Orange;// Godot.Color.Color8(244, 185, 58);
@@ -109,6 +91,7 @@ public class CountdownViewerControl : Control
         }
         if (true)
         {
+            var position = countdown.Smoothed;
             float y = top + size.y * (1f - position);
             DrawRect(new Rect2(left, y, size * new Vector2(1, position)), GameColors.Green, filled: true);
             DrawRect(timerRect, darkGreen, filled: false, width: 2);
@@ -136,18 +119,5 @@ public class CountdownViewerControl : Control
             members.ComboDescriptionValue.Text = "";
             members.ComboScoreValue.Text = "";
         }
-    }
-
-    class NullModel : ICountdownViewmodel
-    {
-        private NullModel() { }
-        public static readonly NullModel Instance = new NullModel();
-
-        public int MaxMillis => 1;
-        public int RemainingMillis => 1;
-        public TimeSpan Time => default;
-        public (Combo, int score) LastCombo => (Combo.Empty, 0);
-        public int Score => 0;
-        public int EnemiesRemaining(BCZ.Core.Color color) => 0;
     }
 }

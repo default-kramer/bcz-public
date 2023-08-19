@@ -10,6 +10,8 @@ namespace BCZ.Core.Viewmodels
     {
         int MaxMillis { get; }
 
+        float MaxMillisAsSingle { get; }
+
         /// <summary>
         /// How many millis remain until the game ends?
         /// Used to draw the bar gauge.

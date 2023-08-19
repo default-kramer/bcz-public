@@ -8,6 +8,7 @@ namespace BCZ.Core
     sealed class HookLevelsMode : EmptyStateHook
     {
         private const int maxMillis = 1000 * 60;
+        private const float maxMillisFloat = maxMillis;
         private const int millisRestoredPerEnemy = 1000 * 5;
         private Appointment countdown;
 
@@ -43,6 +44,7 @@ namespace BCZ.Core
             }
 
             public override int MaxMillis => maxMillis;
+            public override float MaxMillisAsSingle => maxMillisFloat;
             public override int RemainingMillis => hook.countdown.MillisRemaining();
         }
     }

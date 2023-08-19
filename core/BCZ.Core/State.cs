@@ -235,16 +235,6 @@ namespace BCZ.Core
             return true;
         }
 
-        public float LastGaspProgress()// => CountdownViewmodel?.RemainingMillis * 1f /  0; // Could be resurrected to enable the grid flicker effect
-        {
-            var c = CountdownViewmodel;
-            if (c != null)
-            {
-                return 1f - (c.RemainingMillis * 1f / c.MaxMillis);
-            }
-            return 0;
-        }
-
         private StateEvent Spawn()
         {
             if (currentCombo.PermissiveCombo.AdjustedGroupCount > 0)
