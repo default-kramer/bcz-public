@@ -80,6 +80,8 @@ public class GridViewerControl : Control
 
     private static readonly Godot.Color defaultBorderLight = Godot.Color.Color8(24, 130, 110);
     private static readonly Godot.Color defaultBorderDark = defaultBorderLight.Darkened(0.3f);
+    private static readonly Godot.Color moverBorderLight = Godot.Color.Color8(215, 215, 215);
+    private static readonly Godot.Color moverBorderDark = Godot.Color.Color8(160, 160, 160);
     private static readonly Godot.Color bgColor = Godot.Color.Color8(0, 0, 0);
     private static readonly Godot.Color shroudColor = Godot.Color.Color8(0, 0, 0, 120);
 
@@ -93,6 +95,12 @@ public class GridViewerControl : Control
         public float extraX;
         public float extraY;
         public float spriteWTF;
+
+        /// <summary>
+        /// The height of the grid minus the mover rows
+        /// </summary>
+        public int adjustedHeight;
+
 
         /// <summary>
         /// Should be calculated once per <paramref name="loc"/>.
@@ -121,7 +129,13 @@ public class GridViewerControl : Control
 
         public void DrawBorder(Control control, Loc loc, ILogic Logic)
         {
-            var (borderLight, borderDark) = Logic.BorderColor(loc);
+            var borderLight = defaultBorderLight;
+            var borderDark = defaultBorderDark;
+            if (loc.Y >= dimensions.adjustedHeight)
+            {
+                borderLight = moverBorderLight;
+                borderDark = moverBorderDark;
+            }
             var screenCellSize = dimensions.screenCellSize;
 
             control.DrawRect(new Rect2(screenX - 1, gridY * screenCellSize + yPadding, screenCellSize + 2, screenCellSize + 2), borderDark);
@@ -130,7 +144,7 @@ public class GridViewerControl : Control
         }
     }
 
-    private Dimensions CalculateDimensions(GridSize gridSize)
+    private Dimensions CalculateDimensions(GridSize gridSize, ILogic logic)
     {
         var fullSize = this.RectSize - new Vector2(0, yPadding * 2);
         float screenCellSize = GetCellSize(fullSize, gridSize);
@@ -144,6 +158,7 @@ public class GridViewerControl : Control
             extraX = extraX,
             extraY = extraY,
             spriteWTF = spriteWTF,
+            adjustedHeight = gridSize.Height - logic.MoverRowCount,
         };
     }
 
@@ -160,7 +175,7 @@ public class GridViewerControl : Control
         //DrawRect(new Rect2(0, 0, fullSize), Colors.Brown);
         //DrawRect(new Rect2(extraX / 2, extraY / 2, fullSize.x - extraX, fullSize.y - extraY), Colors.Black);
 
-        var dimensions = CalculateDimensions(gridSize);
+        var dimensions = CalculateDimensions(gridSize, Logic);
 
         if (paused)
         {
@@ -291,32 +306,33 @@ public class GridViewerControl : Control
             }
         }
 
-        if (true || Logic.ShouldFlicker)
+        // This code block shrouds/hides the grid to indicate the countdown's progress
         {
-            const float RESERVED_ROWS = 2f;
-            const float GAME_ROWS = 20f;
-            const float TOTAL_ROWS = 22f;
+            // Convert some dimensions to floats:
+            float totalRowsF = gridSize.Height;
+            float reservedRowsF = Logic.MoverRowCount;
+            float gameRowsF = gridSize.Height - Logic.MoverRowCount;
 
-            const float xOffset = 2;
-            float width = RectSize.x - xOffset;
+            // Small pixel adjustments. Values chosen by experimentation:
+            const float xAdjust = 2;
+            const float yAdjust = 2;
 
-            float topArea = RectSize.y * RESERVED_ROWS / TOTAL_ROWS;
-            const float yOffset = 2;
-            topArea += yOffset;
+            float width = RectSize.x - xAdjust;
+            float topArea = RectSize.y * reservedRowsF / totalRowsF;
+            topArea += yAdjust;
 
             float topEnd = RectSize.y - topArea;
             var countdown = 1f - Logic.Countdown;
 
             // Apply shroud to partially depleted rows (and completely depleted rows too)
-            var height = GAME_ROWS * countdown / GAME_ROWS * topEnd;
-            //height = Math.Max(height - yOffset, 0);
-            DrawRect(new Rect2(xOffset, topArea, width, height), shroudColor, filled: true);
+            var height = gameRowsF * countdown / gameRowsF * topEnd;
+            DrawRect(new Rect2(xAdjust, topArea, width, height), shroudColor, filled: true);
 
             // Hide rows that are completely depleted.
             const float magic = 0.5f; // I can't explain why this is needed
-            height = Convert.ToInt32(GAME_ROWS * countdown - magic) / GAME_ROWS * topEnd;
-            height = Math.Max(height - yOffset, 0);
-            DrawRect(new Rect2(xOffset, topArea, width, height), bgColor, filled: true);
+            height = Convert.ToInt32(gameRowsF * countdown - magic) / gameRowsF * topEnd;
+            height = Math.Max(height - yAdjust, 0);
+            DrawRect(new Rect2(xAdjust, topArea, width, height), bgColor, filled: true);
         }
 
         // help debug size
@@ -447,6 +463,11 @@ public class GridViewerControl : Control
         /// </summary>
         public virtual float Countdown => 1;
 
+        /// <summary>
+        /// How many rows (at the top of the <see cref="Grid"/>) are reserved for the mover?
+        /// </summary>
+        public abstract int MoverRowCount { get; }
+
         public abstract IReadOnlyGridSlim Grid { get; }
 
         /// <summary>
@@ -470,8 +491,6 @@ public class GridViewerControl : Control
             return false;
         }
 
-        public virtual (Godot.Color light, Godot.Color dark) BorderColor(Loc loc) => (defaultBorderLight, defaultBorderDark);
-
         /// <summary>
         /// Allows the implementation to collect/cache data to be used during the Draw() routine.
         /// The <paramref name="elapsedSeconds"/> is the amount of Godot (wall clock) time that has
@@ -489,6 +508,8 @@ public class GridViewerControl : Control
         public static readonly NullLogic Instance = new NullLogic();
 
         public override IReadOnlyGridSlim Grid => defaultGrid;
+
+        public override int MoverRowCount => 0;
     }
 
     public sealed class StandardLogic : ILogic
@@ -516,6 +537,9 @@ public class GridViewerControl : Control
 
         public override float Countdown => countdown.Smoothed;
 
+        const int MoverRows = 2;
+        public override int MoverRowCount => MoverRows;
+
         public override IReadOnlyGridSlim Grid => grid;
 
         public override bool ShouldFlicker => false;// state.LastGaspProgress() > 0;
@@ -532,18 +556,6 @@ public class GridViewerControl : Control
         public override float FallSampleOverride(Loc loc) => 0;
 
         public override IDestructionAnimator GetDestructionAnimator() => state.GetDestructionAnimator();
-
-        public override (Godot.Color light, Godot.Color dark) BorderColor(Loc loc)
-        {
-            if (state.Grid.InBounds(loc))
-            {
-                return base.BorderColor(loc);
-            }
-            return (moverBorderLight, moverBorderDark);
-        }
-
-        private static readonly Godot.Color moverBorderLight = Godot.Color.Color8(215, 215, 215);
-        private static readonly Godot.Color moverBorderDark = Godot.Color.Color8(160, 160, 160);
 
         private float MoverDestructionProgress(Loc loc)
         {
@@ -569,8 +581,6 @@ public class GridViewerControl : Control
 
             return 0;
         }
-
-        const int MoverRows = 2;
 
         class GridWithMover : IReadOnlyGridSlim
         {
@@ -623,6 +633,8 @@ public class GridViewerControl : Control
             this.vm = vm;
             this.destructionAnimator = new DestructionAnimator(vm);
         }
+
+        public override int MoverRowCount => 0;
 
         public override IDestructionAnimator GetDestructionAnimator() => destructionAnimator;
 
