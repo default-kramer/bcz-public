@@ -34,8 +34,6 @@ public class GridViewerControl : Control
 
     private SpritePoolV2 spritePool = null!;
 
-    private FlickerState flicker = FlickerState.Initial;
-
     public override void _Ready()
     {
         spritePool = SpritePoolV2.Make(this, SpriteKind.Single, SpriteKind.Joined,
@@ -44,11 +42,9 @@ public class GridViewerControl : Control
             SpriteKind.Barrier4, SpriteKind.Barrier5, SpriteKind.Barrier6, SpriteKind.Barrier7);
     }
 
-    float elapsedSeconds = 0;
     float drawSeconds = 0; // seconds since last Draw() call
     public override void _Process(float delta)
     {
-        elapsedSeconds += delta;
         if (!paused)
         {
             drawSeconds += delta;
@@ -183,16 +179,6 @@ public class GridViewerControl : Control
             return;
         }
 
-        if (Logic.ShouldFlicker)
-        {
-            flicker = flicker.Elapse(elapsedSeconds);
-            elapsedSeconds = 0;
-        }
-        else
-        {
-            flicker = FlickerState.Initial;
-        }
-
         // Occupant sprites are always 360x360 pixels
         var screenCellSize = dimensions.screenCellSize;
         float spriteScale = screenCellSize / 360.0f;
@@ -228,7 +214,7 @@ public class GridViewerControl : Control
                 adder += Logic.FallSampleOverride(loc);
                 var screenY = cellDimensions.screenY - adder * screenCellSize;
 
-                if (flicker.ShowGrid && !previewOcc.HasValue)
+                if (!previewOcc.HasValue)
                 {
                     cellDimensions.DrawBorder(this, loc, Logic);
                 }
@@ -425,36 +411,6 @@ public class GridViewerControl : Control
     private const int BarrierFirst = (int)SpriteKind.Barrier0;
     private const int BarrierLast = (int)SpriteKind.Barrier7;
     private const int NumBarriers = BarrierLast - BarrierFirst + 1;
-
-    readonly struct FlickerState
-    {
-        public readonly int Index;
-        public readonly bool ShowGrid;
-        public readonly float RemainingSeconds;
-
-        private FlickerState(int index, bool showGrid, float remainingSeconds)
-        {
-            this.Index = index;
-            this.ShowGrid = showGrid;
-            this.RemainingSeconds = remainingSeconds;
-        }
-
-        public static readonly FlickerState Initial = new FlickerState(-1, true, 0);
-
-        public FlickerState Elapse(float elapsedSeconds)
-        {
-            float remain = this.RemainingSeconds - elapsedSeconds;
-            if (remain > 0)
-            {
-                return new FlickerState(Index, ShowGrid, remain);
-            }
-            int index = (this.Index + 1) % Flickers.Length;
-            return new FlickerState(index, !ShowGrid, Flickers[index]);
-        }
-
-        private const float quick = 0.033f;
-        private static readonly float[] Flickers = new float[] { quick, quick, quick, 1.4f, quick, quick * 2, quick, quick, quick, 0.8f, quick, 0.4f, quick, quick, quick, 0.5f, quick * 2, 0.4f };
-    }
 
     public abstract class ILogic
     {
