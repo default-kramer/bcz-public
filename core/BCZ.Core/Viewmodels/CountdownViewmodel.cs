@@ -19,7 +19,7 @@ namespace BCZ.Core.Viewmodels
             this.data = data;
         }
 
-        public abstract int MaxMillis { get; }
+        public abstract float MaxMillisAsSingle { get; }
 
         public abstract int RemainingMillis { get; }
 
@@ -37,6 +37,48 @@ namespace BCZ.Core.Viewmodels
         public override void OnComboUpdated(ComboInfo previous, ComboInfo current, IScheduler scheduler, Score score)
         {
             LastCombo = (current.ComboToReward, score.TotalScore);
+        }
+    }
+
+    public sealed class NullCountdownViewmodel : ICountdownViewmodel
+    {
+        private NullCountdownViewmodel() { }
+        public static readonly NullCountdownViewmodel Instance = new NullCountdownViewmodel();
+
+        public float MaxMillisAsSingle => 1;
+        public int RemainingMillis => 1;
+        public TimeSpan Time => default;
+        public (Combo, int score) LastCombo => (Combo.Empty, 0);
+        public int Score => 0;
+        public int EnemiesRemaining(BCZ.Core.Color color) => 0;
+    }
+
+    public sealed class CountdownSmoother
+    {
+        private ICountdownViewmodel vm;
+        private float smoothed;
+        const float smoothingFactor = 0.25f;
+
+        public float Smoothed => smoothed;
+
+        public CountdownSmoother(ICountdownViewmodel vm)
+        {
+            this.vm = vm;
+            Reset(vm);
+        }
+
+        public void Reset(ICountdownViewmodel vm)
+        {
+            this.vm = vm;
+            Update(99);
+        }
+
+        public void Update(float elapsedSeconds)
+        {
+            var vm = this.vm;
+            var target = vm.RemainingMillis / vm.MaxMillisAsSingle;
+            float maxJumpRestore = elapsedSeconds * smoothingFactor;
+            smoothed = Math.Min(target, smoothed + maxJumpRestore);
         }
     }
 }

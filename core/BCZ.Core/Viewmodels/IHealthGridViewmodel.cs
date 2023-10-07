@@ -8,7 +8,7 @@ namespace BCZ.Core.Viewmodels
 {
     public interface ICountdownViewmodel
     {
-        int MaxMillis { get; }
+        float MaxMillisAsSingle { get; }
 
         /// <summary>
         /// How many millis remain until the game ends?

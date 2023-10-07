@@ -235,8 +235,6 @@ namespace BCZ.Core
             return true;
         }
 
-        public float LastGaspProgress() => 0; // Could be resurrected to enable the grid flicker effect
-
         private StateEvent Spawn()
         {
             if (currentCombo.PermissiveCombo.AdjustedGroupCount > 0)

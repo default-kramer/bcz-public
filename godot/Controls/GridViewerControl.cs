@@ -18,12 +18,12 @@ public class GridViewerControl : Control
 
     public void SetLogic(Ticker ticker)
     {
-        this.Logic = new StandardLogic(ticker);
+        SetLogic(new StandardLogic(ticker));
     }
 
     public void SetLogicForAttackGrid(IAttackGridViewmodel vm)
     {
-        this.Logic = new AttackGridLogic(vm);
+        SetLogic(new AttackGridLogic(vm));
     }
 
     /// <summary>
@@ -34,8 +34,6 @@ public class GridViewerControl : Control
 
     private SpritePoolV2 spritePool = null!;
 
-    private FlickerState flicker = FlickerState.Initial;
-
     public override void _Ready()
     {
         spritePool = SpritePoolV2.Make(this, SpriteKind.Single, SpriteKind.Joined,
@@ -44,10 +42,13 @@ public class GridViewerControl : Control
             SpriteKind.Barrier4, SpriteKind.Barrier5, SpriteKind.Barrier6, SpriteKind.Barrier7);
     }
 
-    float elapsedSeconds = 0;
+    float drawSeconds = 0; // seconds since last Draw() call
     public override void _Process(float delta)
     {
-        elapsedSeconds += delta;
+        if (!paused)
+        {
+            drawSeconds += delta;
+        }
     }
 
     private bool paused = false;
@@ -75,6 +76,8 @@ public class GridViewerControl : Control
 
     private static readonly Godot.Color defaultBorderLight = Godot.Color.Color8(24, 130, 110);
     private static readonly Godot.Color defaultBorderDark = defaultBorderLight.Darkened(0.3f);
+    private static readonly Godot.Color moverBorderLight = Godot.Color.Color8(215, 215, 215);
+    private static readonly Godot.Color moverBorderDark = Godot.Color.Color8(160, 160, 160);
     private static readonly Godot.Color bgColor = Godot.Color.Color8(0, 0, 0);
     private static readonly Godot.Color shroudColor = Godot.Color.Color8(0, 0, 0, 120);
 
@@ -88,6 +91,12 @@ public class GridViewerControl : Control
         public float extraX;
         public float extraY;
         public float spriteWTF;
+
+        /// <summary>
+        /// The height of the grid minus the mover rows
+        /// </summary>
+        public int adjustedHeight;
+
 
         /// <summary>
         /// Should be calculated once per <paramref name="loc"/>.
@@ -116,7 +125,13 @@ public class GridViewerControl : Control
 
         public void DrawBorder(Control control, Loc loc, ILogic Logic)
         {
-            var (borderLight, borderDark) = Logic.BorderColor(loc);
+            var borderLight = defaultBorderLight;
+            var borderDark = defaultBorderDark;
+            if (loc.Y >= dimensions.adjustedHeight)
+            {
+                borderLight = moverBorderLight;
+                borderDark = moverBorderDark;
+            }
             var screenCellSize = dimensions.screenCellSize;
 
             control.DrawRect(new Rect2(screenX - 1, gridY * screenCellSize + yPadding, screenCellSize + 2, screenCellSize + 2), borderDark);
@@ -125,7 +140,7 @@ public class GridViewerControl : Control
         }
     }
 
-    private Dimensions CalculateDimensions(GridSize gridSize)
+    private Dimensions CalculateDimensions(GridSize gridSize, ILogic logic)
     {
         var fullSize = this.RectSize - new Vector2(0, yPadding * 2);
         float screenCellSize = GetCellSize(fullSize, gridSize);
@@ -139,12 +154,14 @@ public class GridViewerControl : Control
             extraX = extraX,
             extraY = extraY,
             spriteWTF = spriteWTF,
+            adjustedHeight = gridSize.Height - logic.MoverRowCount,
         };
     }
 
     public override void _Draw()
     {
-        Logic.Update();
+        Logic.Update(this.drawSeconds);
+        this.drawSeconds = 0;
 
         var grid = Logic.Grid;
         var gridSize = grid.Size;
@@ -154,22 +171,12 @@ public class GridViewerControl : Control
         //DrawRect(new Rect2(0, 0, fullSize), Colors.Brown);
         //DrawRect(new Rect2(extraX / 2, extraY / 2, fullSize.x - extraX, fullSize.y - extraY), Colors.Black);
 
-        var dimensions = CalculateDimensions(gridSize);
+        var dimensions = CalculateDimensions(gridSize, Logic);
 
         if (paused)
         {
             DrawPaused(grid, ref dimensions);
             return;
-        }
-
-        if (Logic.ShouldFlicker)
-        {
-            flicker = flicker.Elapse(elapsedSeconds);
-            elapsedSeconds = 0;
-        }
-        else
-        {
-            flicker = FlickerState.Initial;
         }
 
         // Occupant sprites are always 360x360 pixels
@@ -207,7 +214,7 @@ public class GridViewerControl : Control
                 adder += Logic.FallSampleOverride(loc);
                 var screenY = cellDimensions.screenY - adder * screenCellSize;
 
-                if (flicker.ShowGrid && !previewOcc.HasValue)
+                if (!previewOcc.HasValue)
                 {
                     cellDimensions.DrawBorder(this, loc, Logic);
                 }
@@ -285,10 +292,33 @@ public class GridViewerControl : Control
             }
         }
 
-        if (Logic.ShouldFlicker)
+        // This code block shrouds/hides the grid to indicate the countdown's progress
         {
-            var height = Logic.LastChanceProgress * RectSize.y;
-            DrawRect(new Rect2(0, 0, RectSize.x, height), shroudColor, filled: true);
+            // Convert some dimensions to floats:
+            float totalRowsF = gridSize.Height;
+            float reservedRowsF = Logic.MoverRowCount;
+            float gameRowsF = gridSize.Height - Logic.MoverRowCount;
+
+            // Small pixel adjustments. Values chosen by experimentation:
+            const float xAdjust = 2;
+            const float yAdjust = 2;
+
+            float width = RectSize.x - xAdjust;
+            float topArea = RectSize.y * reservedRowsF / totalRowsF;
+            topArea += yAdjust;
+
+            float topEnd = RectSize.y - topArea;
+            var countdown = 1f - Logic.Countdown;
+
+            // Apply shroud to partially depleted rows (and completely depleted rows too)
+            var height = gameRowsF * countdown / gameRowsF * topEnd;
+            DrawRect(new Rect2(xAdjust, topArea, width, height), shroudColor, filled: true);
+
+            // Hide rows that are completely depleted.
+            const float magic = 0.5f; // I can't explain why this is needed
+            height = Convert.ToInt32(gameRowsF * countdown - magic) / gameRowsF * topEnd;
+            height = Math.Max(height - yAdjust, 0);
+            DrawRect(new Rect2(xAdjust, topArea, width, height), bgColor, filled: true);
         }
 
         // help debug size
@@ -382,50 +412,24 @@ public class GridViewerControl : Control
     private const int BarrierLast = (int)SpriteKind.Barrier7;
     private const int NumBarriers = BarrierLast - BarrierFirst + 1;
 
-    readonly struct FlickerState
-    {
-        public readonly int Index;
-        public readonly bool ShowGrid;
-        public readonly float RemainingSeconds;
-
-        private FlickerState(int index, bool showGrid, float remainingSeconds)
-        {
-            this.Index = index;
-            this.ShowGrid = showGrid;
-            this.RemainingSeconds = remainingSeconds;
-        }
-
-        public static readonly FlickerState Initial = new FlickerState(-1, true, 0);
-
-        public FlickerState Elapse(float elapsedSeconds)
-        {
-            float remain = this.RemainingSeconds - elapsedSeconds;
-            if (remain > 0)
-            {
-                return new FlickerState(Index, ShowGrid, remain);
-            }
-            int index = (this.Index + 1) % Flickers.Length;
-            return new FlickerState(index, !ShowGrid, Flickers[index]);
-        }
-
-        private const float quick = 0.033f;
-        private static readonly float[] Flickers = new float[] { quick, quick, quick, 1.4f, quick, quick * 2, quick, quick, quick, 0.8f, quick, 0.4f, quick, quick, quick, 0.5f, quick * 2, 0.4f };
-    }
-
     public abstract class ILogic
     {
+        /// <summary>
+        /// Counts down from 1.0 to 0.0 depending on how much time is left in the game.
+        /// </summary>
+        public virtual float Countdown => 1;
+
+        /// <summary>
+        /// How many rows (at the top of the <see cref="Grid"/>) are reserved for the mover?
+        /// </summary>
+        public abstract int MoverRowCount { get; }
+
         public abstract IReadOnlyGridSlim Grid { get; }
 
         /// <summary>
         /// This is used to make the grid flicker when there is very little time left.
         /// </summary>
         public virtual bool ShouldFlicker => false;
-
-        /// <summary>
-        /// A value from 0 to 1, where 0 means "plenty of time left" and 0.98 means "you're almost done!"
-        /// Note: Current implementation can return negative numbers I think.
-        /// </summary>
-        public virtual float LastChanceProgress => 0;
 
         public virtual Mover? PreviewPlummet() => null;
 
@@ -443,12 +447,12 @@ public class GridViewerControl : Control
             return false;
         }
 
-        public virtual (Godot.Color light, Godot.Color dark) BorderColor(Loc loc) => (defaultBorderLight, defaultBorderDark);
-
         /// <summary>
         /// Allows the implementation to collect/cache data to be used during the Draw() routine.
+        /// The <paramref name="elapsedSeconds"/> is the amount of Godot (wall clock) time that has
+        /// elapsed since the last time this method was called.
         /// </summary>
-        public virtual void Update() { }
+        public virtual void Update(float elapsedSeconds) { }
     }
 
     public sealed class NullLogic : ILogic
@@ -460,12 +464,15 @@ public class GridViewerControl : Control
         public static readonly NullLogic Instance = new NullLogic();
 
         public override IReadOnlyGridSlim Grid => defaultGrid;
+
+        public override int MoverRowCount => 0;
     }
 
     public sealed class StandardLogic : ILogic
     {
         private readonly Ticker ticker;
         private readonly State state;
+        private readonly CountdownSmoother countdown;
         private readonly ITickCalculations tickCalculations;
         private readonly IReadOnlyGridSlim grid;
 
@@ -473,16 +480,25 @@ public class GridViewerControl : Control
         {
             this.ticker = ticker;
             this.state = ticker.state;
+            this.countdown = new CountdownSmoother(state.CountdownViewmodel ?? NullCountdownViewmodel.Instance);
             this.tickCalculations = state.TickCalculations;
 
             grid = new GridWithMover(state);
         }
 
+        public override void Update(float elapsedSeconds)
+        {
+            countdown.Update(elapsedSeconds);
+        }
+
+        public override float Countdown => countdown.Smoothed;
+
+        const int MoverRows = 2;
+        public override int MoverRowCount => MoverRows;
+
         public override IReadOnlyGridSlim Grid => grid;
 
-        public override bool ShouldFlicker => state.LastGaspProgress() > 0;
-
-        public override float LastChanceProgress => state.LastGaspProgress();
+        public override bool ShouldFlicker => false;// state.LastGaspProgress() > 0;
 
         public override Mover? PreviewPlummet() => state.PreviewPlummet();
 
@@ -496,18 +512,6 @@ public class GridViewerControl : Control
         public override float FallSampleOverride(Loc loc) => 0;
 
         public override IDestructionAnimator GetDestructionAnimator() => state.GetDestructionAnimator();
-
-        public override (Godot.Color light, Godot.Color dark) BorderColor(Loc loc)
-        {
-            if (state.Grid.InBounds(loc))
-            {
-                return base.BorderColor(loc);
-            }
-            return (moverBorderLight, moverBorderDark);
-        }
-
-        private static readonly Godot.Color moverBorderLight = Godot.Color.Color8(215, 215, 215);
-        private static readonly Godot.Color moverBorderDark = Godot.Color.Color8(160, 160, 160);
 
         private float MoverDestructionProgress(Loc loc)
         {
@@ -533,8 +537,6 @@ public class GridViewerControl : Control
 
             return 0;
         }
-
-        const int MoverRows = 2;
 
         class GridWithMover : IReadOnlyGridSlim
         {
@@ -587,6 +589,8 @@ public class GridViewerControl : Control
             this.vm = vm;
             this.destructionAnimator = new DestructionAnimator(vm);
         }
+
+        public override int MoverRowCount => 0;
 
         public override IDestructionAnimator GetDestructionAnimator() => destructionAnimator;
 
