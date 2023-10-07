@@ -61,7 +61,6 @@ namespace BCZ.Core
         {
             public CountdownVM(ITimer timer, Grid grid, IStateData data) : base(timer, grid, data) { }
 
-            public override int MaxMillis => gameDurationMillis;
             public override float MaxMillisAsSingle => gameDurationMillisAsSingle;
 
             public override int RemainingMillis => gameDurationMillis - timer.Now.Millis;

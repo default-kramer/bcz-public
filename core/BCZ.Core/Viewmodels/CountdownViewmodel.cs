@@ -19,8 +19,6 @@ namespace BCZ.Core.Viewmodels
             this.data = data;
         }
 
-        public abstract int MaxMillis { get; }
-
         public abstract float MaxMillisAsSingle { get; }
 
         public abstract int RemainingMillis { get; }
@@ -47,7 +45,6 @@ namespace BCZ.Core.Viewmodels
         private NullCountdownViewmodel() { }
         public static readonly NullCountdownViewmodel Instance = new NullCountdownViewmodel();
 
-        public int MaxMillis => 1;
         public float MaxMillisAsSingle => 1;
         public int RemainingMillis => 1;
         public TimeSpan Time => default;

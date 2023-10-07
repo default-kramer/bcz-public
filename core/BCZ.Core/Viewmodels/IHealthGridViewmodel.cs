@@ -8,8 +8,6 @@ namespace BCZ.Core.Viewmodels
 {
     public interface ICountdownViewmodel
     {
-        int MaxMillis { get; }
-
         float MaxMillisAsSingle { get; }
 
         /// <summary>

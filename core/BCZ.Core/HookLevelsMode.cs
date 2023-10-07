@@ -43,7 +43,6 @@ namespace BCZ.Core
                 this.hook = hook;
             }
 
-            public override int MaxMillis => maxMillis;
             public override float MaxMillisAsSingle => maxMillisFloat;
             public override int RemainingMillis => hook.countdown.MillisRemaining();
         }
