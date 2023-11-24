@@ -491,7 +491,19 @@ public class GridViewerControl : Control
             countdown.Update(elapsedSeconds);
         }
 
-        public override float Countdown => countdown.Smoothed;
+        public override float Countdown
+        {
+            get
+            {
+                float intro = ticker.IntroCountdown;
+                if (intro >= 0)
+                {
+                    const float sticky = 0.9f;
+                    return Math.Min(1f, (intro % 1f) / sticky);
+                }
+                return countdown.Smoothed;
+            }
+        }
 
         const int MoverRows = 2;
         public override int MoverRowCount => MoverRows;

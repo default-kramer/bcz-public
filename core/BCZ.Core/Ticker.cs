@@ -139,6 +139,11 @@ namespace BCZ.Core
         }
 
         /// <summary>
+        /// A non-negative value indicates that the game has not started yet.
+        /// </summary>
+        public virtual float IntroCountdown => -1f;
+
+        /// <summary>
         /// Just for testing
         /// </summary>
         public string AnimationString
@@ -161,6 +166,7 @@ namespace BCZ.Core
         private bool isPaused;
         private bool isStarted;
         private Moment now = Moment.Zero;
+        private float startDelay = -1f;
 
         public DotnetTicker(State state, IReplayCollector replayCollector)
             : base(state, replayCollector)
@@ -169,10 +175,21 @@ namespace BCZ.Core
 
         public Moment Now { get { return now; } }
 
-        float startDelay = 0;
         public void DelayStart(float seconds)
         {
             startDelay = seconds;
+        }
+
+        public override float IntroCountdown
+        {
+            get
+            {
+                if (startDelay >= 0)
+                {
+                    return startDelay;
+                }
+                return -1f;
+            }
         }
 
         public void _Process(float delta)

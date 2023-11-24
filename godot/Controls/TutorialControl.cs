@@ -222,7 +222,11 @@ public class TutorialControl : Control
         var deck = new CannedSpawnDeck(spawns);
         var state = State.CreateWithInfiniteHealth(grid, deck);
         var ticker = new DotnetTicker(state, NullReplayCollector.Instance);
-        ticker.DelayStart(0.5f);
+
+        // Now that we do the "3, 2, 1" intro, this looks really bad.
+        // But we need some delay unless we add an "advance the text" button.
+        ticker.DelayStart(1f);
+
         members.GameViewerControl.SetLogic(new Logic(ticker, this));
         return new Challenge(id, deck, state);
     }

@@ -65,6 +65,7 @@ public class GameViewerControl : Control
         }
 
         var ticker = new DotnetTicker(state, replayCollector);
+        ticker.DelayStart(3f);
         var newLogic = new LiveGameLogic(ticker, members, gamePackage);
         SetLogic(newLogic);
     }
