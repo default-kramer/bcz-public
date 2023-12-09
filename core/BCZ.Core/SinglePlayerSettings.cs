@@ -17,6 +17,7 @@ namespace BCZ.Core
         PvPSim,
         [Obsolete("Didn't like it (barriers idea)")]
         Levels2,
+        ScoreAttackWide,
     }
 
     public readonly struct SeededSettings

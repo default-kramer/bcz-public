@@ -140,7 +140,14 @@ namespace BCZ.Core
             }
             else if (mode == GameMode.ScoreAttack)
             {
-                var scoreAttackHook = new HookScoreAttack(stateData, timekeeper, ss, out var grid);
+                var scoreAttackHook = new HookScoreAttackTall(stateData, timekeeper, ss, out var grid);
+                IStateHook hook = scoreAttackHook;
+                var countdownVM = scoreAttackHook.BuildCountdownVM(timekeeper, ref hook);
+                return new State(grid, deck, hook, timekeeper, stateData, null, null, countdownVM, settings.ScorePerEnemy);
+            }
+            else if (mode == GameMode.ScoreAttackWide)
+            {
+                var scoreAttackHook = new HookScoreAttackWide(stateData, timekeeper, ss, out var grid);
                 IStateHook hook = scoreAttackHook;
                 var countdownVM = scoreAttackHook.BuildCountdownVM(timekeeper, ref hook);
                 return new State(grid, deck, hook, timekeeper, stateData, null, null, countdownVM, settings.ScorePerEnemy);

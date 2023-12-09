@@ -41,7 +41,7 @@ public class SinglePlayerMenu : Control
     private readonly ChoiceModel<ChoiceItem> GameModeChoices = new ChoiceModel<ChoiceItem>()
         .AddChoices(ChoiceItem.ModeLevels, ChoiceItem.ModeScoreAttack);
 
-    private static readonly ISinglePlayerSettings ScoreAttackSettings = OfficialSettings.ScoreAttackV0;
+    private static readonly ISinglePlayerSettings ScoreAttackSettings = OfficialSettings.ScoreAttackWide5;
 
     private readonly ChoiceModel<int> LevelChoices = new ChoiceModel<int>()
         .AddChoices(Enumerable.Range(1, SinglePlayerSettings.MaxLevel));

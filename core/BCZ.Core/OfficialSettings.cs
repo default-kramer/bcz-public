@@ -40,6 +40,8 @@ namespace BCZ.Core
             {
                 case nameof(ScoreAttackV0):
                     return OfficialSettings.ScoreAttackV0;
+                case nameof(ScoreAttackWide5):
+                    return OfficialSettings.ScoreAttackWide5;
                 default:
                     return null;
             }
@@ -47,6 +49,7 @@ namespace BCZ.Core
 
         // These names should never change once they get used
         public static readonly OfficialSettingsId ScoreAttackV0 = new(nameof(ScoreAttackV0));
+        public static readonly OfficialSettingsId ScoreAttackWide5 = new(nameof(ScoreAttackWide5));
     }
 
     public static class OfficialSettings
@@ -64,6 +67,17 @@ namespace BCZ.Core
             // TODO I upped this from 100 to 200 because I was worried about spamming empty combos.
             // Now that I have set an upper bound on "how permissive" we will be, I wonder if this
             // should go back to 100...?
+            ScorePerEnemy = 200,
+        };
+
+        public static readonly ISinglePlayerSettings ScoreAttackWide5 = new SinglePlayerSettings()
+        {
+            OfficialSettingsId = OfficialSettingsId.ScoreAttackWide5,
+            EnemyCount = -1, // N/A for Wide layouts
+            SpawnBlanks = true,
+            GridWidth = 16,
+            GridHeight = 16,
+            GameMode = GameMode.ScoreAttackWide,
             ScorePerEnemy = 200,
         };
     }
