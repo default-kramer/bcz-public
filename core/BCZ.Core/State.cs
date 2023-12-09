@@ -272,6 +272,12 @@ namespace BCZ.Core
 
             hook.PreSpawn(this, NumCatalystsSpawned);
 
+            // It's possible that wide layout cleared one half, leaving an orphan on the other half which will now fall:
+            if (Fall(out var ev))
+            {
+                return ev;
+            }
+
             if (pendingDumps > 0)
             {
                 pendingDumps = 0; // TODO need to decide how dump volume will be controlled...
@@ -523,12 +529,24 @@ namespace BCZ.Core
             }
         }
 
-        private StateEvent FallOrDestroyOrSpawn()
+        private bool Fall(out StateEvent ev)
         {
             if (Fall(true))
             {
                 int millis = Constants.FallingMillisPerCell * fallSampler.MaxFall();
-                return eventFactory.Fell(fallSampler, scheduler.CreateAppointment(millis));
+                ev = eventFactory.Fell(fallSampler, scheduler.CreateAppointment(millis));
+                return true;
+            }
+
+            ev = default;
+            return false;
+        }
+
+        private StateEvent FallOrDestroyOrSpawn()
+        {
+            if (Fall(out var ev))
+            {
+                return ev;
             }
             else if (Destroy())
             {
