@@ -33,6 +33,10 @@ public class SinglePlayerMenu : Control
         public static readonly ChoiceItem MedalsHide = new("Hide", "Do not display your progress towards each medal.\nYou can still earn medals anyway.");
         public static readonly ChoiceItem MedalsShow = new("Show", "Display your progress towards each medal.\nLarge combos are needed to win the gold medal.");
 
+        // Layout
+        public static readonly ChoiceItem LayoutTall = new ChoiceItem("Tall", "Play on the normal grid.");
+        public static readonly ChoiceItem LayoutWide = new ChoiceItem("Wide", "Play on a wide grid.");
+
         // Enable/Disable blanks
         public static readonly ChoiceItem BlanksOn = new("On", "Play with blank pieces.");
         public static readonly ChoiceItem BlanksOff = new("Off", "Playing without blanks might help beginners learn.\n(But earning medals will be practically impossible.)");
@@ -40,8 +44,6 @@ public class SinglePlayerMenu : Control
 
     private readonly ChoiceModel<ChoiceItem> GameModeChoices = new ChoiceModel<ChoiceItem>()
         .AddChoices(ChoiceItem.ModeLevels, ChoiceItem.ModeScoreAttack);
-
-    private static readonly ISinglePlayerSettings ScoreAttackSettings = OfficialSettings.ScoreAttackWide5;
 
     private readonly ChoiceModel<int> LevelChoices = new ChoiceModel<int>()
         .AddChoices(Enumerable.Range(1, SinglePlayerSettings.MaxLevel));
@@ -51,6 +53,9 @@ public class SinglePlayerMenu : Control
 
     private readonly ChoiceModel<ChoiceItem> ChoiceBlanks = new ChoiceModel<ChoiceItem>()
         .AddChoices(ChoiceItem.BlanksOn, ChoiceItem.BlanksOff);
+
+    private readonly ChoiceModel<ChoiceItem> LayoutChoices = new ChoiceModel<ChoiceItem>()
+        .AddChoices(ChoiceItem.LayoutTall, ChoiceItem.LayoutWide);
 
     private readonly ChoiceModel<ScoreAttackGoal> ChoiceScoreAttackGoal = new ChoiceModel<ScoreAttackGoal>().AddChoices(
         ScoreAttackGoal.PersonalBest,
@@ -65,7 +70,9 @@ public class SinglePlayerMenu : Control
         public readonly MenuChoiceControl ChoiceLevel;
         public readonly MenuChoiceControl ChoiceMedals;
         public readonly MenuChoiceControl ChoiceBlanks;
+        public readonly MenuChoiceControl ChoiceScoreAttackLayout;
         public readonly MenuChoiceControl ChoiceScoreAttackGoal;
+
         public readonly Button ButtonStartGame;
         public readonly Button ButtonBack;
 
@@ -88,6 +95,9 @@ public class SinglePlayerMenu : Control
 
             me.FindNode(out ChoiceBlanks, nameof(ChoiceBlanks));
             ChoiceBlanks.Model = me.ChoiceBlanks;
+
+            me.FindNode(out ChoiceScoreAttackLayout, nameof(ChoiceScoreAttackLayout));
+            ChoiceScoreAttackLayout.Model = me.LayoutChoices;
 
             me.FindNode(out ChoiceScoreAttackGoal, nameof(ChoiceScoreAttackGoal));
             ChoiceScoreAttackGoal.Model = me.ChoiceScoreAttackGoal;
@@ -167,7 +177,21 @@ public class SinglePlayerMenu : Control
         }
         else if (mode == ChoiceItem.ModeScoreAttack)
         {
-            var token = new ScoreAttackLevelToken(ScoreAttackSettings, ChoiceScoreAttackGoal.SelectedItem);
+            var layout = LayoutChoices.SelectedItem;
+            ISinglePlayerSettings settings;
+            if (layout == ChoiceItem.LayoutTall)
+            {
+                settings = OfficialSettings.ScoreAttackV0;
+            }
+            else if (layout == ChoiceItem.LayoutWide)
+            {
+                settings = OfficialSettings.ScoreAttackWide5;
+            }
+            else
+            {
+                throw new Exception("Unexpected layout choice");
+            }
+            var token = new ScoreAttackLevelToken(settings, ChoiceScoreAttackGoal.SelectedItem);
             NewRoot.FindRoot(this).StartGame(token);
         }
         else
