@@ -140,7 +140,14 @@ namespace BCZ.Core
             }
             else if (mode == GameMode.ScoreAttack)
             {
-                var scoreAttackHook = new HookScoreAttack(stateData, timekeeper, ss, out var grid);
+                var scoreAttackHook = new HookScoreAttackTall(stateData, timekeeper, ss, out var grid);
+                IStateHook hook = scoreAttackHook;
+                var countdownVM = scoreAttackHook.BuildCountdownVM(timekeeper, ref hook);
+                return new State(grid, deck, hook, timekeeper, stateData, null, null, countdownVM, settings.ScorePerEnemy);
+            }
+            else if (mode == GameMode.ScoreAttackWide)
+            {
+                var scoreAttackHook = new HookScoreAttackWide(stateData, timekeeper, ss, out var grid);
                 IStateHook hook = scoreAttackHook;
                 var countdownVM = scoreAttackHook.BuildCountdownVM(timekeeper, ref hook);
                 return new State(grid, deck, hook, timekeeper, stateData, null, null, countdownVM, settings.ScorePerEnemy);
@@ -264,6 +271,12 @@ namespace BCZ.Core
             }
 
             hook.PreSpawn(this, NumCatalystsSpawned);
+
+            // It's possible that wide layout cleared one half, leaving an orphan on the other half which will now fall:
+            if (Fall(out var fallEvent))
+            {
+                return fallEvent;
+            }
 
             if (pendingDumps > 0)
             {
@@ -516,12 +529,24 @@ namespace BCZ.Core
             }
         }
 
-        private StateEvent FallOrDestroyOrSpawn()
+        private bool Fall(out StateEvent ev)
         {
             if (Fall(true))
             {
                 int millis = Constants.FallingMillisPerCell * fallSampler.MaxFall();
-                return eventFactory.Fell(fallSampler, scheduler.CreateAppointment(millis));
+                ev = eventFactory.Fell(fallSampler, scheduler.CreateAppointment(millis));
+                return true;
+            }
+
+            ev = default;
+            return false;
+        }
+
+        private StateEvent FallOrDestroyOrSpawn()
+        {
+            if (Fall(out var fallEvent))
+            {
+                return fallEvent;
             }
             else if (Destroy())
             {

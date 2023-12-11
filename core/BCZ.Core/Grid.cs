@@ -606,6 +606,45 @@ namespace BCZ.Core
             }
             return false;
         }
+
+        /// <summary>
+        /// Starting at the given <paramref name="loc"/> and walking in the given <paramref name="direction"/>,
+        /// returns the count of how many occupants share the same color.
+        /// The count will include the starting loc (assuming it was not vacant).
+        /// </summary>
+        public int CountColorMatches(Loc loc, Direction direction)
+        {
+            if (!InBounds(loc))
+            {
+                return 0;
+            }
+
+            Occupant occ = Get(loc);
+            if (occ.Kind == OccupantKind.None)
+            {
+                return 0;
+            }
+
+            Color targetColor = occ.Color;
+            int count = 1;
+            loc = loc.Neighbor(direction);
+
+            while (InBounds(loc))
+            {
+                occ = Get(loc);
+                if (occ.Kind != OccupantKind.None && occ.Color == targetColor)
+                {
+                    count++;
+                    loc = loc.Neighbor(direction);
+                }
+                else
+                {
+                    return count;
+                }
+            }
+
+            return count;
+        }
     }
 
     public sealed class ImmutableGrid : GridBase, IImmutableGrid
