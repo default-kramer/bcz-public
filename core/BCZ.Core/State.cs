@@ -273,9 +273,9 @@ namespace BCZ.Core
             hook.PreSpawn(this, NumCatalystsSpawned);
 
             // It's possible that wide layout cleared one half, leaving an orphan on the other half which will now fall:
-            if (Fall(out var ev))
+            if (Fall(out var fallEvent))
             {
-                return ev;
+                return fallEvent;
             }
 
             if (pendingDumps > 0)
@@ -544,9 +544,9 @@ namespace BCZ.Core
 
         private StateEvent FallOrDestroyOrSpawn()
         {
-            if (Fall(out var ev))
+            if (Fall(out var fallEvent))
             {
-                return ev;
+                return fallEvent;
             }
             else if (Destroy())
             {
