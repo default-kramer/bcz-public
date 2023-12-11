@@ -35,7 +35,7 @@ namespace BCZ.Core
 
         private static bool MaybeRefillWideLayout(PRNG prng, Grid grid, GridWindow enemyWindow, GridWindow fullWindow)
         {
-            if (HasEnemy(grid, enemyWindow))
+            if (grid.HasOccupant(OccupantKind.Enemy, enemyWindow))
             {
                 return false; // no refill needed
             }
@@ -43,22 +43,6 @@ namespace BCZ.Core
             ClearGrid(grid, fullWindow);
             AddEnemies(prng, grid, enemyWindow);
             return true;
-        }
-
-        private static bool HasEnemy(IReadOnlyGrid grid, GridWindow window)
-        {
-            for (int x = window.startX; x < window.endX; x++)
-            {
-                for (int y = window.startY; y < window.endY; y++)
-                {
-                    if (grid.Get(new Loc(x, y)).Kind == OccupantKind.Enemy)
-                    {
-                        return true;
-                    }
-                }
-            }
-
-            return false;
         }
 
         private static void AddEnemies(PRNG prng, Grid grid, GridWindow window)
