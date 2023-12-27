@@ -79,6 +79,11 @@ public class SinglePlayerMenu : Control
         public readonly Control NormalModeOptions;
         public readonly Control ScoreAttackOptions;
 
+        public readonly TextureRect IconBronze;
+        public readonly TextureRect IconSilver;
+        public readonly TextureRect IconGold;
+        public readonly TextureRect IconCheckmark;
+
         public Members(SinglePlayerMenu me)
         {
             me.FindNode(out ChoiceGameMode, nameof(ChoiceGameMode));
@@ -104,6 +109,11 @@ public class SinglePlayerMenu : Control
 
             me.FindNode(out ButtonStartGame, nameof(ButtonStartGame));
             me.FindNode(out ButtonBack, nameof(ButtonBack));
+
+            me.FindNode(out IconBronze, nameof(IconBronze));
+            me.FindNode(out IconSilver, nameof(IconSilver));
+            me.FindNode(out IconGold, nameof(IconGold));
+            me.FindNode(out IconCheckmark, nameof(IconCheckmark));
         }
     }
 
@@ -155,8 +165,10 @@ public class SinglePlayerMenu : Control
     private void LevelChanged()
     {
         var level = LevelChoices.SelectedItem;
-        // TODO would be nice to show a preview grid so you know how big the level is...
-        // For now just placeholder code
+        members.IconCheckmark.Visible = level < 18;
+        members.IconBronze.Visible = level < 15;
+        members.IconSilver.Visible = level < 10;
+        members.IconGold.Visible = level < 5;
     }
 
     private bool HideMedals => ChoiceMedals.SelectedItem == ChoiceItem.MedalsHide;
