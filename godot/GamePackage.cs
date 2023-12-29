@@ -89,7 +89,7 @@ class LevelsModeGamePackage : GamePackage
         if (medal != MedalKind.None)
         {
             SaveData.RecordMedal(Level, medal);
-            members.ShowGreatNews($"{medal} Medal Earned!");
+            members.ShowGreatNews($"{medal} Medal Earned!", medal);
         }
     }
 
@@ -138,7 +138,7 @@ class ScoreAttackGamePackage : GamePackage
         if (totalScore > SaveData.ScoreAttackPB)
         {
             SaveData.ScoreAttackPB = totalScore;
-            members.ShowGreatNews("!!! New Personal Best !!!");
+            members.ShowGreatNews("!!! New Personal Best !!!", MedalKind.None);
         }
     }
 }

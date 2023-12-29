@@ -1,6 +1,9 @@
-[gd_scene load_steps=2 format=2]
+[gd_scene load_steps=5 format=2]
 
 [ext_resource path="res://Controls/GameOverMenu.cs" type="Script" id=1]
+[ext_resource path="res://Sprites/medals/bronze.bmp" type="Texture" id=2]
+[ext_resource path="res://Sprites/medals/gold.bmp" type="Texture" id=3]
+[ext_resource path="res://Sprites/medals/silver.bmp" type="Texture" id=4]
 
 [node name="Control" type="Control"]
 anchor_right = 1.0
@@ -26,25 +29,24 @@ anchor_bottom = 1.0
 
 [node name="CenterContainer" type="CenterContainer" parent="VBoxContainer"]
 margin_right = 1024.0
-margin_bottom = 397.0
+margin_bottom = 450.0
 size_flags_vertical = 3
 size_flags_stretch_ratio = 2.0
 
 [node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/CenterContainer"]
 margin_left = 393.0
-margin_top = 1.0
 margin_right = 630.0
-margin_bottom = 396.0
+margin_bottom = 450.0
 
 [node name="ColorRect" type="ColorRect" parent="VBoxContainer/CenterContainer/MarginContainer"]
 visible = false
 margin_right = 237.0
-margin_bottom = 395.0
+margin_bottom = 450.0
 color = Color( 1, 1, 1, 0.721569 )
 
 [node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/CenterContainer/MarginContainer"]
 margin_right = 237.0
-margin_bottom = 395.0
+margin_bottom = 450.0
 custom_constants/margin_right = 20
 custom_constants/margin_top = 20
 custom_constants/margin_left = 20
@@ -54,7 +56,7 @@ custom_constants/margin_bottom = 20
 margin_left = 20.0
 margin_top = 20.0
 margin_right = 217.0
-margin_bottom = 375.0
+margin_bottom = 430.0
 custom_constants/separation = 30
 
 [node name="LabelMessage" type="Label" parent="VBoxContainer/CenterContainer/MarginContainer/MarginContainer/VBoxContainer2"]
@@ -63,18 +65,45 @@ margin_bottom = 21.0
 text = "Stage Clear"
 align = 1
 
-[node name="LabelGreatNews" type="Label" parent="VBoxContainer/CenterContainer/MarginContainer/MarginContainer/VBoxContainer2"]
-visible = false
+[node name="ContainerGreatNews" type="CenterContainer" parent="VBoxContainer/CenterContainer/MarginContainer/MarginContainer/VBoxContainer2"]
 margin_top = 51.0
 margin_right = 197.0
-margin_bottom = 72.0
+margin_bottom = 76.0
+
+[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/CenterContainer/MarginContainer/MarginContainer/VBoxContainer2/ContainerGreatNews"]
+margin_left = 19.0
+margin_right = 178.0
+margin_bottom = 25.0
+
+[node name="IconBronze" type="TextureRect" parent="VBoxContainer/CenterContainer/MarginContainer/MarginContainer/VBoxContainer2/ContainerGreatNews/HBoxContainer"]
+margin_right = 26.0
+margin_bottom = 25.0
+texture = ExtResource( 2 )
+
+[node name="IconSilver" type="TextureRect" parent="VBoxContainer/CenterContainer/MarginContainer/MarginContainer/VBoxContainer2/ContainerGreatNews/HBoxContainer"]
+margin_left = 30.0
+margin_right = 56.0
+margin_bottom = 25.0
+texture = ExtResource( 4 )
+
+[node name="IconGold" type="TextureRect" parent="VBoxContainer/CenterContainer/MarginContainer/MarginContainer/VBoxContainer2/ContainerGreatNews/HBoxContainer"]
+margin_left = 60.0
+margin_right = 86.0
+margin_bottom = 25.0
+texture = ExtResource( 3 )
+
+[node name="LabelGreatNews" type="Label" parent="VBoxContainer/CenterContainer/MarginContainer/MarginContainer/VBoxContainer2/ContainerGreatNews/HBoxContainer"]
+margin_left = 90.0
+margin_top = 2.0
+margin_right = 159.0
+margin_bottom = 23.0
 text = "New PB!!"
 align = 1
 
 [node name="GridContainer" type="GridContainer" parent="VBoxContainer/CenterContainer/MarginContainer/MarginContainer/VBoxContainer2"]
-margin_top = 51.0
+margin_top = 106.0
 margin_right = 197.0
-margin_bottom = 227.0
+margin_bottom = 282.0
 custom_constants/vseparation = 10
 columns = 2
 
@@ -159,9 +188,9 @@ margin_bottom = 176.0
 text = "<55:22.498>"
 
 [node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/CenterContainer/MarginContainer/MarginContainer/VBoxContainer2"]
-margin_top = 257.0
+margin_top = 312.0
 margin_right = 197.0
-margin_bottom = 355.0
+margin_bottom = 410.0
 
 [node name="ButtonNext" type="Button" parent="VBoxContainer/CenterContainer/MarginContainer/MarginContainer/VBoxContainer2/VBoxContainer"]
 margin_right = 197.0
@@ -181,7 +210,7 @@ margin_bottom = 98.0
 text = "Back to Title"
 
 [node name="BottomSpacer" type="Control" parent="VBoxContainer"]
-margin_top = 401.0
+margin_top = 454.0
 margin_right = 1024.0
 margin_bottom = 600.0
 size_flags_vertical = 3

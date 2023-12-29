@@ -18,6 +18,10 @@ public class GameOverMenu : Control
     {
         public readonly Label LabelMessage;
         private readonly Label LabelGreatNews;
+        private readonly Container ContainerGreatNews;
+        private readonly TextureRect IconBronze;
+        private readonly TextureRect IconSilver;
+        private readonly TextureRect IconGold;
         public readonly Button ButtonNext;
         public readonly Button ButtonReplay;
         public readonly Button ButtonQuit;
@@ -39,6 +43,10 @@ public class GameOverMenu : Control
         {
             parent.FindNode(out LabelMessage, nameof(LabelMessage));
             parent.FindNode(out LabelGreatNews, nameof(LabelGreatNews));
+            parent.FindNode(out ContainerGreatNews, nameof(ContainerGreatNews));
+            parent.FindNode(out IconBronze, nameof(IconBronze));
+            parent.FindNode(out IconSilver, nameof(IconSilver));
+            parent.FindNode(out IconGold, nameof(IconGold));
             parent.FindNode(out ButtonNext, nameof(ButtonNext));
             parent.FindNode(out ButtonReplay, nameof(ButtonReplay));
             parent.FindNode(out ButtonQuit, nameof(ButtonQuit));
@@ -69,15 +77,18 @@ public class GameOverMenu : Control
             EfficiencyValue.Visible = false;
         }
 
-        public void ShowGreatNews(string message)
+        public void ShowGreatNews(string message, MedalKind medal)
         {
             LabelGreatNews.Text = message;
-            LabelGreatNews.Visible = true;
+            IconBronze.Visible = medal == MedalKind.Bronze;
+            IconSilver.Visible = medal == MedalKind.Silver;
+            IconGold.Visible = medal == MedalKind.Gold;
+            ContainerGreatNews.Visible = true;
         }
 
         public void HideGreatNews()
         {
-            LabelGreatNews.Visible = false;
+            ContainerGreatNews.Visible = false;
         }
     }
 
