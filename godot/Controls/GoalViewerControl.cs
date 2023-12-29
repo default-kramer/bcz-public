@@ -60,7 +60,7 @@ public class GoalViewerControl : Control
         float yStart = RectSize.y - yPadding;
         float origYStart = yStart;
 
-        if (goals[count - 1].MedalKind.HasValue) // if any medals exist, they will be last
+        if (goals[count - 1].MedalKind == MedalKind.Gold) // assumes that when medals exist, gold will be last
         {
             medalScale = barWidth / medalSize.x;
             yStart -= medalSize.y * medalScale;
