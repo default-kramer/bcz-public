@@ -49,7 +49,9 @@ public class SinglePlayerMenu : Control
         .AddChoices(Enumerable.Range(1, SinglePlayerSettings.MaxLevel));
 
     private readonly ChoiceModel<ChoiceItem> ChoiceMedals = new ChoiceModel<ChoiceItem>()
-        .AddChoices(ChoiceItem.MedalsHide, ChoiceItem.MedalsShow);
+        //.AddChoices(ChoiceItem.MedalsHide, ChoiceItem.MedalsShow);
+        // Decided to always show medals:
+        .AddChoices(ChoiceItem.MedalsShow);
 
     private readonly ChoiceModel<ChoiceItem> ChoiceBlanks = new ChoiceModel<ChoiceItem>()
         .AddChoices(ChoiceItem.BlanksOn, ChoiceItem.BlanksOff);
