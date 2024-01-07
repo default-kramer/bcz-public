@@ -86,10 +86,15 @@ class LevelsModeGamePackage : GamePackage
         {
             medal = MostImpressiveGoal(Goals, efficiency);
         }
+
         if (medal != MedalKind.None)
         {
             SaveData.RecordMedal(Level, medal);
             members.ShowGreatNews($"{medal} Medal Earned!", medal);
+        }
+        else if (state.ClearedAllEnemies)
+        {
+            SaveData.RecordLevelComplete(Level);
         }
     }
 

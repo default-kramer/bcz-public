@@ -144,6 +144,18 @@ public class SinglePlayerMenu : Control
         GameModeChanged();
     }
 
+    public override void _Notification(int what)
+    {
+        base._Notification(what);
+        if (what == NotificationVisibilityChanged)
+        {
+            // If the user improved the Completion of level N, and they exit to the Title Screen,
+            // and they come back into this menu, we would still be showing level N with the old Completion.
+            // So do this to refresh it:
+            LevelChanged();
+        }
+    }
+
     private void Show(Control control)
     {
         members.NormalModeOptions.Visible = false;
@@ -167,10 +179,11 @@ public class SinglePlayerMenu : Control
     private void LevelChanged()
     {
         var level = LevelChoices.SelectedItem;
-        members.IconCheckmark.Visible = level < 18;
-        members.IconBronze.Visible = level < 15;
-        members.IconSilver.Visible = level < 10;
-        members.IconGold.Visible = level < 5;
+        var completion = SaveData.GetCompletion(level);
+        members.IconCheckmark.Visible = completion >= SaveData.LevelCompletion.Complete;
+        members.IconBronze.Visible = completion >= SaveData.LevelCompletion.Bronze;
+        members.IconSilver.Visible = completion >= SaveData.LevelCompletion.Silver;
+        members.IconGold.Visible = completion >= SaveData.LevelCompletion.Gold;
     }
 
     private bool HideMedals => ChoiceMedals.SelectedItem == ChoiceItem.MedalsHide;
