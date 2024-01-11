@@ -60,11 +60,10 @@ public class SinglePlayerMenu : Control
         .AddChoices(ChoiceItem.LayoutTall, ChoiceItem.LayoutWide);
 
     private readonly ChoiceModel<ScoreAttackGoal> ChoiceScoreAttackGoal = new ChoiceModel<ScoreAttackGoal>().AddChoices(
-        ScoreAttackGoal.PersonalBest,
         ScoreAttackGoal.Beginner,
         ScoreAttackGoal.Advanced,
         ScoreAttackGoal.Elite,
-        ScoreAttackGoal.WorldRecord);
+        ScoreAttackGoal.PersonalBest);
 
     readonly struct Members
     {
@@ -140,6 +139,7 @@ public class SinglePlayerMenu : Control
 
         GameModeChoices.OnChanged(GameModeChanged);
         LevelChoices.OnChanged(LevelChanged);
+        LayoutChoices.OnChanged(LayoutChanged);
 
         GameModeChanged();
     }
@@ -153,6 +153,8 @@ public class SinglePlayerMenu : Control
             // and they come back into this menu, we would still be showing level N with the old Completion.
             // So do this to refresh it:
             LevelChanged();
+            // Same idea for Layout
+            LayoutChanged();
         }
     }
 
@@ -186,6 +188,11 @@ public class SinglePlayerMenu : Control
         members.IconGold.Visible = completion >= SaveData.LevelCompletion.Gold;
     }
 
+    private void LayoutChanged()
+    {
+        ChoiceScoreAttackGoal.UpdateHelpText();
+    }
+
     private bool HideMedals => ChoiceMedals.SelectedItem == ChoiceItem.MedalsHide;
 
     private void StartGame()
@@ -204,21 +211,8 @@ public class SinglePlayerMenu : Control
         }
         else if (mode == ChoiceItem.ModeScoreAttack)
         {
-            var layout = LayoutChoices.SelectedItem;
-            ISinglePlayerSettings settings;
-            if (layout == ChoiceItem.LayoutTall)
-            {
-                settings = OfficialSettings.ScoreAttackV0;
-            }
-            else if (layout == ChoiceItem.LayoutWide)
-            {
-                settings = OfficialSettings.ScoreAttackWide5;
-            }
-            else
-            {
-                throw new Exception("Unexpected layout choice");
-            }
-            var token = new ScoreAttackLevelToken(settings, ChoiceScoreAttackGoal.SelectedItem);
+            var (layout, settings) = SelectedLayoutInfo(LayoutChoices.SelectedItem);
+            var token = new ScoreAttackLevelToken(settings, ChoiceScoreAttackGoal.SelectedItem, layout);
             NewRoot.FindRoot(this).StartGame(token);
         }
         else
@@ -229,6 +223,19 @@ public class SinglePlayerMenu : Control
             var token = new LevelsModeToken(level, collection, HideMedals);
             NewRoot.FindRoot(this).StartGame(token);
         }
+    }
+
+    private static (Layout, ISinglePlayerSettings) SelectedLayoutInfo(ChoiceItem selectedLayout)
+    {
+        if (selectedLayout == ChoiceItem.LayoutTall)
+        {
+            return (Layout.Tall, OfficialSettings.ScoreAttackV0);
+        }
+        if (selectedLayout == ChoiceItem.LayoutWide)
+        {
+            return (Layout.Wide, OfficialSettings.ScoreAttackWide5);
+        }
+        throw new ArgumentException("Assert fail - selectedLayout");
     }
 
     private void BackToMainMenu()
@@ -261,13 +268,9 @@ public class SinglePlayerMenu : Control
         }
         else if (goal == ScoreAttackGoal.PersonalBest)
         {
-            var score = goal.GetTargetScore();
+            var layout = SelectedLayoutInfo(LayoutChoices.SelectedItem).Item1;
+            var score = goal.GetTargetScore(layout);
             return $"Your current Personal Best is {score.ToString("N0")}.";
-        }
-        else if (goal == ScoreAttackGoal.WorldRecord)
-        {
-            var score = goal.GetTargetScore();
-            return $"Leaderboards/replays are coming soon...\nFor now, you can try to beat my PB: {score.ToString("N0")}";
         }
         return null;
     }
@@ -329,11 +332,13 @@ public class SinglePlayerMenu : Control
     {
         private readonly ISinglePlayerSettings settings;
         private readonly ScoreAttackGoal goalType;
+        private readonly Layout layout;
 
-        public ScoreAttackLevelToken(ISinglePlayerSettings settings, ScoreAttackGoal goalType)
+        public ScoreAttackLevelToken(ISinglePlayerSettings settings, ScoreAttackGoal goalType, Layout layout)
         {
             this.settings = settings;
             this.goalType = goalType;
+            this.layout = layout;
         }
 
         public override bool CanAdvance => false;
@@ -346,15 +351,12 @@ public class SinglePlayerMenu : Control
         public override GamePackage CreateGamePackage()
         {
             var settings = this.settings.AddRandomSeed();
-            var package = new ScoreAttackGamePackage(settings);
-            package.ScoreAttackGoal = GetGoal();
+            var package = new ScoreAttackGamePackage(settings, goalType, layout);
             return package;
         }
-
-        private int GetGoal() => goalType.GetTargetScore();
     }
 
-    sealed class ScoreAttackGoal
+    public sealed class ScoreAttackGoal
     {
         public readonly string DisplayValue;
         public readonly (int score, string helpText)? FixedValue;
@@ -371,11 +373,10 @@ public class SinglePlayerMenu : Control
         public static readonly ScoreAttackGoal Advanced = new ScoreAttackGoal("Advanced", (20000, $"Try for {20000.ToString("N0")} points."));
         public static readonly ScoreAttackGoal Elite = new ScoreAttackGoal("Elite", (30000, $"Try for {30000.ToString("N0")} points."));
         public static readonly ScoreAttackGoal PersonalBest = new ScoreAttackGoal("Personal Best", null);
-        public static readonly ScoreAttackGoal WorldRecord = new ScoreAttackGoal("World Record", null);
 
         public const int MinPersonalBest = 100; // To be used if the player doesn't have a PB yet
 
-        public int GetTargetScore()
+        public int GetTargetScore(Layout layout)
         {
             if (FixedValue.HasValue)
             {
@@ -383,11 +384,7 @@ public class SinglePlayerMenu : Control
             }
             else if (this == PersonalBest)
             {
-                return Math.Max(MinPersonalBest, SaveData.ScoreAttackPB);
-            }
-            else if (this == WorldRecord)
-            {
-                return 32350;
+                return Math.Max(MinPersonalBest, SaveData.GetPersonalBest(layout));
             }
             throw new Exception("Assert fail");
         }

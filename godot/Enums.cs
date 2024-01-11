@@ -11,3 +11,9 @@ enum PauseMenuActions
     Restart = 1,
     Quit = 2,
 }
+
+public enum Layout
+{
+    Tall,
+    Wide,
+}

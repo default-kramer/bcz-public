@@ -108,6 +108,11 @@ public sealed class ChoiceModel<T> : IChoiceModel
     public void AddHelpText(Func<T, string?> helpTextProvider)
     {
         this.helpTextProvider = helpTextProvider;
+        UpdateHelpText();
+    }
+
+    public void UpdateHelpText()
+    {
         this.HelpText = helpTextProvider(SelectedItem);
     }
 }

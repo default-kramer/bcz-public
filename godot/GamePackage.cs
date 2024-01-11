@@ -116,20 +116,24 @@ class LevelsModeGamePackage : GamePackage
 
 class ScoreAttackGamePackage : GamePackage
 {
-    public ScoreAttackGamePackage(SeededSettings settings) : base(settings) { }
+    private readonly SinglePlayerMenu.ScoreAttackGoal goal;
+    private readonly Layout layout;
 
-    /// <summary>
-    /// Did the user choose a non-zero goal for score attack mode?
-    /// </summary>
-    public int ScoreAttackGoal { get; set; }
+    public ScoreAttackGamePackage(SeededSettings settings, SinglePlayerMenu.ScoreAttackGoal goal, Layout layout) : base(settings)
+    {
+        this.goal = goal;
+        this.layout = layout;
+    }
 
     internal override void Initialize(GameViewerControl.Members members, Ticker ticker)
     {
-        if (ScoreAttackGoal > 0)
+        var targetScore = goal.GetTargetScore(layout);
+        if (targetScore > 0)
         {
+            Console.WriteLine($"Goal is {targetScore}");
             var state = ticker.state;
             var countdownVM = state.CountdownViewmodel ?? throw new Exception("Expected Countdown VM to exist");
-            members.GoalViewerControl.SetLogicForScoreAttack(state.Data, countdownVM, ScoreAttackGoal);
+            members.GoalViewerControl.SetLogicForScoreAttack(state.Data, countdownVM, targetScore);
             members.GoalViewerControl.Visible = true;
         }
     }
@@ -140,9 +144,8 @@ class ScoreAttackGamePackage : GamePackage
 
         var data = state.Data;
         var totalScore = data.Score.TotalScore;
-        if (totalScore > SaveData.ScoreAttackPB)
+        if (SaveData.UpdatePersonalBest(layout, totalScore))
         {
-            SaveData.ScoreAttackPB = totalScore;
             members.ShowGreatNews("!!! New Personal Best !!!", MedalKind.None);
         }
     }

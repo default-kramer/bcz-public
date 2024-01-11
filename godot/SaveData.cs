@@ -23,16 +23,38 @@ static class SaveData
         Gold = 4,
     };
 
-    class LevelsData
+    sealed class LevelsData
     {
         public const string FilePath = "user://LevelsData.txt";
 
         public Dictionary<int, LevelCompletion> Completion { get; set; } = new Dictionary<int, LevelCompletion>();
     }
 
-    public static int ScoreAttackPB { get; set; } = 0;
+    sealed class ScoreAttackData
+    {
+        public const string FilePath = "user://ScoreAttackData.txt";
+
+        public sealed class Details
+        {
+            public int PB { get; set; }
+        }
+
+        public Details Tall { get; set; } = new();
+        public Details Wide { get; set; } = new();
+
+        public Details GetDetails(Layout layout)
+        {
+            switch (layout)
+            {
+                case Layout.Tall: return Tall;
+                case Layout.Wide: return Wide;
+                default: throw new ArgumentException($"Assert fail - unexpected layout {layout}");
+            }
+        }
+    }
 
     private static LevelsData? _levelsData = null;
+    private static ScoreAttackData? _scoreAttackData = null;
 
     public static LevelCompletion GetCompletion(int level)
     {
@@ -40,40 +62,45 @@ static class SaveData
         return value;
     }
 
+    private static T? ReadFile<T>(string path) where T : class
+    {
+        using var file = new Godot.File();
+        var error = file.Open(path, Godot.File.ModeFlags.Read);
+        if (error == Godot.Error.Ok)
+        {
+            string filePath = file.GetPathAbsolute();
+            string content = file.GetAsText();
+            file.Close();
+            try
+            {
+                return Newtonsoft.Json.JsonConvert.DeserializeObject<T>(content);
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"Could not deserialize {typeof(T).FullName} from {filePath}");
+                Console.Error.WriteLine(ex.ToString());
+            }
+        }
+        return null;
+    }
+
     private static LevelsData GetLevelsData()
     {
-        if (_levelsData == null)
-        {
-            using var file = new Godot.File();
-            var error = file.Open(LevelsData.FilePath, Godot.File.ModeFlags.Read);
-            if (error == Godot.Error.Ok)
-            {
-                string filePath = file.GetPathAbsolute();
-                string content = file.GetAsText();
-                file.Close();
-                try
-                {
-                    _levelsData = Newtonsoft.Json.JsonConvert.DeserializeObject<LevelsData>(content);
-                }
-                catch (Exception ex)
-                {
-                    Console.Error.WriteLine($"Could not deserialize levels data from {filePath}");
-                    Console.Error.WriteLine(ex.ToString());
-                }
-            }
-
-            _levelsData = _levelsData ?? new LevelsData();
-        }
-
+        _levelsData = _levelsData ?? ReadFile<LevelsData>(LevelsData.FilePath) ?? new LevelsData();
         return _levelsData;
     }
 
-    private static void SaveLevelsData(LevelsData data)
+    private static ScoreAttackData GetScoreAttackData()
     {
-        _levelsData = data;
+        _scoreAttackData = _scoreAttackData ?? ReadFile<ScoreAttackData>(ScoreAttackData.FilePath) ?? new ScoreAttackData();
+        return _scoreAttackData;
+    }
+
+    private static void SaveToFile(object data, string path)
+    {
         string json = Newtonsoft.Json.JsonConvert.SerializeObject(data);
         using var file = new Godot.File();
-        var error = file.Open(LevelsData.FilePath, Godot.File.ModeFlags.Write);
+        var error = file.Open(path, Godot.File.ModeFlags.Write);
         if (error != Godot.Error.Ok)
         {
             Console.Error.WriteLine($"Could not save to {file.GetPathAbsolute()}, error {error}");
@@ -81,6 +108,18 @@ static class SaveData
         }
         file.StoreString(json);
         file.Close();
+    }
+
+    private static void SaveLevelsData(LevelsData data)
+    {
+        _levelsData = data;
+        SaveToFile(_levelsData, LevelsData.FilePath);
+    }
+
+    private static void SaveScoreAttackData(ScoreAttackData data)
+    {
+        _scoreAttackData = data;
+        SaveToFile(_scoreAttackData, ScoreAttackData.FilePath);
     }
 
     public static void RecordLevelComplete(int level)
@@ -113,5 +152,29 @@ static class SaveData
             case MedalKind.Bronze: return LevelCompletion.Bronze;
             default: return LevelCompletion.Incomplete;
         }
+    }
+
+    public static int GetPersonalBest(Layout layout)
+    {
+        var data = GetScoreAttackData();
+        var details = data.GetDetails(layout);
+        return details.PB;
+    }
+
+    /// <summary>
+    /// Returns true if the given <paramref name="score"/> is a new PB, false otherwise.
+    /// Updates save data if necessary.
+    /// </summary>
+    public static bool UpdatePersonalBest(Layout layout, int score)
+    {
+        var data = GetScoreAttackData();
+        var details = data.GetDetails(layout);
+        if (score <= details.PB)
+        {
+            return false;
+        }
+        details.PB = score;
+        SaveScoreAttackData(data);
+        return true;
     }
 }
