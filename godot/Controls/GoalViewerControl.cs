@@ -25,6 +25,21 @@ public class GoalViewerControl : Control
         this.viewmodel = new ScoreAttackViewmodel(state, countdown, targetScore);
     }
 
+    private Texture medalBronze = null!;
+    private Texture medalSilver = null!;
+    private Texture medalGold = null!;
+    private Vector2 medalSize;
+
+    public override void _Ready()
+    {
+        base._Ready();
+
+        medalBronze = (Texture)ResourceLoader.Load("res://Sprites/medals/bronze.bmp");
+        medalSilver = (Texture)ResourceLoader.Load("res://Sprites/medals/silver.bmp");
+        medalGold = (Texture)ResourceLoader.Load("res://Sprites/medals/gold.bmp");
+        medalSize = medalBronze.GetSize(); // all should be the same size
+    }
+
     public override void _Draw()
     {
         DrawRect(new Rect2(0, 0, RectSize), b1);
@@ -32,17 +47,34 @@ public class GoalViewerControl : Control
 
         var goals = viewmodel.Recalculate();
         int count = goals.Length;
+        if (count == 0)
+        {
+            return;
+        }
+
         const float totalPadding = 0.4f;
         const float yPadding = 5f;
-        float yStart = RectSize.y - yPadding;
-        float maxHeight = yStart - yPadding;
         float barWidth = RectSize.x * (1 - totalPadding) / count;
+        float medalScale = 1f;
+
+        float yStart = RectSize.y - yPadding;
+        float origYStart = yStart;
+
+        if (goals[count - 1].MedalKind == MedalKind.Gold) // assumes that when medals exist, gold will be last
+        {
+            medalScale = barWidth / medalSize.x;
+            yStart -= medalSize.y * medalScale;
+            origYStart = yStart;
+            yStart -= yPadding / 2f; // add padding above medal icons
+        }
+
+        float maxHeight = yStart - yPadding;
         float padding = RectSize.x * totalPadding / (count + 1);
 
         for (int i = 0; i < count; i++)
         {
             var goal = goals[i];
-            float xOffset = padding * (i + 1) + barWidth * i;
+            float xOffset = GetXOffset(padding, barWidth, i);
             float height;
             if (goal.Projection != null)
             {
@@ -52,6 +84,37 @@ public class GoalViewerControl : Control
             height = maxHeight * goal.Progress;
             DrawRect(new Rect2(xOffset, yStart - height, barWidth, height), goal.Color);
         }
+
+        // I have to use DrawSetTransform but I don't know how to revert it, so do it last!
+        yStart = origYStart;
+        for (int i = 0; i < count; i++)
+        {
+            var goal = goals[i];
+            Texture medalTexture;
+            switch (goal.MedalKind)
+            {
+                case MedalKind.Bronze:
+                    medalTexture = medalBronze;
+                    break;
+                case MedalKind.Silver:
+                    medalTexture = medalSilver;
+                    break;
+                case MedalKind.Gold:
+                    medalTexture = medalGold;
+                    break;
+                default:
+                    continue;
+            }
+
+            float xOffset = GetXOffset(padding, barWidth, i);
+            DrawSetTransform(new Vector2(xOffset, yStart), 0f, new Vector2(medalScale, medalScale));
+            DrawTexture(medalTexture, new Vector2(0, 0));
+        }
+    }
+
+    private static float GetXOffset(float padding, float barWidth, int i)
+    {
+        return padding * (i + 1) + barWidth * i;
     }
 
     interface IViewmodel
@@ -118,9 +181,13 @@ public class GoalViewerControl : Control
                 int clampedValue = Math.Min(bars[i], headroom);
                 float progress = clampedValue * 1f / headroom;
                 var color = GameColors.Green;
+                MedalKind medalKind = MedalKind.None;
+
                 if (i != playerIndex)
                 {
                     var goal = goals[i - goalsOffset];
+                    medalKind = goal.Kind;
+
                     switch (goal.Kind)
                     {
                         case MedalKind.Bronze:
@@ -134,7 +201,7 @@ public class GoalViewerControl : Control
                             break;
                     }
                 }
-                models[i] = new GoalModel(progress, color);
+                models[i] = new GoalModel(progress, color, medalKind);
             }
 
             return models;
@@ -156,8 +223,8 @@ public class GoalViewerControl : Control
             this.countdown = countdown;
             this.targetScore = targetScore;
             this.headroom = targetScore * 1.2f;
-            models[1] = new GoalModel(targetScore / headroom, GameColors.Silver);
-            models[0] = new GoalModel(lastPlayerScore, GameColors.Green, 0f);
+            models[1] = new GoalModel(targetScore / headroom, GameColors.Silver, MedalKind.None);
+            models[0] = new GoalModel(lastPlayerScore, GameColors.Green, projection: 0f);
         }
 
         public ReadOnlySpan<GoalModel> Recalculate()
@@ -179,17 +246,22 @@ public class GoalViewerControl : Control
 
     readonly struct GoalModel
     {
+        public readonly MedalKind? MedalKind;
         public readonly float Progress;
         public readonly Godot.Color Color;
         public readonly float? Projection;
 
-        public GoalModel(float progress, Godot.Color color) : this(progress, color, null) { }
+        public GoalModel(float progress, Godot.Color color, MedalKind medalKind) : this(progress, color, projection: null)
+        {
+            this.MedalKind = medalKind;
+        }
 
         public GoalModel(float progress, Godot.Color color, float? projection)
         {
             this.Progress = progress;
             this.Color = color;
             this.Projection = projection;
+            this.MedalKind = null;
         }
     }
 }

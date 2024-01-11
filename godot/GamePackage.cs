@@ -86,10 +86,15 @@ class LevelsModeGamePackage : GamePackage
         {
             medal = MostImpressiveGoal(Goals, efficiency);
         }
+
         if (medal != MedalKind.None)
         {
             SaveData.RecordMedal(Level, medal);
-            members.ShowGreatNews($"{medal} Medal Earned!");
+            members.ShowGreatNews($"{medal} Medal Earned!", medal);
+        }
+        else if (state.ClearedAllEnemies)
+        {
+            SaveData.RecordLevelComplete(Level);
         }
     }
 
@@ -138,7 +143,7 @@ class ScoreAttackGamePackage : GamePackage
         if (totalScore > SaveData.ScoreAttackPB)
         {
             SaveData.ScoreAttackPB = totalScore;
-            members.ShowGreatNews("!!! New Personal Best !!!");
+            members.ShowGreatNews("!!! New Personal Best !!!", MedalKind.None);
         }
     }
 }

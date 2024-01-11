@@ -49,7 +49,9 @@ public class SinglePlayerMenu : Control
         .AddChoices(Enumerable.Range(1, SinglePlayerSettings.MaxLevel));
 
     private readonly ChoiceModel<ChoiceItem> ChoiceMedals = new ChoiceModel<ChoiceItem>()
-        .AddChoices(ChoiceItem.MedalsHide, ChoiceItem.MedalsShow);
+        //.AddChoices(ChoiceItem.MedalsHide, ChoiceItem.MedalsShow);
+        // Decided to always show medals:
+        .AddChoices(ChoiceItem.MedalsShow);
 
     private readonly ChoiceModel<ChoiceItem> ChoiceBlanks = new ChoiceModel<ChoiceItem>()
         .AddChoices(ChoiceItem.BlanksOn, ChoiceItem.BlanksOff);
@@ -79,6 +81,11 @@ public class SinglePlayerMenu : Control
         public readonly Control NormalModeOptions;
         public readonly Control ScoreAttackOptions;
 
+        public readonly TextureRect IconBronze;
+        public readonly TextureRect IconSilver;
+        public readonly TextureRect IconGold;
+        public readonly TextureRect IconCheckmark;
+
         public Members(SinglePlayerMenu me)
         {
             me.FindNode(out ChoiceGameMode, nameof(ChoiceGameMode));
@@ -104,6 +111,11 @@ public class SinglePlayerMenu : Control
 
             me.FindNode(out ButtonStartGame, nameof(ButtonStartGame));
             me.FindNode(out ButtonBack, nameof(ButtonBack));
+
+            me.FindNode(out IconBronze, nameof(IconBronze));
+            me.FindNode(out IconSilver, nameof(IconSilver));
+            me.FindNode(out IconGold, nameof(IconGold));
+            me.FindNode(out IconCheckmark, nameof(IconCheckmark));
         }
     }
 
@@ -132,6 +144,18 @@ public class SinglePlayerMenu : Control
         GameModeChanged();
     }
 
+    public override void _Notification(int what)
+    {
+        base._Notification(what);
+        if (what == NotificationVisibilityChanged)
+        {
+            // If the user improved the Completion of level N, and they exit to the Title Screen,
+            // and they come back into this menu, we would still be showing level N with the old Completion.
+            // So do this to refresh it:
+            LevelChanged();
+        }
+    }
+
     private void Show(Control control)
     {
         members.NormalModeOptions.Visible = false;
@@ -155,8 +179,11 @@ public class SinglePlayerMenu : Control
     private void LevelChanged()
     {
         var level = LevelChoices.SelectedItem;
-        // TODO would be nice to show a preview grid so you know how big the level is...
-        // For now just placeholder code
+        var completion = SaveData.GetCompletion(level);
+        members.IconCheckmark.Visible = completion >= SaveData.LevelCompletion.Complete;
+        members.IconBronze.Visible = completion >= SaveData.LevelCompletion.Bronze;
+        members.IconSilver.Visible = completion >= SaveData.LevelCompletion.Silver;
+        members.IconGold.Visible = completion >= SaveData.LevelCompletion.Gold;
     }
 
     private bool HideMedals => ChoiceMedals.SelectedItem == ChoiceItem.MedalsHide;

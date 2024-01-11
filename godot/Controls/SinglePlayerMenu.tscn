@@ -1,8 +1,12 @@
-[gd_scene load_steps=4 format=2]
+[gd_scene load_steps=8 format=2]
 
 [ext_resource path="res://Controls/MenuChoiceControl.tscn" type="PackedScene" id=1]
 [ext_resource path="res://Controls/SinglePlayerMenu.cs" type="Script" id=2]
 [ext_resource path="res://Controls/BorderRect.tscn" type="PackedScene" id=3]
+[ext_resource path="res://Sprites/medals/bronze.bmp" type="Texture" id=4]
+[ext_resource path="res://Sprites/medals/silver.bmp" type="Texture" id=5]
+[ext_resource path="res://Sprites/medals/gold.bmp" type="Texture" id=6]
+[ext_resource path="res://Sprites/medals/checkmark.bmp" type="Texture" id=7]
 
 [node name="MarginContainer" type="MarginContainer"]
 margin_right = 40.0
@@ -10,37 +14,37 @@ margin_bottom = 40.0
 script = ExtResource( 2 )
 
 [node name="BorderRect" parent="." instance=ExtResource( 3 )]
-margin_right = 200.0
-margin_bottom = 355.0
+margin_right = 217.0
+margin_bottom = 352.0
 
 [node name="CenterContainer" type="CenterContainer" parent="."]
-margin_right = 200.0
-margin_bottom = 355.0
+margin_right = 217.0
+margin_bottom = 352.0
 
 [node name="VBoxContainer" type="VBoxContainer" parent="CenterContainer"]
-margin_right = 200.0
-margin_bottom = 355.0
+margin_right = 217.0
+margin_bottom = 352.0
 
 [node name="PaddingTop" type="Control" parent="CenterContainer/VBoxContainer"]
-margin_right = 200.0
+margin_right = 217.0
 margin_bottom = 10.0
 rect_min_size = Vector2( 0, 10 )
 
 [node name="HBoxContainer" type="HBoxContainer" parent="CenterContainer/VBoxContainer"]
 margin_top = 14.0
-margin_right = 200.0
-margin_bottom = 341.0
+margin_right = 217.0
+margin_bottom = 338.0
 
 [node name="CenterContainer" type="CenterContainer" parent="CenterContainer/VBoxContainer/HBoxContainer"]
-margin_right = 200.0
-margin_bottom = 327.0
+margin_right = 217.0
+margin_bottom = 324.0
 
 [node name="VBoxContainer" type="VBoxContainer" parent="CenterContainer/VBoxContainer/HBoxContainer/CenterContainer"]
-margin_right = 200.0
-margin_bottom = 327.0
+margin_right = 217.0
+margin_bottom = 324.0
 
 [node name="GridContainer" type="GridContainer" parent="CenterContainer/VBoxContainer/HBoxContainer/CenterContainer/VBoxContainer"]
-margin_right = 200.0
+margin_right = 217.0
 margin_bottom = 28.0
 custom_constants/hseparation = 15
 columns = 2
@@ -58,60 +62,101 @@ margin_bottom = 28.0
 
 [node name="Spacer1" type="Control" parent="CenterContainer/VBoxContainer/HBoxContainer/CenterContainer/VBoxContainer"]
 margin_top = 32.0
-margin_right = 200.0
+margin_right = 217.0
 margin_bottom = 52.0
 rect_min_size = Vector2( 0, 20 )
 
 [node name="NormalModeOptions" type="GridContainer" parent="CenterContainer/VBoxContainer/HBoxContainer/CenterContainer/VBoxContainer"]
 margin_top = 56.0
-margin_right = 200.0
-margin_bottom = 160.0
+margin_right = 217.0
+margin_bottom = 157.0
 custom_constants/vseparation = 10
 custom_constants/hseparation = 15
 columns = 2
 
 [node name="Label3" type="Label" parent="CenterContainer/VBoxContainer/HBoxContainer/CenterContainer/VBoxContainer/NormalModeOptions"]
 margin_top = 3.0
-margin_right = 59.0
+margin_right = 86.0
 margin_bottom = 24.0
 text = "Level:"
 align = 2
 
-[node name="ChoiceLevel" parent="CenterContainer/VBoxContainer/HBoxContainer/CenterContainer/VBoxContainer/NormalModeOptions" instance=ExtResource( 1 )]
-margin_left = 74.0
-margin_right = 74.0
+[node name="HBoxContainer" type="HBoxContainer" parent="CenterContainer/VBoxContainer/HBoxContainer/CenterContainer/VBoxContainer/NormalModeOptions"]
+margin_left = 101.0
+margin_right = 217.0
 margin_bottom = 28.0
 
+[node name="ChoiceLevel" parent="CenterContainer/VBoxContainer/HBoxContainer/CenterContainer/VBoxContainer/NormalModeOptions/HBoxContainer" instance=ExtResource( 1 )]
+margin_bottom = 28.0
+
+[node name="Label2" type="Label" parent="CenterContainer/VBoxContainer/HBoxContainer/CenterContainer/VBoxContainer/NormalModeOptions"]
+margin_top = 40.0
+margin_right = 86.0
+margin_bottom = 61.0
+text = "Completed:"
+align = 2
+
+[node name="HBoxContainer2" type="HBoxContainer" parent="CenterContainer/VBoxContainer/HBoxContainer/CenterContainer/VBoxContainer/NormalModeOptions"]
+margin_left = 101.0
+margin_top = 38.0
+margin_right = 217.0
+margin_bottom = 63.0
+rect_min_size = Vector2( 0, 25 )
+
+[node name="IconCheckmark" type="TextureRect" parent="CenterContainer/VBoxContainer/HBoxContainer/CenterContainer/VBoxContainer/NormalModeOptions/HBoxContainer2"]
+margin_right = 26.0
+margin_bottom = 25.0
+texture = ExtResource( 7 )
+
+[node name="IconBronze" type="TextureRect" parent="CenterContainer/VBoxContainer/HBoxContainer/CenterContainer/VBoxContainer/NormalModeOptions/HBoxContainer2"]
+margin_left = 30.0
+margin_right = 56.0
+margin_bottom = 25.0
+texture = ExtResource( 4 )
+
+[node name="IconSilver" type="TextureRect" parent="CenterContainer/VBoxContainer/HBoxContainer/CenterContainer/VBoxContainer/NormalModeOptions/HBoxContainer2"]
+margin_left = 60.0
+margin_right = 86.0
+margin_bottom = 25.0
+texture = ExtResource( 5 )
+
+[node name="IconGold" type="TextureRect" parent="CenterContainer/VBoxContainer/HBoxContainer/CenterContainer/VBoxContainer/NormalModeOptions/HBoxContainer2"]
+margin_left = 90.0
+margin_right = 116.0
+margin_bottom = 25.0
+texture = ExtResource( 6 )
+
 [node name="Label5" type="Label" parent="CenterContainer/VBoxContainer/HBoxContainer/CenterContainer/VBoxContainer/NormalModeOptions"]
-margin_top = 41.0
-margin_right = 59.0
-margin_bottom = 62.0
+visible = false
+margin_top = 76.0
+margin_right = 86.0
+margin_bottom = 97.0
 text = "Medals:"
 align = 2
 
 [node name="ChoiceMedals" parent="CenterContainer/VBoxContainer/HBoxContainer/CenterContainer/VBoxContainer/NormalModeOptions" instance=ExtResource( 1 )]
-margin_left = 74.0
-margin_top = 38.0
-margin_right = 74.0
-margin_bottom = 66.0
+visible = false
+margin_top = 73.0
+margin_right = 86.0
+margin_bottom = 101.0
 
 [node name="Label" type="Label" parent="CenterContainer/VBoxContainer/HBoxContainer/CenterContainer/VBoxContainer/NormalModeOptions"]
-margin_top = 79.0
-margin_right = 59.0
-margin_bottom = 100.0
+margin_top = 76.0
+margin_right = 86.0
+margin_bottom = 97.0
 text = "Blanks:"
 align = 2
 
 [node name="ChoiceBlanks" parent="CenterContainer/VBoxContainer/HBoxContainer/CenterContainer/VBoxContainer/NormalModeOptions" instance=ExtResource( 1 )]
-margin_left = 74.0
-margin_top = 76.0
-margin_right = 74.0
-margin_bottom = 104.0
+margin_left = 101.0
+margin_top = 73.0
+margin_right = 217.0
+margin_bottom = 101.0
 
 [node name="ScoreAttackOptions" type="GridContainer" parent="CenterContainer/VBoxContainer/HBoxContainer/CenterContainer/VBoxContainer"]
-margin_top = 164.0
-margin_right = 200.0
-margin_bottom = 230.0
+margin_top = 161.0
+margin_right = 217.0
+margin_bottom = 227.0
 custom_constants/vseparation = 10
 custom_constants/hseparation = 15
 columns = 2
@@ -141,38 +186,38 @@ margin_right = 67.0
 margin_bottom = 66.0
 
 [node name="Spacer2" type="Control" parent="CenterContainer/VBoxContainer/HBoxContainer/CenterContainer/VBoxContainer"]
-margin_top = 234.0
-margin_right = 200.0
-margin_bottom = 249.0
+margin_top = 231.0
+margin_right = 217.0
+margin_bottom = 246.0
 rect_min_size = Vector2( 0, 15 )
 
 [node name="CenterContainer" type="CenterContainer" parent="CenterContainer/VBoxContainer/HBoxContainer/CenterContainer/VBoxContainer"]
-margin_top = 253.0
-margin_right = 200.0
-margin_bottom = 293.0
+margin_top = 250.0
+margin_right = 217.0
+margin_bottom = 290.0
 rect_min_size = Vector2( 200, 40 )
 
 [node name="ButtonStartGame" type="Button" parent="CenterContainer/VBoxContainer/HBoxContainer/CenterContainer/VBoxContainer/CenterContainer"]
-margin_left = 45.0
+margin_left = 53.0
 margin_top = 5.0
-margin_right = 155.0
+margin_right = 163.0
 margin_bottom = 35.0
 text = "Start Game"
 
 [node name="CenterContainer2" type="CenterContainer" parent="CenterContainer/VBoxContainer/HBoxContainer/CenterContainer/VBoxContainer"]
-margin_top = 297.0
-margin_right = 200.0
-margin_bottom = 327.0
+margin_top = 294.0
+margin_right = 217.0
+margin_bottom = 324.0
 rect_min_size = Vector2( 200, 0 )
 
 [node name="ButtonBack" type="Button" parent="CenterContainer/VBoxContainer/HBoxContainer/CenterContainer/VBoxContainer/CenterContainer2"]
-margin_left = 73.0
-margin_right = 127.0
+margin_left = 81.0
+margin_right = 135.0
 margin_bottom = 30.0
 text = "Back"
 
 [node name="PaddingBottom" type="Control" parent="CenterContainer/VBoxContainer"]
-margin_top = 345.0
-margin_right = 200.0
-margin_bottom = 355.0
+margin_top = 342.0
+margin_right = 217.0
+margin_bottom = 352.0
 rect_min_size = Vector2( 0, 10 )
