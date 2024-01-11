@@ -122,7 +122,7 @@ custom_constants/separation = 16
 [node name="Label" type="Label" parent="MarginContainer/CopyrightNotice"]
 margin_right = 1008.0
 margin_bottom = 21.0
-text = "Copyright 2023 Ryan Kramer"
+text = "Copyright 2024 Ryan Kramer"
 
 [node name="Label2" type="Label" parent="MarginContainer/CopyrightNotice"]
 margin_top = 37.0
