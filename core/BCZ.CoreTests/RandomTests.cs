@@ -51,7 +51,7 @@ namespace BCZ.CoreTests
         [TestMethod]
         public void queue_is_deterministic()
         {
-            var prng1 = PRNG.Create();
+            var prng1 = PRNG.Create(new Random());
             var prng2 = prng1.Clone();
             var state1 = MakeState(prng1);
             var state2 = MakeState(prng2);

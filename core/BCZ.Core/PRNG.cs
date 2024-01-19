@@ -65,28 +65,34 @@ namespace BCZ.Core
             return new PRNG(this);
         }
 
-        private static readonly Random seeder = new Random();
-        private static long GetSeed(long limit)
+        /// <summary>
+        /// Caller must ensure the thread-safety of the given <paramref name="seeder"/>.
+        /// </summary>
+        public static PRNG Create(Random seeder)
         {
-            return (long)(seeder.NextDouble() * (limit - 1));
-        }
-        public static PRNG Create()
-        {
-            return new PRNG(RandomSeed());
+            return new PRNG(RandomSeed(seeder));
         }
 
-        public static PRNG.State RandomSeed()
+        /// <summary>
+        /// Caller must ensure the thread-safety of the given <paramref name="seeder"/>.
+        /// </summary>
+        public static PRNG.State RandomSeed(Random seeder)
         {
             try
             {
-                return new State(GetSeed(m1), GetSeed(m1), GetSeed(m1), GetSeed(m2), GetSeed(m2), GetSeed(m2));
+                return new State(GetSeed(seeder, m1), GetSeed(seeder, m1), GetSeed(seeder, m1), GetSeed(seeder, m2), GetSeed(seeder, m2), GetSeed(seeder, m2));
             }
             catch (ArgumentException)
             {
                 // This exception should be ****Extremely**** unlikely (getting s10,s11,s12 all zero),
                 // but it is still technically possible
-                return RandomSeed();
+                return RandomSeed(seeder);
             }
+        }
+
+        private static long GetSeed(Random seeder, long limit)
+        {
+            return (long)(seeder.NextDouble() * (limit - 1));
         }
 
         /// <returns>A pseudorandom double N such that 0 &lt; N &lt; 1</returns>

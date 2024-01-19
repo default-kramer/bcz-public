@@ -17,7 +17,7 @@ namespace BCZ.CoreTests
             var settingsCollection = SinglePlayerSettings.LevelsModeWithBlanks;
             var settings = settingsCollection.GetSettings(settingsCollection.MaxLevel);
 
-            var prng = PRNG.Create();
+            var prng = PRNG.Create(new Random());
 
             // Make sure we can find groups of 2 to make sure our test actually works
             bool foundGroupsOfTwo = false;
