@@ -11,14 +11,8 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace BCZ.CoreTests
 {
     [TestClass]
-    public class PuzzleTests
+    public class PuzzleTests : ReplayTestBase
     {
-        private static ReplayDriver ParseReplay(string path)
-        {
-            path = Path.Combine(ReplayDirectory.FullName, path);
-            return ReplayReader.BuildReplayDriver(path);
-        }
-
         private static (Puzzle, Puzzle) Get(string path, int index)
         {
             var raw = GetRawPuzzles(path)[index];
@@ -323,30 +317,6 @@ BB                      "));
                     }
                 }
             }
-        }
-
-        private static readonly DirectoryInfo ReplayDirectory = FindReplayDirectory();
-
-        private static DirectoryInfo FindReplayDirectory()
-        {
-            var startLoc = System.Reflection.Assembly.GetExecutingAssembly().Location;
-            var currentDir = new DirectoryInfo(Path.GetDirectoryName(startLoc)!);
-
-            while (currentDir.Parent != null)
-            {
-                if (currentDir.Name == "BCZ.CoreTests")
-                {
-                    var replayDir = new DirectoryInfo(Path.Combine(currentDir.FullName, "Replays"));
-                    if (!replayDir.Exists)
-                    {
-                        throw new Exception($"Replay directory does not exist: {replayDir.FullName}");
-                    }
-                    return replayDir;
-                }
-                currentDir = currentDir.Parent;
-            }
-
-            throw new Exception($"Could not find replay directory. Started from {startLoc}");
         }
     }
 }
