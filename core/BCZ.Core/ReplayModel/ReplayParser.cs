@@ -198,6 +198,7 @@ namespace BCZ.Core.ReplayModel
         /// </summary>
         public CompletedGameInfo AsCompletedGame()
         {
+            Game.Ticker.Advance(new Moment(int.MaxValue)); // need to ensure final combo resolves
             return new CompletedGameInfo(Game.Settings, Game.Ticker.state.Data);
         }
     }

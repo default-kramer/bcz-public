@@ -11,7 +11,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace BCZ.CoreTests
 {
     [TestClass]
-    public class ReplayTests
+    public class PuzzleTests
     {
         private static ReplayDriver ParseReplay(string path)
         {
