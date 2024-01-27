@@ -28,6 +28,20 @@ namespace BCZ.Core
         {
             return loc.Y * Width + loc.X;
         }
+
+        public static bool operator ==(GridSize a, GridSize b)
+        {
+            return a.Width == b.Width && a.Height == b.Height;
+        }
+
+        public static bool operator !=(GridSize a, GridSize b)
+        {
+            return !(a == b);
+        }
+
+        public override bool Equals(object? obj) => false;
+
+        public override int GetHashCode() => Width * 23 + Height;
     }
 
     public interface IReadOnlyGridSlim

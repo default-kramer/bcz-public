@@ -1,13 +1,22 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using BCZ.Core;
 using Godot;
+
+abstract class Request
+{
+    public abstract string Path { get; }
+    public abstract Godot.HTTPClient.Method Method { get; }
+    public virtual string Body() => "";
+    public abstract double TimeoutSeconds { get; }
+    public virtual void OnRequestCompleted(long result, long responseCode, string[] headers, byte[] body) { }
+    public virtual void OnError(Error error) { }
+}
 
 interface IServerConnection
 {
-    void UploadGame(string replayFile);
+    void Execute(Request request);
 }
 
 /// <summary>
@@ -16,28 +25,53 @@ interface IServerConnection
 /// </summary>
 class BrowserBasedServerConnection : Godot.Node, IServerConnection
 {
-    private readonly HTTPRequest http = new HTTPRequest();
     private readonly string baseUrl;
 
     public BrowserBasedServerConnection(string baseUrl)
     {
         this.baseUrl = baseUrl;
-        AddChild(http);
-        http.Timeout = 20;
-        http.Connect("request_completed", this, nameof(OnRequestCompleted));
     }
 
-    private void OnRequestCompleted(long result, long responseCode, string[] headers, byte[] body)
+    public void Execute(Request request)
     {
-        //Console.WriteLine($"Request completed! Got {result} / {responseCode} / {body.GetStringFromUTF8()}");
+        RequestNode.Execute(this, request);
     }
 
-    public void UploadGame(string replayFile)
+    class RequestNode : Godot.Node
     {
-        string url = $"{baseUrl}/api/upload-game/v1";
-        //Console.WriteLine($"Uploading! To {url}");
-        http.Timeout = 20;
-        var error = http.Request(url, method: HTTPClient.Method.Post, requestData: replayFile);
-        //Console.WriteLine($"Result: {error}");
+        private readonly BrowserBasedServerConnection parent;
+        public readonly HTTPRequest http;
+        private readonly Request request;
+        private readonly string url;
+
+        private RequestNode(BrowserBasedServerConnection parent, Request request)
+        {
+            this.parent = parent;
+            this.http = new HTTPRequest();
+            this.request = request;
+            this.url = parent.baseUrl + request.Path;
+
+            parent.AddChild(this);
+            this.AddChild(http);
+            http.Connect("request_completed", this, nameof(OnRequestCompleted));
+        }
+
+        public static void Execute(BrowserBasedServerConnection parent, Request request)
+        {
+            var node = new RequestNode(parent, request);
+            node.http.Timeout = request.TimeoutSeconds;
+            var error = node.http.Request(node.url, method: request.Method, requestData: request.Body());
+            if (error != Error.Ok)
+            {
+                GD.PushError($"{request.Method} {node.url} | fail | {error}");
+                request.OnError(error);
+            }
+        }
+
+        private void OnRequestCompleted(long result, long responseCode, string[] headers, byte[] body)
+        {
+            GD.Print($"{request.Method} {url} | {responseCode} | {result}");
+            request.OnRequestCompleted(result, responseCode, headers, body);
+        }
     }
 }

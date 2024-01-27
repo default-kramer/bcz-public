@@ -15,6 +15,11 @@ public class GoalViewerControl : Control
         viewmodel = NullViewmodel.Instance;
     }
 
+    public void BeforePreparingGame()
+    {
+        Disable();
+    }
+
     public void SetLogic(State state, IReadOnlyList<IGoal> goals)
     {
         this.viewmodel = new Viewmodel(goals, state.Data);

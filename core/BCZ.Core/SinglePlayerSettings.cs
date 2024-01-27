@@ -55,6 +55,8 @@ namespace BCZ.Core
         int ScorePerEnemy { get; }
 
         SeededSettings AddRandomSeed(Random seeder);
+
+        SeededSettings AddSeed(PRNG.State seed);
     }
 
     public sealed class SinglePlayerSettings : ISinglePlayerSettings
@@ -74,6 +76,11 @@ namespace BCZ.Core
         public SeededSettings AddRandomSeed(Random seeder)
         {
             return new SeededSettings(PRNG.RandomSeed(seeder), this);
+        }
+
+        public SeededSettings AddSeed(PRNG.State seed)
+        {
+            return new SeededSettings(seed, this);
         }
 
         public int CalculateEnemyHeight()
