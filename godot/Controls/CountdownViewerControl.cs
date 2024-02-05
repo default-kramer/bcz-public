@@ -46,6 +46,11 @@ public class CountdownViewerControl : Control
         this.countdown.Reset(this.vm);
     }
 
+    public void BeforePreparingGame()
+    {
+        SetModel(null);
+    }
+
     private const float slowBlinkRate = 0.5f;
     private const float fastBlinkRate = 0.1f;
     float slowBlinker = 0;

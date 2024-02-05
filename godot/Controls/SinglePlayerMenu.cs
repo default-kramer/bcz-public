@@ -8,8 +8,6 @@ using System.Linq;
 
 public class SinglePlayerMenu : Control
 {
-    private static readonly Random seeder = new Random(); // only for use on UI thread
-
     sealed class ChoiceItem : IHaveHelpText
     {
         public readonly string DisplayValue;
@@ -322,7 +320,7 @@ public class SinglePlayerMenu : Control
 
         public override GamePackage CreateGamePackage()
         {
-            var settings = Collection.GetSettings(Level).AddRandomSeed(seeder);
+            var settings = Collection.GetSettings(Level).AddRandomSeed(Util.seeder);
             var goals = Collection.GetGoals(Level);
             var package = new LevelsModeGamePackage(settings, Level, goals);
             package.HideMedalProgress = HideMedals;
@@ -352,7 +350,6 @@ public class SinglePlayerMenu : Control
 
         public override GamePackage CreateGamePackage()
         {
-            var settings = this.settings.AddRandomSeed(seeder);
             var package = new ScoreAttackGamePackage(settings, goalType, layout);
             return package;
         }

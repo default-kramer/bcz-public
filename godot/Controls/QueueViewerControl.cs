@@ -7,6 +7,11 @@ using System;
 
 public class QueueViewerControl : Control
 {
+    public void BeforePreparingGame()
+    {
+        Model = QueueModel.EmptyModel;
+    }
+
     public QueueModel Model { get; set; } = null!;
     public GridViewerControl GridViewer { get; set; } = null!;
     private SpritePoolV2 spritePool = null!;

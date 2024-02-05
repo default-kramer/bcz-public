@@ -42,9 +42,24 @@ class GameUploader : IReplayCollector
         replayWriter.OnGameEnded();
         stringWriter.Flush();
         var replayContent = stringWriter.GetStringBuilder().ToString();
-        server.UploadGame(replayContent);
+        server.Execute(new UploadGameRequest(replayContent));
 
         stringWriter.Close();
         stringWriter.Dispose();
+    }
+
+    sealed class UploadGameRequest : Request
+    {
+        private readonly string replayFile;
+
+        public UploadGameRequest(string replayFile)
+        {
+            this.replayFile = replayFile;
+        }
+
+        public override double TimeoutSeconds => 20;
+        public override string Path => "/api/upload-game/v1";
+        public override Godot.HTTPClient.Method Method => Godot.HTTPClient.Method.Post;
+        public override string Body() => replayFile;
     }
 }

@@ -158,6 +158,29 @@ public class GridViewerControl : Control
         };
     }
 
+    public void BeforePreparingGame(GridSize size)
+    {
+        // Hiding all sprites solved a problem where the mover sprites from the
+        // previous game remained on the grid while the next game was preparing to start.
+        HideAllSprites();
+
+        NullLogic.Instance.SetGridSize(size);
+        SetLogic(NullLogic.Instance);
+    }
+
+    private void HideAllSprites()
+    {
+        for (int i = 0; i < activeSprites.Length; i++)
+        {
+            var entry = activeSprites[i];
+            if (entry != null)
+            {
+                entry.Return();
+                activeSprites[i] = null;
+            }
+        }
+    }
+
     public override void _Draw()
     {
         Logic.Update(this.drawSeconds);
@@ -457,15 +480,39 @@ public class GridViewerControl : Control
 
     public sealed class NullLogic : ILogic
     {
-        private static readonly IReadOnlyGridSlim defaultGrid = BCZ.Core.Grid.Create();
+        // These heights include 2 rows for the top mover area
+        private static readonly IReadOnlyGridSlim emptyGridTall = BCZ.Core.Grid.Create(8, 22);
+        private static readonly IReadOnlyGridSlim emptyGridWide = BCZ.Core.Grid.Create(16, 18);
+        private IReadOnlyGridSlim grid = emptyGridTall;
 
         private NullLogic() { }
 
         public static readonly NullLogic Instance = new NullLogic();
 
-        public override IReadOnlyGridSlim Grid => defaultGrid;
+        public override IReadOnlyGridSlim Grid => grid;
 
-        public override int MoverRowCount => 0;
+        public override int MoverRowCount => 2;
+
+        public void SetGridSize(GridSize gridSize)
+        {
+            // Callers pass in the playable grid size, and we assume that all game modes
+            // will add 2 height for the top mover area.
+            gridSize = new GridSize(gridSize.Width, gridSize.Height + 2);
+
+            if (gridSize == emptyGridTall.Size)
+            {
+                grid = emptyGridTall;
+            }
+            else if (gridSize == emptyGridWide.Size)
+            {
+                grid = emptyGridWide;
+            }
+            else
+            {
+                GD.PushError($"Unexpected grid size {gridSize.Width}x{gridSize.Height}");
+                grid = emptyGridTall;
+            }
+        }
     }
 
     public sealed class StandardLogic : ILogic

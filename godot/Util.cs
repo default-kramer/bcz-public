@@ -10,6 +10,11 @@ using Godot;
 static class Util
 {
     /// <summary>
+    /// For use by the UI thread only!!
+    /// </summary>
+    public static readonly Random seeder = new Random();
+
+    /// <summary>
     /// Similar to the built-in FindNode except that it will not recurse into nested tscn files.
     /// The problem I had was something like this:
     /// * GameViewerControl

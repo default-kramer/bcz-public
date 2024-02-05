@@ -6,9 +6,9 @@ using System.Collections.Generic;
 
 #nullable enable
 
-public class GameViewerControl : Control
+public class GameViewerControl : Control, IGameStarter
 {
-    private ILogic logic = NullLogic.Instance;
+    private ILogic logic = WaitingToStartGameLogic.Instance;
 
     internal void SetLogic(ILogic newLogic)
     {
@@ -38,7 +38,38 @@ public class GameViewerControl : Control
 
     private void NewGame(GamePackage gamePackage)
     {
-        var settings = gamePackage.Settings;
+        ForceUnpause();
+
+        // Set up temporary stuff for displaying an empty grid/queue/goals/etc...
+        // If we need to get a seed from the server, it could take a few seconds
+        // and we want to show something reasonable while they wait.
+        members.GridViewer.BeforePreparingGame(gamePackage.GridSize);
+        members.GridViewer.Visible = true;
+        members.QueueViewer.BeforePreparingGame();
+        members.QueueViewer.Visible = true;
+        members.CountdownViewer.BeforePreparingGame();
+        members.CountdownViewer.Visible = true;
+        members.GoalViewerControl.BeforePreparingGame();
+        members.GoalViewerControl.Visible = true;
+
+        // Hide all this stuff
+        members.Shroud.Visible = false;
+        members.GameOverMenu.Visible = false;
+        members.SwitchViewerControl.Visible = false;
+        members.AttackGridViewer.Visible = false;
+        members.SwitchViewerControl.Visible = false;
+
+        SetLogic(WaitingToStartGameLogic.Instance);
+
+        // This call might be able to start the game immediately,
+        // or it may need to call the server.
+        gamePackage.PrepareGame(this);
+    }
+
+    IServerConnection? IGameStarter.GetServerConnection() => NewRoot.FindRoot(this).GetServerConnection();
+
+    void IGameStarter.StartGame(GamePackage gamePackage, SeededSettings settings)
+    {
         var state = State.Create(settings);
         var listReplayCollector = new ListReplayCollector();
         IReplayCollector replayCollector = listReplayCollector;
@@ -352,24 +383,17 @@ public class GameViewerControl : Control
         void HandlePauseAction(PauseMenuActions action, IRoot root);
     }
 
-    sealed class NullLogic : ILogic
+    sealed class WaitingToStartGameLogic : ILogic
     {
-        private NullLogic() { }
+        private WaitingToStartGameLogic() { }
+        public static readonly WaitingToStartGameLogic Instance = new WaitingToStartGameLogic();
 
-        public static readonly NullLogic Instance = new NullLogic();
-
-        public void Cleanup() { }
-        public void Process(float delta) { }
-        public void HandleInput() { }
         public void CheckGameOver() { }
+        public void Cleanup() { }
+        public void HandleInput() { }
+        public void Process(float delta) { }
 
-        public void Initialize(Members members)
-        {
-            members.GridViewer.SetLogic(GridViewerControl.NullLogic.Instance);
-            members.GridViewer.Visible = true;
-            // TODO should set a null model here... but we'll just make them invisible for now
-            members.QueueViewer.Visible = false;
-        }
+        public void Initialize(Members members) { }
 
         public bool TrySetPaused(bool paused, out PauseMenuActions allowedActions)
         {
