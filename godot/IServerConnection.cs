@@ -37,10 +37,17 @@ class BrowserBasedServerConnection : Godot.Node, IServerConnection
         RequestNode.Execute(this, request);
     }
 
+    /// <summary>
+    /// From https://docs.godotengine.org/en/3.5/tutorials/networking/http_request_class.html
+    ///   Keep in mind that you have to wait for a request to finish before sending another one.
+    ///   Making multiple request at once requires you to have one node per request.
+    ///   A common strategy is to create and delete HTTPRequest nodes at runtime as necessary.
+    /// Sounds good to me. We will create one instance of this class per HTTP request.
+    /// </summary>
     class RequestNode : Godot.Node
     {
         private readonly BrowserBasedServerConnection parent;
-        public readonly HTTPRequest http;
+        private readonly HTTPRequest http;
         private readonly Request request;
         private readonly string url;
 
@@ -65,6 +72,7 @@ class BrowserBasedServerConnection : Godot.Node, IServerConnection
             {
                 GD.PushError($"{request.Method} {node.url} | fail | {error}");
                 request.OnError(error);
+                node.Cleanup();
             }
         }
 
@@ -72,6 +80,13 @@ class BrowserBasedServerConnection : Godot.Node, IServerConnection
         {
             GD.Print($"{request.Method} {url} | {responseCode} | {result}");
             request.OnRequestCompleted(result, responseCode, headers, body);
+            Cleanup();
+        }
+
+        private void Cleanup()
+        {
+            // I'm not sure if this is correct or even necessary...
+            this.QueueFree();
         }
     }
 }
