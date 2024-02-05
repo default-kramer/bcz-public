@@ -480,8 +480,9 @@ public class GridViewerControl : Control
 
     public sealed class NullLogic : ILogic
     {
-        private static readonly IReadOnlyGridSlim emptyGridTall = BCZ.Core.Grid.Create();
-        private static readonly IReadOnlyGridSlim emptyGridWide = BCZ.Core.Grid.Create(16, 16);
+        // These heights include 2 rows for the top mover area
+        private static readonly IReadOnlyGridSlim emptyGridTall = BCZ.Core.Grid.Create(8, 22);
+        private static readonly IReadOnlyGridSlim emptyGridWide = BCZ.Core.Grid.Create(16, 18);
         private IReadOnlyGridSlim grid = emptyGridTall;
 
         private NullLogic() { }
@@ -494,6 +495,10 @@ public class GridViewerControl : Control
 
         public void SetGridSize(GridSize gridSize)
         {
+            // Callers pass in the playable grid size, and we assume that all game modes
+            // will add 2 height for the top mover area.
+            gridSize = new GridSize(gridSize.Width, gridSize.Height + 2);
+
             if (gridSize == emptyGridTall.Size)
             {
                 grid = emptyGridTall;
