@@ -253,10 +253,10 @@ class ScoreAttackGamePackage : GamePackage
 
         private SeededSettings HandleResponse(Newtonsoft.Json.Linq.JObject response)
         {
-            //var seedId = response.Value<long>("seed_id");
+            var seedId = response.Value<long>("seed_id");
             var seed = response.Value<string>("seed");
             var state = PRNG.State.Deserialize(seed ?? "assert-fail!");
-            return package.settings.AddSeed(state);
+            return package.settings.AddSeed(state, seedId);
         }
     }
 }

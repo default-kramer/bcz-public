@@ -11,7 +11,7 @@ namespace BCZ.CoreTests
         {
             var settings = new SinglePlayerSettings();
             var seed = PRNG.State.Deserialize(prng.Serialize());
-            return State.Create(new SeededSettings(seed, settings));
+            return State.Create(new SeededSettings(seed, settings, null));
         }
 
         private void AssertStuff(ISettingsCollection settingsCollection, bool spawnBlanks)

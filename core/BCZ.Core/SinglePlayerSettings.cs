@@ -25,10 +25,16 @@ namespace BCZ.Core
         public readonly PRNG.State Seed;
         public readonly ISinglePlayerSettings Settings;
 
-        public SeededSettings(PRNG.State seed, ISinglePlayerSettings settings)
+        /// <summary>
+        /// Only applies to games in which a seed was assigned by a remote server.
+        /// </summary>
+        public readonly long? SeedId;
+
+        public SeededSettings(PRNG.State seed, ISinglePlayerSettings settings, long? seedId)
         {
             this.Seed = seed;
             this.Settings = settings;
+            this.SeedId = seedId;
         }
     }
 
@@ -56,7 +62,7 @@ namespace BCZ.Core
 
         SeededSettings AddRandomSeed(Random seeder);
 
-        SeededSettings AddSeed(PRNG.State seed);
+        SeededSettings AddSeed(PRNG.State seed, long seedId);
     }
 
     public sealed class SinglePlayerSettings : ISinglePlayerSettings
@@ -75,12 +81,12 @@ namespace BCZ.Core
 
         public SeededSettings AddRandomSeed(Random seeder)
         {
-            return new SeededSettings(PRNG.RandomSeed(seeder), this);
+            return new SeededSettings(PRNG.RandomSeed(seeder), this, null);
         }
 
-        public SeededSettings AddSeed(PRNG.State seed)
+        public SeededSettings AddSeed(PRNG.State seed, long seedId)
         {
-            return new SeededSettings(seed, this);
+            return new SeededSettings(seed, this, seedId);
         }
 
         public int CalculateEnemyHeight()

@@ -60,6 +60,7 @@ namespace BCZ.Core.ReplayModel
 
         int? version = null;
         private PRNG.State? seed = null;
+        private long? seedId = null;
         private OfficialSettingsId? officialSettingsId = null;
         private GameMode? mode;
         private int? enemyCount;
@@ -81,7 +82,7 @@ namespace BCZ.Core.ReplayModel
             {
                 if (officialSettingsId.Value.Validate(out var officialSettings))
                 {
-                    return new SeededSettings(seed.Value, officialSettings);
+                    return new SeededSettings(seed.Value, officialSettings, seedId);
                 }
                 else
                 {
@@ -98,7 +99,7 @@ namespace BCZ.Core.ReplayModel
             settings.RowsPerStripe = this.rowsPerStripe ?? settings.RowsPerStripe;
             settings.ScorePerEnemy = this.scorePerEnemy ?? 100;
             settings.GameMode = this.mode ?? GameMode.Levels;
-            return new SeededSettings(seed.Value, settings);
+            return new SeededSettings(seed.Value, settings, seedId);
         }
 
         public void Parse(VersionElement v)
@@ -116,15 +117,19 @@ namespace BCZ.Core.ReplayModel
 
         public void Parse(SettingsElement setting)
         {
-            if (setting.Name == "seed")
+            if (setting.Name == SettingName.seed)
             {
                 seed = PRNG.State.Deserialize(setting.Value);
             }
-            if (setting.Name == "officialSettingsId")
+            if (setting.Name == SettingName.seedId)
+            {
+                seedId = int.Parse(setting.Value);
+            }
+            if (setting.Name == SettingName.officialSettingsId)
             {
                 officialSettingsId = new OfficialSettingsId(setting.Value);
             }
-            if (setting.Name == "mode")
+            if (setting.Name == SettingName.mode)
             {
                 mode = setting.Value switch
                 {
@@ -134,31 +139,31 @@ namespace BCZ.Core.ReplayModel
                     _ => throw new InvalidReplayException($"Unsupported mode: {setting.Value}"),
                 };
             }
-            if (setting.Name == "enemyCount")
+            if (setting.Name == SettingName.enemyCount)
             {
                 enemyCount = int.Parse(setting.Value);
             }
-            if (setting.Name == "spawnBlanks")
+            if (setting.Name == SettingName.spawnBlanks)
             {
                 spawnBlanks = bool.Parse(setting.Value);
             }
-            if (setting.Name == "gridWidth")
+            if (setting.Name == SettingName.gridWidth)
             {
                 gridWidth = int.Parse(setting.Value);
             }
-            if (setting.Name == "gridHeight")
+            if (setting.Name == SettingName.gridHeight)
             {
                 gridHeight = int.Parse(setting.Value);
             }
-            if (setting.Name == "enemiesPerStripe")
+            if (setting.Name == SettingName.enemiesPerStripe)
             {
                 enemiesPerStripe = int.Parse(setting.Value);
             }
-            if (setting.Name == "rowsPerStripe")
+            if (setting.Name == SettingName.rowsPerStripe)
             {
                 rowsPerStripe = int.Parse(setting.Value);
             }
-            if (setting.Name == "scorePerEnemy")
+            if (setting.Name == SettingName.scorePerEnemy)
             {
                 scorePerEnemy = int.Parse(setting.Value);
             }

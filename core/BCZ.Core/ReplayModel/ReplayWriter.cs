@@ -23,21 +23,25 @@ namespace BCZ.Core.ReplayModel
             var settings = ss.Settings;
 
             writer.WriteLine("version -1"); // use negative numbers until I am ready to promise forward compatibility
-            writer.WriteLine("s seed {0}", ss.Seed.Serialize());
+            writer.WriteLine($"s {SettingName.seed} {ss.Seed.Serialize()}");
+            if (ss.SeedId.HasValue)
+            {
+                writer.WriteLine($"s {SettingName.seedId} {ss.SeedId.Value}");
+            }
             if (settings.OfficialSettingsId.HasValue)
             {
-                writer.WriteLine("s officialSettingsId {0}", settings.OfficialSettingsId.Value.Id);
+                writer.WriteLine($"s {SettingName.officialSettingsId} {settings.OfficialSettingsId.Value.Id}");
             }
             else
             {
-                writer.WriteLine("s mode {0}", settings.GameMode);
-                writer.WriteLine("s enemyCount {0}", settings.EnemyCount);
-                writer.WriteLine("s spawnBlanks {0}", settings.SpawnBlanks);
-                writer.WriteLine("s gridWidth {0}", settings.GridWidth);
-                writer.WriteLine("s gridHeight {0}", settings.GridHeight);
-                writer.WriteLine("s enemiesPerStripe {0}", settings.EnemiesPerStripe);
-                writer.WriteLine("s rowsPerStripe {0}", settings.RowsPerStripe);
-                writer.WriteLine("s scorePerEnemy {0}", settings.ScorePerEnemy);
+                writer.WriteLine($"s {SettingName.mode} {settings.GameMode}");
+                writer.WriteLine($"s {SettingName.enemyCount} {settings.EnemyCount}");
+                writer.WriteLine($"s {SettingName.spawnBlanks} {settings.SpawnBlanks}");
+                writer.WriteLine($"s {SettingName.gridWidth} {settings.GridWidth}");
+                writer.WriteLine($"s {SettingName.gridHeight} {settings.GridHeight}");
+                writer.WriteLine($"s {SettingName.enemiesPerStripe} {settings.EnemiesPerStripe}");
+                writer.WriteLine($"s {SettingName.rowsPerStripe} {settings.RowsPerStripe}");
+                writer.WriteLine($"s {SettingName.scorePerEnemy} {settings.ScorePerEnemy}");
             }
 
             return new ReplayWriter(writer, shouldDispose);
