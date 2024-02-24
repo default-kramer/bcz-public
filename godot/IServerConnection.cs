@@ -16,21 +16,35 @@ abstract class Request
 
 interface IServerConnection
 {
+    bool IsOnline { get; }
+
     void Execute(Request request);
 }
 
 /// <summary>
-/// Relies on the player token cookie... Not sure how PC version will work yet.
+/// TODO NOMERGE
+/// TODO NO LONGER TRUE: Relies on the player token cookie... Not sure how PC version will work yet.
+/// TODO rename this class.
+///
 /// Note that we inherit Godot.Node here because HTTPRequest is also a node that needs a parent.
 /// </summary>
 class BrowserBasedServerConnection : Godot.Node, IServerConnection
 {
     private readonly string baseUrl;
+    private readonly string[] customHeaders = new string[1];
 
     public BrowserBasedServerConnection(string baseUrl)
     {
         this.baseUrl = baseUrl;
     }
+
+    /// <summary>
+    /// TODO set custom HTTP header.
+    /// Server should look for cookie (browser) and header (other platforms).
+    /// </summary>
+    public string? PlayerNickname { get; set; }
+
+    public bool IsOnline => true;
 
     public void Execute(Request request)
     {
@@ -65,9 +79,16 @@ class BrowserBasedServerConnection : Godot.Node, IServerConnection
 
         public static void Execute(BrowserBasedServerConnection parent, Request request)
         {
+            string[]? headers = null;
+            if (parent.PlayerNickname != null)
+            {
+                parent.customHeaders[0] = "bcz-playername: " + parent.PlayerNickname;
+                headers = parent.customHeaders;
+            }
+
             var node = new RequestNode(parent, request);
             node.http.Timeout = request.TimeoutSeconds;
-            var error = node.http.Request(node.url, method: request.Method, requestData: request.Body());
+            var error = node.http.Request(node.url, method: request.Method, requestData: request.Body(), customHeaders: headers);
             if (error != Error.Ok)
             {
                 GD.PushError($"{request.Method} {node.url} | fail | {error}");
@@ -88,5 +109,19 @@ class BrowserBasedServerConnection : Godot.Node, IServerConnection
             // I'm not sure if this is correct or even necessary...
             this.QueueFree();
         }
+    }
+}
+
+class UnavailableServer : IServerConnection
+{
+    private UnavailableServer() { }
+    public static readonly UnavailableServer Instance = new UnavailableServer();
+
+    public bool IsOnline => false;
+
+    public void Execute(Request request)
+    {
+        // Callers are supposed to check IsOnline before calling this method.
+        throw new NotImplementedException("Server is offline");
     }
 }

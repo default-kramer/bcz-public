@@ -42,7 +42,10 @@ class GameUploader : IReplayCollector
         replayWriter.OnGameEnded();
         stringWriter.Flush();
         var replayContent = stringWriter.GetStringBuilder().ToString();
-        server.Execute(new UploadGameRequest(replayContent));
+        if (server.IsOnline)
+        {
+            server.Execute(new UploadGameRequest(replayContent));
+        }
 
         stringWriter.Close();
         stringWriter.Dispose();

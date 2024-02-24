@@ -9,7 +9,8 @@ namespace BCZ.Core
 {
     abstract class BaseHookScoreAttack : EmptyStateHook
     {
-        private const int gameDurationMillis = 1000 * 60 * 5;
+        // TODO NOMERGE private const int gameDurationMillis = 1000 * 60 * 5;
+        private const int gameDurationMillis = 1000 * 20;
         private const float gameDurationMillisAsSingle = gameDurationMillis;
         private readonly IStateData data;
         protected readonly ISinglePlayerSettings settings;
