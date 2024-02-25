@@ -53,8 +53,25 @@ static class SaveData
         }
     }
 
+    public enum OnlineMode
+    {
+        NoSelection = 0,
+        Anonymous = 1,
+        Online = 2,
+        Offline = 3,
+    }
+
+    public sealed class OnlineConfigData
+    {
+        public const string FilePath = "user://OnlineConfig.txt";
+
+        public OnlineMode Mode { get; set; }
+        public string? Nickname { get; set; }
+    }
+
     private static LevelsData? _levelsData = null;
     private static ScoreAttackData? _scoreAttackData = null;
+    private static OnlineConfigData? _onlineConfigData = null;
 
     public static LevelCompletion GetCompletion(int level)
     {
@@ -96,6 +113,12 @@ static class SaveData
         return _scoreAttackData;
     }
 
+    public static OnlineConfigData GetOnlineConfigData()
+    {
+        _onlineConfigData = _onlineConfigData ?? ReadFile<OnlineConfigData>(OnlineConfigData.FilePath) ?? new OnlineConfigData();
+        return _onlineConfigData;
+    }
+
     private static void SaveToFile(object data, string path)
     {
         string json = Newtonsoft.Json.JsonConvert.SerializeObject(data);
@@ -120,6 +143,12 @@ static class SaveData
     {
         _scoreAttackData = data;
         SaveToFile(_scoreAttackData, ScoreAttackData.FilePath);
+    }
+
+    public static void SaveOnlineConfig(OnlineConfigData data)
+    {
+        _onlineConfigData = data;
+        SaveToFile(data, OnlineConfigData.FilePath);
     }
 
     public static void RecordLevelComplete(int level)

@@ -192,19 +192,18 @@ public class NewRoot : Control, IRoot
         members.TutorialControl.Reset();
     }
 
-    internal void ConfirmNickname(string? nickname, bool playAnon, bool playOffline)
+    internal void ConfirmNickname(SaveData.OnlineConfigData data)
     {
-        if (playOffline)
+        if (data.Mode == SaveData.OnlineMode.Offline)
         {
             serverConnection = UnavailableServer.Instance;
         }
         else
         {
-            //TODO NOMERGE var conn = SetupServerConnection("https://blockcipherz.com");
-            var conn = SetupServerConnection("http://localhost:5024");
-            if (!playAnon)
+            var conn = SetupServerConnection("https://blockcipherz.com");
+            if (data.Mode == SaveData.OnlineMode.Online)
             {
-                conn.PlayerNickname = nickname;
+                conn.PlayerNickname = data.Nickname;
             }
         }
 
