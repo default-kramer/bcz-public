@@ -52,9 +52,9 @@ public class NewRoot : Control, IRoot
         }
     }
 
-    private BrowserBasedServerConnection SetupServerConnection(string baseUrl)
+    private ServerConnection SetupServerConnection(string baseUrl)
     {
-        var conn = new BrowserBasedServerConnection(baseUrl);
+        var conn = new ServerConnection(baseUrl);
         serverConnection = conn;
         this.AddChild(conn);
         conn.PauseMode = AlwaysPausedHack.Process;

@@ -22,25 +22,22 @@ interface IServerConnection
 }
 
 /// <summary>
-/// TODO NOMERGE
-/// TODO NO LONGER TRUE: Relies on the player token cookie... Not sure how PC version will work yet.
-/// TODO rename this class.
-///
-/// Note that we inherit Godot.Node here because HTTPRequest is also a node that needs a parent.
+/// We inherit Godot.Node here because HTTPRequest is also a node that needs a parent.
 /// </summary>
-class BrowserBasedServerConnection : Godot.Node, IServerConnection
+class ServerConnection : Godot.Node, IServerConnection
 {
     private readonly string baseUrl;
-    private readonly string[] customHeaders = new string[1];
+    private readonly string[] customHeaderBuffer = new string[1]; // we will only send max 1 custom header
 
-    public BrowserBasedServerConnection(string baseUrl)
+    public ServerConnection(string baseUrl)
     {
         this.baseUrl = baseUrl;
     }
 
     /// <summary>
-    /// TODO set custom HTTP header.
-    /// Server should look for cookie (browser) and header (other platforms).
+    /// For "play in browser", the player name will be sent as a browser cookie
+    /// and the game code will be totally unaware.
+    /// For all other builds, the player name must be set here and sent as a HTTP header.
     /// </summary>
     public string? PlayerNickname { get; set; }
 
@@ -60,12 +57,12 @@ class BrowserBasedServerConnection : Godot.Node, IServerConnection
     /// </summary>
     class RequestNode : Godot.Node
     {
-        private readonly BrowserBasedServerConnection parent;
+        private readonly ServerConnection parent;
         private readonly HTTPRequest http;
         private readonly Request request;
         private readonly string url;
 
-        private RequestNode(BrowserBasedServerConnection parent, Request request)
+        private RequestNode(ServerConnection parent, Request request)
         {
             this.parent = parent;
             this.http = new HTTPRequest();
@@ -77,13 +74,13 @@ class BrowserBasedServerConnection : Godot.Node, IServerConnection
             http.Connect("request_completed", this, nameof(OnRequestCompleted));
         }
 
-        public static void Execute(BrowserBasedServerConnection parent, Request request)
+        public static void Execute(ServerConnection parent, Request request)
         {
             string[]? headers = null;
             if (parent.PlayerNickname != null)
             {
-                parent.customHeaders[0] = "bcz-playername: " + parent.PlayerNickname;
-                headers = parent.customHeaders;
+                parent.customHeaderBuffer[0] = "bcz-playername: " + parent.PlayerNickname;
+                headers = parent.customHeaderBuffer;
             }
 
             var node = new RequestNode(parent, request);
