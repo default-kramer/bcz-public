@@ -2,8 +2,6 @@ using BCZ.Core;
 using Godot;
 using System;
 
-#nullable enable
-
 public class NewRoot : Control, IRoot
 {
     readonly struct Members
@@ -14,6 +12,7 @@ public class NewRoot : Control, IRoot
         public readonly ControllerSetupControl ControllerSetupControl;
         public readonly TutorialControl TutorialControl;
         public readonly CreditsControl CreditsControl;
+        public readonly SetNicknameControl SetNicknameControl;
 
         public Members(Control me)
         {
@@ -23,6 +22,7 @@ public class NewRoot : Control, IRoot
             me.FindNode(out ControllerSetupControl, nameof(ControllerSetupControl));
             me.FindNode(out TutorialControl, nameof(TutorialControl));
             me.FindNode(out CreditsControl, nameof(CreditsControl));
+            me.FindNode(out SetNicknameControl, nameof(SetNicknameControl));
         }
     }
 
@@ -32,25 +32,33 @@ public class NewRoot : Control, IRoot
     // Called when the node enters the scene tree for the first time.
     public override void _Ready()
     {
-        var location = JavaScript.Eval("window.location.toString()") as string;
-        Console.WriteLine("Got location: " + location);
-        if (location != null)
-        {
-            var uri = new Uri(location);
-            var conn = new BrowserBasedServerConnection($"{uri.Scheme}://{uri.Host}:{uri.Port}");
-            serverConnection = conn;
-            this.AddChild(conn);
-            conn.PauseMode = AlwaysPausedHack.Process;
-        }
-
-        var userAgent = JavaScript.Eval("navigator.userAgent") as string;
-        if (userAgent != null)
-        {
-            Console.WriteLine("Got user agent: " + userAgent);
-        }
-
         this.members = new Members(this);
-        BackToMainMenu();
+
+        if (OS.GetName() == "Web")
+        {
+            var location = JavaScript.Eval("window.location.toString()") as string;
+            Console.WriteLine("Got location: " + location);
+            if (location != null)
+            {
+                var uri = new Uri(location);
+                SetupServerConnection($"{uri.Scheme}://{uri.Host}:{uri.Port}");
+            }
+
+            BackToMainMenu();
+        }
+        else
+        {
+            SwitchTo(members.SetNicknameControl);
+        }
+    }
+
+    private ServerConnection SetupServerConnection(string baseUrl)
+    {
+        var conn = new ServerConnection(baseUrl);
+        serverConnection = conn;
+        this.AddChild(conn);
+        conn.PauseMode = AlwaysPausedHack.Process;
+        return conn;
     }
 
     internal static IRoot FindRoot(Node child)
@@ -137,6 +145,7 @@ public class NewRoot : Control, IRoot
         SetEnabled(members.ControllerSetupControl, false);
         SetEnabled(members.TutorialControl, false);
         SetEnabled(members.CreditsControl, false);
+        SetEnabled(members.SetNicknameControl, false);
 
         SetEnabled(control, true);
     }
@@ -183,5 +192,26 @@ public class NewRoot : Control, IRoot
         members.TutorialControl.Reset();
     }
 
-    IServerConnection? IRoot.GetServerConnection() => serverConnection;
+    internal void ConfirmNickname(SaveData.OnlineConfigData data)
+    {
+        if (data.Mode == SaveData.OnlineMode.Offline)
+        {
+            serverConnection = UnavailableServer.Instance;
+        }
+        else
+        {
+            var conn = SetupServerConnection("https://blockcipherz.com");
+            if (data.Mode == SaveData.OnlineMode.Online)
+            {
+                conn.PlayerNickname = data.Nickname;
+            }
+        }
+
+        BackToMainMenu();
+    }
+
+    IServerConnection IRoot.GetServerConnection()
+    {
+        return serverConnection ?? throw new Exception("Premature call to GetServerConnection");
+    }
 }

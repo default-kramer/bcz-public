@@ -13,7 +13,7 @@ using Godot;
 /// </summary>
 interface IGameStarter
 {
-    IServerConnection? GetServerConnection();
+    IServerConnection GetServerConnection();
 
     void StartGame(GamePackage package, SeededSettings settings);
 }
@@ -160,7 +160,7 @@ class ScoreAttackGamePackage : GamePackage
     internal override void PrepareGame(IGameStarter starter)
     {
         var server = starter.GetServerConnection();
-        if (server != null)
+        if (server.IsOnline)
         {
             server.Execute(new GetRandomSeedRequest(this, starter));
         }

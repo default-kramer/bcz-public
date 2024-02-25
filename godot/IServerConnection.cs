@@ -16,21 +16,32 @@ abstract class Request
 
 interface IServerConnection
 {
+    bool IsOnline { get; }
+
     void Execute(Request request);
 }
 
 /// <summary>
-/// Relies on the player token cookie... Not sure how PC version will work yet.
-/// Note that we inherit Godot.Node here because HTTPRequest is also a node that needs a parent.
+/// We inherit Godot.Node here because HTTPRequest is also a node that needs a parent.
 /// </summary>
-class BrowserBasedServerConnection : Godot.Node, IServerConnection
+class ServerConnection : Godot.Node, IServerConnection
 {
     private readonly string baseUrl;
+    private readonly string[] customHeaderBuffer = new string[1]; // we will only send max 1 custom header
 
-    public BrowserBasedServerConnection(string baseUrl)
+    public ServerConnection(string baseUrl)
     {
         this.baseUrl = baseUrl;
     }
+
+    /// <summary>
+    /// For "play in browser", the player name will be sent as a browser cookie
+    /// and the game code will be totally unaware.
+    /// For all other builds, the player name must be set here and sent as a HTTP header.
+    /// </summary>
+    public string? PlayerNickname { get; set; }
+
+    public bool IsOnline => true;
 
     public void Execute(Request request)
     {
@@ -46,12 +57,12 @@ class BrowserBasedServerConnection : Godot.Node, IServerConnection
     /// </summary>
     class RequestNode : Godot.Node
     {
-        private readonly BrowserBasedServerConnection parent;
+        private readonly ServerConnection parent;
         private readonly HTTPRequest http;
         private readonly Request request;
         private readonly string url;
 
-        private RequestNode(BrowserBasedServerConnection parent, Request request)
+        private RequestNode(ServerConnection parent, Request request)
         {
             this.parent = parent;
             this.http = new HTTPRequest();
@@ -63,11 +74,18 @@ class BrowserBasedServerConnection : Godot.Node, IServerConnection
             http.Connect("request_completed", this, nameof(OnRequestCompleted));
         }
 
-        public static void Execute(BrowserBasedServerConnection parent, Request request)
+        public static void Execute(ServerConnection parent, Request request)
         {
+            string[]? headers = null;
+            if (parent.PlayerNickname != null)
+            {
+                parent.customHeaderBuffer[0] = "bcz-playername: " + parent.PlayerNickname;
+                headers = parent.customHeaderBuffer;
+            }
+
             var node = new RequestNode(parent, request);
             node.http.Timeout = request.TimeoutSeconds;
-            var error = node.http.Request(node.url, method: request.Method, requestData: request.Body());
+            var error = node.http.Request(node.url, method: request.Method, requestData: request.Body(), customHeaders: headers);
             if (error != Error.Ok)
             {
                 GD.PushError($"{request.Method} {node.url} | fail | {error}");
@@ -88,5 +106,19 @@ class BrowserBasedServerConnection : Godot.Node, IServerConnection
             // I'm not sure if this is correct or even necessary...
             this.QueueFree();
         }
+    }
+}
+
+class UnavailableServer : IServerConnection
+{
+    private UnavailableServer() { }
+    public static readonly UnavailableServer Instance = new UnavailableServer();
+
+    public bool IsOnline => false;
+
+    public void Execute(Request request)
+    {
+        // Callers are supposed to check IsOnline before calling this method.
+        throw new NotImplementedException("Server is offline");
     }
 }

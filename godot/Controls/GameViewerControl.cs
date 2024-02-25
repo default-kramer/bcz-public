@@ -66,7 +66,7 @@ public class GameViewerControl : Control, IGameStarter
         gamePackage.PrepareGame(this);
     }
 
-    IServerConnection? IGameStarter.GetServerConnection() => NewRoot.FindRoot(this).GetServerConnection();
+    IServerConnection IGameStarter.GetServerConnection() => NewRoot.FindRoot(this).GetServerConnection();
 
     void IGameStarter.StartGame(GamePackage gamePackage, SeededSettings settings)
     {
@@ -90,7 +90,7 @@ public class GameViewerControl : Control, IGameStarter
         }
 
         var server = NewRoot.FindRoot(this).GetServerConnection();
-        if (server != null)
+        if (server.IsOnline)
         {
             replayCollector = replayCollector.Combine(new GameUploader(server, settings));
         }

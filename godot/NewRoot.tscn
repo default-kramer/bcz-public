@@ -1,4 +1,4 @@
-[gd_scene load_steps=13 format=2]
+[gd_scene load_steps=14 format=2]
 
 [ext_resource path="res://Controls/GameViewerControl.tscn" type="PackedScene" id=1]
 [ext_resource path="res://NewRoot.cs" type="Script" id=2]
@@ -6,6 +6,7 @@
 [ext_resource path="res://Sprites/background.png" type="Texture" id=4]
 [ext_resource path="res://Controls/TutorialControl.tscn" type="PackedScene" id=5]
 [ext_resource path="res://Controls/CreditsControl.tscn" type="PackedScene" id=6]
+[ext_resource path="res://Controls/SetNicknameControl.tscn" type="PackedScene" id=7]
 [ext_resource path="res://Controls/MainMenu.tscn" type="PackedScene" id=8]
 [ext_resource path="res://Controls/MainMenu.cs" type="Script" id=9]
 [ext_resource path="res://Controls/PuzzleControl.tscn" type="PackedScene" id=10]
@@ -95,6 +96,14 @@ margin_right = 10.0
 margin_bottom = 10.0
 texture = ExtResource( 4 )
 stretch_mode = 1
+
+[node name="SetNicknameControl" parent="." instance=ExtResource( 7 )]
+visible = false
+anchor_right = 1.0
+anchor_bottom = 1.0
+margin_top = 0.0
+margin_right = 0.0
+margin_bottom = 0.0
 
 [node name="GameViewer" parent="." instance=ExtResource( 1 )]
 visible = false

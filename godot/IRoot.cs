@@ -25,5 +25,5 @@ interface IRoot
 
     void WatchReplay(string filepath);
 
-    IServerConnection? GetServerConnection();
+    IServerConnection GetServerConnection();
 }
