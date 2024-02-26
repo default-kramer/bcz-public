@@ -164,8 +164,8 @@ public class NewRoot : Control, IRoot
 
     public void WatchReplay(string replayFile)
     {
-        SwitchTo(members.GameViewer);
         members.GameViewer.WatchReplay(replayFile);
+        SwitchTo(members.GameViewer);
     }
 
     public void ShowCredits()

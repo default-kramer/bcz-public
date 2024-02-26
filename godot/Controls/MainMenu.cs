@@ -1,3 +1,4 @@
+using BCZ.Core.ReplayModel;
 using Godot;
 using System;
 using System.Collections.Generic;
@@ -17,7 +18,7 @@ public class MainMenu : Control, IHelpText
         public readonly Button ButtonCredits;
         public readonly Control MainContainer;
         public readonly Control MenuSinglePlayer;
-        public readonly Control FileDialog;
+        public readonly FileDialog FileDialog;
         public readonly GameViewerControl GameViewerControl;
         private readonly Control CopyrightNotice;
         private readonly Label ExplanationLabel;
@@ -71,10 +72,11 @@ public class MainMenu : Control, IHelpText
     public override void _Ready()
     {
         members = new Members(this);
-        members.ButtonWatchReplay.Visible = Util.IsSuperuser;
+
         // TODO - this replay continues to run in the background, that should be fixed
         // Probably want to SetProcess(false) on inactive components?
         members.GameViewerControl.WatchDemo();
+
         members.ButtonSinglePlayer.Connect("pressed", this, nameof(PressedSinglePlayer));
         members.ButtonTutorial.Connect("pressed", this, nameof(PressedTutorial));
         members.ButtonControllerSetup.Connect("pressed", this, nameof(PressedControllerSetup));
@@ -88,8 +90,18 @@ public class MainMenu : Control, IHelpText
 
     private void OnFileSelected(string path)
     {
-        members.FileDialog.Hide();
-        NewRoot.FindRoot(this).WatchReplay(path);
+        var root = NewRoot.FindRoot(this);
+        try
+        {
+            root.WatchReplay(path);
+            members.FileDialog.Hide();
+        }
+        catch (InvalidReplayException ex)
+        {
+            root.BackToMainMenu();
+            GD.PushWarning(ex.ToString());
+            OS.Alert("Selected file is not valid.", "Invalid Replay");
+        }
     }
 
     private void PressedSinglePlayer()
@@ -110,15 +122,15 @@ public class MainMenu : Control, IHelpText
     private void PressedWatchReplay()
     {
         var fd = members.FileDialog;
-        fd.RectSize = this.RectSize;
-        fd.Set("access", 2); // access the whole filesystem
-        fd.Set("mode", 0); // select one and only one file
+        fd.RectMinSize = new Vector2(600, 500);
+        fd.Access = FileDialog.AccessEnum.Filesystem;
+        fd.Mode = FileDialog.ModeEnum.OpenFile;
         string replayDir = System.Environment.GetEnvironmentVariable("ffreplaydir");
         if (replayDir != null)
         {
-            fd.Set("current_dir", replayDir);
+            fd.CurrentDir = replayDir;
         }
-        fd.Call("popup_centered");
+        fd.PopupCentered();
     }
 
     private void PressedCredits()
