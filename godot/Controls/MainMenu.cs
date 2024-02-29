@@ -68,10 +68,25 @@ public class MainMenu : Control, IHelpText
         SwitchTo(members.MainContainer);
     }
 
+    /// <summary>
+    /// Usually <see cref="ShowMainMenu"/> is enough, but apparently there is some weird quirk at startup.
+    /// </summary>
+    public void StartupSetFocus()
+    {
+        CallDeferred(nameof(SetFocusOnStartup));
+    }
+
+    private void SetFocusOnStartup()
+    {
+        members.ButtonSinglePlayer.GrabFocus();
+    }
+
     // Called when the node enters the scene tree for the first time.
     public override void _Ready()
     {
         members = new Members(this);
+
+        members.ButtonWatchReplay.Visible = OS.GetName() != "HTML5";
 
         // TODO - this replay continues to run in the background, that should be fixed
         // Probably want to SetProcess(false) on inactive components?

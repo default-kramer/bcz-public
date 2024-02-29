@@ -34,7 +34,9 @@ public class NewRoot : Control, IRoot
     {
         this.members = new Members(this);
 
-        if (OS.GetName() == "Web")
+        string osName = OS.GetName();
+        Console.WriteLine($"OS is: {osName}");
+        if (osName == "HTML5")
         {
             var location = JavaScript.Eval("window.location.toString()") as string;
             Console.WriteLine("Got location: " + location);
@@ -45,6 +47,7 @@ public class NewRoot : Control, IRoot
             }
 
             BackToMainMenu();
+            members.MainMenu.StartupSetFocus();
         }
         else
         {
