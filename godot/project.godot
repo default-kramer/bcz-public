@@ -10,9 +10,13 @@ config_version=4
 
 [application]
 
-config/name="bcz-godot"
+config/name="Block Cipher Z"
 run/main_scene="res://NewRoot.tscn"
 config/icon="res://icon.png"
+
+[display]
+
+window/size/height=700
 
 [gui]
 
