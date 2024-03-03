@@ -15,11 +15,13 @@ public class ControllerSetupControl : Control
     {
         public readonly Control PromptLabelContainer;
         public readonly TextureRect ControllerTextureRect;
+        public readonly VBoxContainer ContainerDebug;
 
         public Members(Control me)
         {
             me.FindNode(out PromptLabelContainer, nameof(PromptLabelContainer));
             me.FindNode(out ControllerTextureRect, nameof(ControllerTextureRect));
+            me.FindNode(out ContainerDebug, nameof(ContainerDebug));
         }
     }
 
@@ -47,14 +49,65 @@ public class ControllerSetupControl : Control
 
         if (e is InputEventJoypadButton button && button.Pressed)
         {
-            //Console.WriteLine($"Button: {button.Device}/{button.ButtonIndex}, Pressure: {button.Pressure}");
+            DebugLog(button);
             Capture(e);
         }
         else if (e is InputEventKey key && key.Pressed && !key.Echo)
         {
-            //Console.WriteLine($"Key: {key.Device}/{key.Scancode}");
-            Capture(e);
+            const uint unknown = (uint)KeyList.Unknown;
+            if (key.Scancode == unknown && key.PhysicalScancode == unknown)
+            {
+                // On my Xbox+Edge, every controller button press is accompanied by this event.
+                // So ignoring it makes sense for this platform at least, and I haven't seen it anywhere else.
+                AddToDebugWindow($"Ignoring 'unknown' key {unknown}");
+            }
+            else
+            {
+                DebugLog(key);
+                Capture(e);
+            }
         }
+    }
+
+    private Label GetDebugLabel(int index)
+    {
+        var node = members.ContainerDebug.GetChild(index);
+        return (Label)node;
+    }
+
+    private void AddToDebugWindow(string str)
+    {
+        int debugCount = members.ContainerDebug.GetChildCount();
+
+        for (int i = 0; i < debugCount; i++)
+        {
+            var label = GetDebugLabel(i);
+            if (string.IsNullOrEmpty(label.Text))
+            {
+                label.Text = str;
+                return;
+            }
+        }
+
+        // Slide everything back one slot...
+        for (int i = 0; i < debugCount - 1; i++)
+        {
+            var current = GetDebugLabel(i);
+            var next = GetDebugLabel(i + 1);
+            current.Text = next.Text;
+        }
+        // ... and add new entry to the last slot
+        GetDebugLabel(debugCount - 1).Text = str;
+    }
+
+    private void DebugLog(InputEventJoypadButton button)
+    {
+        AddToDebugWindow($"Joypad{button.Device}: {button.ButtonIndex} / {button.Pressure}");
+    }
+
+    private void DebugLog(InputEventKey key)
+    {
+        AddToDebugWindow($"Key{key.Device}: {key.Scancode} / {key.PhysicalScancode} / {key.Command} / {key.Meta}");
     }
 
     private void Capture(InputEvent e)

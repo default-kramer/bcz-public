@@ -13,15 +13,15 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 
 [node name="HBoxContainer" type="HBoxContainer" parent="CenterContainer"]
-margin_left = 154.0
-margin_top = 184.0
-margin_right = 869.0
-margin_bottom = 415.0
+margin_left = 141.0
+margin_top = 214.0
+margin_right = 882.0
+margin_bottom = 485.0
 size_flags_vertical = 3
 
 [node name="MarginContainer" type="MarginContainer" parent="CenterContainer/HBoxContainer"]
-margin_right = 178.0
-margin_bottom = 231.0
+margin_right = 204.0
+margin_bottom = 271.0
 custom_constants/margin_right = 20
 custom_constants/margin_top = 25
 custom_constants/margin_left = 25
@@ -29,83 +29,113 @@ custom_constants/margin_left = 25
 [node name="PromptLabelContainer" type="VBoxContainer" parent="CenterContainer/HBoxContainer/MarginContainer"]
 margin_left = 25.0
 margin_top = 25.0
-margin_right = 158.0
-margin_bottom = 231.0
+margin_right = 184.0
+margin_bottom = 271.0
 
 [node name="LabelUp" type="Label" parent="CenterContainer/HBoxContainer/MarginContainer/PromptLabelContainer"]
-margin_right = 133.0
-margin_bottom = 14.0
+margin_right = 159.0
+margin_bottom = 21.0
 text = "Up"
 align = 2
 
 [node name="LabelDown" type="Label" parent="CenterContainer/HBoxContainer/MarginContainer/PromptLabelContainer"]
-margin_top = 18.0
-margin_right = 133.0
-margin_bottom = 32.0
+margin_top = 25.0
+margin_right = 159.0
+margin_bottom = 46.0
 text = "Down"
 align = 2
 
 [node name="LabelLeft" type="Label" parent="CenterContainer/HBoxContainer/MarginContainer/PromptLabelContainer"]
-margin_top = 36.0
-margin_right = 133.0
-margin_bottom = 50.0
+margin_top = 50.0
+margin_right = 159.0
+margin_bottom = 71.0
 text = "Left"
 align = 2
 
 [node name="Label2" type="Label" parent="CenterContainer/HBoxContainer/MarginContainer/PromptLabelContainer"]
-margin_top = 54.0
-margin_right = 133.0
-margin_bottom = 68.0
+margin_top = 75.0
+margin_right = 159.0
+margin_bottom = 96.0
 rect_pivot_offset = Vector2( -831, -102 )
 text = "Right"
 align = 2
 
 [node name="Label3" type="Label" parent="CenterContainer/HBoxContainer/MarginContainer/PromptLabelContainer"]
-margin_top = 72.0
-margin_right = 133.0
-margin_bottom = 86.0
+margin_top = 100.0
+margin_right = 159.0
+margin_bottom = 121.0
 rect_pivot_offset = Vector2( -831, -102 )
 text = "Drop"
 align = 2
 
 [node name="Label4" type="Label" parent="CenterContainer/HBoxContainer/MarginContainer/PromptLabelContainer"]
-margin_top = 90.0
-margin_right = 133.0
-margin_bottom = 104.0
+margin_top = 125.0
+margin_right = 159.0
+margin_bottom = 146.0
 text = "Rotate Clockwise"
 align = 2
 
 [node name="Label5" type="Label" parent="CenterContainer/HBoxContainer/MarginContainer/PromptLabelContainer"]
-margin_top = 108.0
-margin_right = 133.0
-margin_bottom = 122.0
+margin_top = 150.0
+margin_right = 159.0
+margin_bottom = 171.0
 text = "Rotate Anticlockwise"
 align = 2
 
 [node name="Label6" type="Label" parent="CenterContainer/HBoxContainer/MarginContainer/PromptLabelContainer"]
-margin_top = 126.0
-margin_right = 133.0
-margin_bottom = 140.0
+margin_top = 175.0
+margin_right = 159.0
+margin_bottom = 196.0
 text = "Confirm"
 align = 2
 
 [node name="Label7" type="Label" parent="CenterContainer/HBoxContainer/MarginContainer/PromptLabelContainer"]
-margin_top = 144.0
-margin_right = 133.0
-margin_bottom = 158.0
+margin_top = 200.0
+margin_right = 159.0
+margin_bottom = 221.0
 text = "Cancel"
 align = 2
 
 [node name="Label8" type="Label" parent="CenterContainer/HBoxContainer/MarginContainer/PromptLabelContainer"]
-margin_top = 162.0
-margin_right = 133.0
-margin_bottom = 176.0
+margin_top = 225.0
+margin_right = 159.0
+margin_bottom = 246.0
 text = "Pause"
 align = 2
 
 [node name="ControllerTextureRect" type="TextureRect" parent="CenterContainer/HBoxContainer"]
-margin_left = 182.0
-margin_right = 715.0
-margin_bottom = 231.0
+margin_left = 208.0
+margin_right = 741.0
+margin_bottom = 271.0
 rect_min_size = Vector2( 350, 0 )
 texture = ExtResource( 2 )
+
+[node name="ContainerDebug" type="VBoxContainer" parent="."]
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+margin_top = -121.0
+
+[node name="Label" type="Label" parent="ContainerDebug"]
+margin_right = 1024.0
+margin_bottom = 21.0
+
+[node name="Label2" type="Label" parent="ContainerDebug"]
+margin_top = 25.0
+margin_right = 1024.0
+margin_bottom = 46.0
+
+[node name="Label3" type="Label" parent="ContainerDebug"]
+margin_top = 50.0
+margin_right = 1024.0
+margin_bottom = 71.0
+
+[node name="Label4" type="Label" parent="ContainerDebug"]
+margin_top = 75.0
+margin_right = 1024.0
+margin_bottom = 96.0
+
+[node name="Label5" type="Label" parent="ContainerDebug"]
+margin_top = 100.0
+margin_right = 1024.0
+margin_bottom = 121.0
